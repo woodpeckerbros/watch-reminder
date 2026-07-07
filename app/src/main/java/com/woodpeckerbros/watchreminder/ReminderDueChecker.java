@@ -11,7 +11,6 @@ public class ReminderDueChecker {
     public static final long CHECK_INTERVAL_MS = ReminderSettings.DEFAULT_CHECK_INTERVAL_SECONDS * 1000L;
     public static final long LOOKBACK_MS = CHECK_INTERVAL_MS + 45_000L;
     public static final long CATCH_UP_LOOKBACK_MS = 24 * 60 * 60_000L;
-    private static final long RELIABILITY_FALLBACK_DELAY_MS = 5 * 60_000L;
     private static final String PREFS_NAME = "reminder_due_checker";
     private static final String KEY_LAST_CHECK = "last_check";
     private static final Object DISPATCH_LOCK = new Object();
@@ -110,41 +109,11 @@ public class ReminderDueChecker {
         }
         due.sort(Comparator.comparingLong(item -> item.scheduledAt));
         AppLog.d(context, "dispatchDue dueCount=" + due.size() + " effectiveFrom=" + NextReminderCalculator.formatDateTime(effectiveFrom));
-        maybeEnableReliabilityFallback(context, due, to);
         for (DueDispatch item : due) {
             ReminderReceiver.fire(context, item.reminderId, item.reminderName, item.scheduledAt, item.originalAt, item.day, item.snooze);
         }
         prefs.edit().putLong(KEY_LAST_CHECK, to).apply();
         AppLog.d(context, "dispatchDue saved lastCheck=" + NextReminderCalculator.formatDateTime(to));
-    }
-
-    private static void maybeEnableReliabilityFallback(Context context, ArrayList<DueDispatch> due, long now) {
-        if (due.isEmpty()) {
-            return;
-        }
-        ReminderSettings settings = new ReminderSettings(context);
-        if (settings.serviceEnabled()) {
-            return;
-        }
-        DueDispatch delayed = null;
-        long maxDelay = 0L;
-        for (DueDispatch item : due) {
-            long delay = now - item.scheduledAt;
-            if (delay > maxDelay) {
-                maxDelay = delay;
-                delayed = item;
-            }
-        }
-        if (delayed == null || maxDelay < RELIABILITY_FALLBACK_DELAY_MS) {
-            return;
-        }
-        AppLog.w(context, "dispatchDue enabling reliability fallback after missed reminder id="
-                + delayed.reminderId
-                + " snooze=" + delayed.snooze
-                + " delayMs=" + maxDelay
-                + " scheduledAt=" + NextReminderCalculator.formatDateTime(delayed.scheduledAt));
-        settings.setServiceEnabled(true);
-        ReminderForegroundService.start(context);
     }
 
     private static DueOccurrence occurrenceBetween(Context context, long from, long to, Reminder reminder, int day) {

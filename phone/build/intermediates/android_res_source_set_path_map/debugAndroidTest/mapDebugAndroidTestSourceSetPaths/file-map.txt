@@ -1,6 +1,0 @@
-com.woodpeckerbros.watchreminder.phone.test.phone-androidTest-0 /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/phone/build/generated/res/resValues/androidTest/debug
-com.woodpeckerbros.watchreminder.phone.test.phone-updated_navigation_xml-1 /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/phone/build/generated/updated_navigation_xml/debugAndroidTest
-com.woodpeckerbros.watchreminder.phone.test.phone-mergeDebugAndroidTestResources-2 /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/phone/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
-com.woodpeckerbros.watchreminder.phone.test.phone-mergeDebugAndroidTestResources-3 /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/phone/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
-com.woodpeckerbros.watchreminder.phone.test.phone-debugAndroidTest-4 /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/phone/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
-gradleHome-0 /Users/refaelnakar/.gradle
