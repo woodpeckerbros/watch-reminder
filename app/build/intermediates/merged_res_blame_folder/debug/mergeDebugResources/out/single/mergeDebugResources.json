@@ -1,0 +1,86 @@
+[
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-hdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xxxhdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xxxhdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xhdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xhdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "/Users/refaelnakar/.gradle/daemon/9.4.1/com.woodpeckerbros.watchreminder.app-debug-27:/drawable_ic_complication_clock.xml.flat",
+        "source": "/Users/refaelnakar/.gradle/daemon/9.4.1/com.woodpeckerbros.watchreminder.app-main-29:/drawable/ic_complication_clock.xml"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-mdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-mdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xxhdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xxhdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "/Users/refaelnakar/.gradle/daemon/9.4.1/com.woodpeckerbros.watchreminder.app-debug-27:/drawable_ic_launcher.xml.flat",
+        "source": "/Users/refaelnakar/.gradle/daemon/9.4.1/com.woodpeckerbros.watchreminder.app-main-29:/drawable/ic_launcher.xml"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-hdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-hdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-mdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-hdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xxxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "/Users/refaelnakar/.gradle/daemon/9.4.1/com.woodpeckerbros.watchreminder.app-debug-27:/drawable_ic_notification.xml.flat",
+        "source": "/Users/refaelnakar/.gradle/daemon/9.4.1/com.woodpeckerbros.watchreminder.app-main-29:/drawable/ic_notification.xml"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.woodpeckerbros.watchreminder.app-debug-27:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.woodpeckerbros.watchreminder.app-main-29:/mipmap-xxhdpi/ic_launcher_round.webp"
+    }
+]

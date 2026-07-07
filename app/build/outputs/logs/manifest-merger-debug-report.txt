@@ -1,0 +1,627 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:1:1-212:12
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:1:1-212:12
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:1:1-212:12
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:1:1-212:12
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:2:1-13:12
+MERGED from [androidx.wear.watchface:watchface-complications:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4e9ed1b754b0ea40ae83e308b8e44e1b/transformed/watchface-complications-1.2.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:2:1-13:12
+MERGED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:14:1-34:12
+MERGED from [com.google.android.gms:play-services-wearable:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2f09325556d42d3c916d7d6e2d5ab6cc/transformed/play-services-wearable-18.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.preference:preference:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b12776dd16536f9f8aabab37198d3990/transformed/preference-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:16:1-24:12
+MERGED from [com.google.android.gms:play-services-tasks:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5b4de6d3bfe3d0a290d2df1984bf5e35/transformed/play-services-tasks-18.0.1/AndroidManifest.xml:2:1-6:12
+MERGED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:16:1-26:12
+MERGED from [androidx.core:core-ktx:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/758bbbc5f3ad05dc2def573ae604f143/transformed/core-ktx-1.13.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.appcompat:appcompat:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/fd2ecb85f1169f815afa0c859556a70c/transformed/appcompat-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.fragment:fragment:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/78c13789ec26be9d1b25c8c14c112105/transformed/fragment-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/54decbced225c00763c776aef311c7dd/transformed/recyclerview-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.wear.protolayout:protolayout-expression:1.0.0-beta01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/1b120a0555793d1fe1d8ca79b083acf2/transformed/protolayout-expression-1.0.0-beta01/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.wear.protolayout:protolayout-expression-pipeline:1.0.0-beta01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/76e91a532268343b9641eb9040e89921/transformed/protolayout-expression-pipeline-1.0.0-beta01/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.appcompat:appcompat-resources:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/20760059b33bfb09ddac75df5c67593f/transformed/appcompat-resources-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d97f4eef2f9c9d5d7568a2d81a9809df/transformed/legacy-support-core-ui-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cc85d1dc68042dfdf72c9cf9d030f723/transformed/drawerlayout-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/0511b871c78c036a9bbf8ddea8c2f1c0/transformed/viewpager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5f0e5b11c9a6682e77ec5858a001f9dc/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/a5fb38478c3356608cf65d3982da0983/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/104fee419257ae2a26a228b3f8880b70/transformed/activity-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/0b352f56785e29290cda90123d92c28f/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/8f2d666108365553ebf5abeeb20bb117/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b0c7392628833404f5d64d38d5aae2e3/transformed/coordinatorlayout-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b877458a6698559dc024c0e5b3350f88/transformed/slidingpanelayout-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/eed748397fd8e99774b60414c73ab08a/transformed/customview-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/1136483851c29bd197900c896aedc4dc/transformed/swiperefreshlayout-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/8b4e084f60a5be28dff0cac975ca8d21/transformed/asynclayoutinflater-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c71c166997641454ef4fc4603ded9f76/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/6f46074c56e11148e780f524cfeb986f/transformed/lifecycle-livedata-core-2.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d84f3fe97d4c3b7aa96a76439c44ee58/transformed/lifecycle-livedata-2.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/281242a7e2114926803417612392c34c/transformed/lifecycle-viewmodel-2.6.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/81a390f34e255de932682d6ae917add8/transformed/savedstate-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d6dbf736791ae938da6330a58f24d21e/transformed/lifecycle-runtime-2.6.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2e1b6415b557541bdbdffd8cae3b7c67/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c682ca5eb2a3ce510ab6cf569fdba5c5/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c0f553221154d564e4a126f94473ee6e/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/90321877625c807b0923821aeced5134/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/024dcc20e4811879ffba7ffc548ed360/transformed/documentfile-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4c7a05656dd0359b48fcadbee5e64c93/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/845a382b35153c0a94bfeafbeb0c3693/transformed/print-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/24577612290ca909d12a99d8bd872625/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:2:1-7:12
+	package
+		INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:1:11-69
+uses-feature#android.hardware.type.watch
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:2:5-88
+	android:required
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:2:62-85
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:2:19-61
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:4:5-77
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:4:22-74
+uses-permission#android.permission.SCHEDULE_EXACT_ALARM
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:5:5-7:38
+	android:maxSdkVersion
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:7:9-35
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:6:9-63
+uses-permission#android.permission.USE_EXACT_ALARM
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:8:5-74
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:8:22-71
+uses-permission#android.permission.USE_FULL_SCREEN_INTENT
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:9:5-81
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:9:22-78
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:10:5-77
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:10:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:11:5-89
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:11:22-86
+uses-permission#android.permission.VIBRATE
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:12:5-66
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:12:22-63
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:13:5-81
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:13:22-78
+uses-permission#android.permission.BODY_SENSORS
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:14:5-71
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:14:22-68
+uses-permission#android.permission.ACCESS_COARSE_LOCATION
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:15:5-81
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:15:22-78
+uses-permission#android.permission.ACCESS_FINE_LOCATION
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:16:5-79
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:16:22-76
+uses-permission#android.permission.ACTIVITY_RECOGNITION
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:17:5-79
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:17:22-76
+application
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:19:5-211:19
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:19:5-211:19
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:7:5-11:19
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:7:5-11:19
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:7:5-11:19
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:7:5-11:19
+MERGED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:23:5-32:19
+MERGED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:23:5-32:19
+MERGED from [com.google.android.gms:play-services-wearable:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2f09325556d42d3c916d7d6e2d5ab6cc/transformed/play-services-wearable-18.0.0/AndroidManifest.xml:22:5-20
+MERGED from [com.google.android.gms:play-services-wearable:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2f09325556d42d3c916d7d6e2d5ab6cc/transformed/play-services-wearable-18.0.0/AndroidManifest.xml:22:5-20
+MERGED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-tasks:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5b4de6d3bfe3d0a290d2df1984bf5e35/transformed/play-services-tasks-18.0.1/AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5b4de6d3bfe3d0a290d2df1984bf5e35/transformed/play-services-tasks-18.0.1/AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:20:5-24:19
+MERGED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:20:5-24:19
+MERGED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2e1b6415b557541bdbdffd8cae3b7c67/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2e1b6415b557541bdbdffd8cae3b7c67/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+	android:extractNativeLibs
+		INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+	android:supportsRtl
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:23:9-35
+	android:label
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:22:9-41
+	android:icon
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:21:9-45
+	android:allowBackup
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:20:9-35
+	android:theme
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:24:9-40
+uses-library#com.google.android.wearable
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:26:9-28:40
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:8:9-10:40
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:8:9-10:40
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:8:9-10:40
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:8:9-10:40
+	android:required
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:28:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:27:13-55
+meta-data#com.google.android.wearable.standalone
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:30:9-32:36
+	android:value
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:32:13-33
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:31:13-66
+service#com.woodpeckerbros.watchreminder.ReminderForegroundService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:34:9-41:19
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:36:13-37
+	android:foregroundServiceType
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:37:13-55
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:35:13-54
+property#android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:38:13-40:183
+	android:value
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:40:17-180
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:39:17-76
+service#com.woodpeckerbros.watchreminder.DeferredWearStateService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:43:9-50:19
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:45:13-37
+	android:foregroundServiceType
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:46:13-55
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:44:13-53
+service#com.woodpeckerbros.watchreminder.ReminderHealthPassiveService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:52:9-55:111
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:54:13-36
+	android:permission
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:55:13-108
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:53:13-57
+service#com.woodpeckerbros.watchreminder.RestoreFromPhoneService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:57:9-67:19
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:59:13-36
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:58:13-52
+intent-filter#action:name:com.google.android.gms.wearable.MESSAGE_RECEIVED+data:host:*+data:pathPrefix:/watch_reminder_+data:scheme:wear
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:60:13-66:29
+action#com.google.android.gms.wearable.MESSAGE_RECEIVED
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:61:17-91
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:61:25-88
+data
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:62:17-65:45
+	android:host
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:63:21-37
+	android:scheme
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:65:21-42
+	android:pathPrefix
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:64:21-58
+service#com.woodpeckerbros.watchreminder.NextReminderComplicationService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:69:9-85:19
+	android:label
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:74:13-63
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:72:13-36
+	android:permission
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:75:13-99
+	android:icon
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:73:13-53
+	android:directBootAware
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:71:13-43
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:70:13-60
+intent-filter#action:name:android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:76:13-78:29
+action#android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:77:17-116
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:77:25-113
+meta-data#android.support.wearable.complications.SUPPORTED_TYPES
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:79:13-81:68
+	android:value
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:81:17-65
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:80:17-86
+meta-data#android.support.wearable.complications.UPDATE_PERIOD_SECONDS
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:82:13-84:39
+	android:value
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:84:17-36
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:83:17-92
+service#com.woodpeckerbros.watchreminder.BlessingReminderComplicationService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:87:9-103:19
+	android:label
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:92:13-67
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:90:13-36
+	android:permission
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:93:13-99
+	android:icon
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:91:13-53
+	android:directBootAware
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:89:13-43
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:88:13-64
+service#com.woodpeckerbros.watchreminder.ZmanimComplicationService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:105:9-121:19
+	android:label
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:110:13-56
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:108:13-36
+	android:permission
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:111:13-99
+	android:icon
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:109:13-59
+	android:directBootAware
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:107:13-43
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:106:13-54
+service#com.woodpeckerbros.watchreminder.HebrewDateComplicationService
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:123:9-139:19
+	android:label
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:128:13-61
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:126:13-36
+	android:permission
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:129:13-99
+	android:icon
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:127:13-59
+	android:directBootAware
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:125:13-43
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:124:13-58
+activity#com.woodpeckerbros.watchreminder.ReminderAlertActivity
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:141:9-146:47
+	android:excludeFromRecents
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:143:13-46
+	android:showWhenLocked
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:145:13-42
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:144:13-37
+	android:theme
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:146:13-44
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:142:13-50
+activity#com.woodpeckerbros.watchreminder.DafYomiAlertActivity
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:148:9-153:47
+	android:excludeFromRecents
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:150:13-46
+	android:showWhenLocked
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:152:13-42
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:151:13-37
+	android:theme
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:153:13-44
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:149:13-49
+activity#com.woodpeckerbros.watchreminder.OmerAlertActivity
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:155:9-160:47
+	android:excludeFromRecents
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:157:13-46
+	android:showWhenLocked
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:159:13-42
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:158:13-37
+	android:theme
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:160:13-44
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:156:13-46
+activity#com.woodpeckerbros.watchreminder.MainActivity
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:162:9-170:20
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:164:13-36
+	android:theme
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:165:13-58
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:163:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:166:13-169:29
+action#android.intent.action.MAIN
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:167:17-69
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:167:25-66
+category#android.intent.category.LAUNCHER
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:168:17-77
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:168:27-74
+receiver#com.woodpeckerbros.watchreminder.ReminderReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:172:9-174:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:174:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:173:13-45
+receiver#com.woodpeckerbros.watchreminder.AutoSnoozeReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:176:9-178:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:178:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:177:13-47
+receiver#com.woodpeckerbros.watchreminder.DafYomiReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:180:9-182:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:182:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:181:13-44
+receiver#com.woodpeckerbros.watchreminder.OmerReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:184:9-186:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:186:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:185:13-41
+receiver#com.woodpeckerbros.watchreminder.MoonBlessingReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:188:9-190:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:190:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:189:13-49
+receiver#com.woodpeckerbros.watchreminder.JewishDayReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:192:9-194:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:194:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:193:13-46
+receiver#com.woodpeckerbros.watchreminder.WatchdogReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:196:9-198:40
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:198:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:197:13-45
+receiver#com.woodpeckerbros.watchreminder.BootReceiver
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:200:9-210:20
+	android:exported
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:202:13-37
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:201:13-41
+intent-filter#action:name:android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED+action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED+action:name:android.intent.action.TIMEZONE_CHANGED+action:name:android.intent.action.TIME_SET
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:203:13-209:29
+action#android.intent.action.BOOT_COMPLETED
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:204:17-79
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:204:25-76
+action#android.intent.action.MY_PACKAGE_REPLACED
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:205:17-84
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:205:25-81
+action#android.intent.action.TIME_SET
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:206:17-73
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:206:25-70
+action#android.intent.action.TIMEZONE_CHANGED
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:207:17-81
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:207:25-78
+action#android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
+ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:208:17-107
+	android:name
+		ADDED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml:208:25-104
+uses-sdk
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.watchface:watchface-complications-data:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/7e7bad32632a387be14461efb494f7c4/transformed/watchface-complications-data-1.2.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.watchface:watchface-complications:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4e9ed1b754b0ea40ae83e308b8e44e1b/transformed/watchface-complications-1.2.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.watchface:watchface-complications:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4e9ed1b754b0ea40ae83e308b8e44e1b/transformed/watchface-complications-1.2.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.watchface:watchface-complications-data-source:1.2.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/ddd8049df2233482a24aa888ad5739b7/transformed/watchface-complications-data-source-1.2.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:17:5-44
+MERGED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:17:5-44
+MERGED from [com.google.android.gms:play-services-wearable:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2f09325556d42d3c916d7d6e2d5ab6cc/transformed/play-services-wearable-18.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-wearable:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2f09325556d42d3c916d7d6e2d5ab6cc/transformed/play-services-wearable-18.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.preference:preference:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b12776dd16536f9f8aabab37198d3990/transformed/preference-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.preference:preference:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b12776dd16536f9f8aabab37198d3990/transformed/preference-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5b4de6d3bfe3d0a290d2df1984bf5e35/transformed/play-services-tasks-18.0.1/AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5b4de6d3bfe3d0a290d2df1984bf5e35/transformed/play-services-tasks-18.0.1/AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:18:5-43
+MERGED from [androidx.core:core-ktx:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/758bbbc5f3ad05dc2def573ae604f143/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/758bbbc5f3ad05dc2def573ae604f143/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/fd2ecb85f1169f815afa0c859556a70c/transformed/appcompat-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.appcompat:appcompat:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/fd2ecb85f1169f815afa0c859556a70c/transformed/appcompat-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/78c13789ec26be9d1b25c8c14c112105/transformed/fragment-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/78c13789ec26be9d1b25c8c14c112105/transformed/fragment-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/54decbced225c00763c776aef311c7dd/transformed/recyclerview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/54decbced225c00763c776aef311c7dd/transformed/recyclerview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.wear.protolayout:protolayout-expression:1.0.0-beta01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/1b120a0555793d1fe1d8ca79b083acf2/transformed/protolayout-expression-1.0.0-beta01/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.protolayout:protolayout-expression:1.0.0-beta01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/1b120a0555793d1fe1d8ca79b083acf2/transformed/protolayout-expression-1.0.0-beta01/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.protolayout:protolayout-expression-pipeline:1.0.0-beta01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/76e91a532268343b9641eb9040e89921/transformed/protolayout-expression-pipeline-1.0.0-beta01/AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.protolayout:protolayout-expression-pipeline:1.0.0-beta01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/76e91a532268343b9641eb9040e89921/transformed/protolayout-expression-pipeline-1.0.0-beta01/AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/20760059b33bfb09ddac75df5c67593f/transformed/appcompat-resources-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.appcompat:appcompat-resources:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/20760059b33bfb09ddac75df5c67593f/transformed/appcompat-resources-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d97f4eef2f9c9d5d7568a2d81a9809df/transformed/legacy-support-core-ui-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d97f4eef2f9c9d5d7568a2d81a9809df/transformed/legacy-support-core-ui-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cc85d1dc68042dfdf72c9cf9d030f723/transformed/drawerlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cc85d1dc68042dfdf72c9cf9d030f723/transformed/drawerlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/0511b871c78c036a9bbf8ddea8c2f1c0/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/0511b871c78c036a9bbf8ddea8c2f1c0/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5f0e5b11c9a6682e77ec5858a001f9dc/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/5f0e5b11c9a6682e77ec5858a001f9dc/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/a5fb38478c3356608cf65d3982da0983/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/a5fb38478c3356608cf65d3982da0983/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/104fee419257ae2a26a228b3f8880b70/transformed/activity-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.activity:activity:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/104fee419257ae2a26a228b3f8880b70/transformed/activity-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/0b352f56785e29290cda90123d92c28f/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/0b352f56785e29290cda90123d92c28f/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/8f2d666108365553ebf5abeeb20bb117/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/8f2d666108365553ebf5abeeb20bb117/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b0c7392628833404f5d64d38d5aae2e3/transformed/coordinatorlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b0c7392628833404f5d64d38d5aae2e3/transformed/coordinatorlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b877458a6698559dc024c0e5b3350f88/transformed/slidingpanelayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/b877458a6698559dc024c0e5b3350f88/transformed/slidingpanelayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/eed748397fd8e99774b60414c73ab08a/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/eed748397fd8e99774b60414c73ab08a/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/1136483851c29bd197900c896aedc4dc/transformed/swiperefreshlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/1136483851c29bd197900c896aedc4dc/transformed/swiperefreshlayout-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/8b4e084f60a5be28dff0cac975ca8d21/transformed/asynclayoutinflater-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/8b4e084f60a5be28dff0cac975ca8d21/transformed/asynclayoutinflater-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c71c166997641454ef4fc4603ded9f76/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c71c166997641454ef4fc4603ded9f76/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/6f46074c56e11148e780f524cfeb986f/transformed/lifecycle-livedata-core-2.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/6f46074c56e11148e780f524cfeb986f/transformed/lifecycle-livedata-core-2.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d84f3fe97d4c3b7aa96a76439c44ee58/transformed/lifecycle-livedata-2.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d84f3fe97d4c3b7aa96a76439c44ee58/transformed/lifecycle-livedata-2.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/281242a7e2114926803417612392c34c/transformed/lifecycle-viewmodel-2.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/281242a7e2114926803417612392c34c/transformed/lifecycle-viewmodel-2.6.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/81a390f34e255de932682d6ae917add8/transformed/savedstate-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.savedstate:savedstate:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/81a390f34e255de932682d6ae917add8/transformed/savedstate-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d6dbf736791ae938da6330a58f24d21e/transformed/lifecycle-runtime-2.6.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/d6dbf736791ae938da6330a58f24d21e/transformed/lifecycle-runtime-2.6.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2e1b6415b557541bdbdffd8cae3b7c67/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/2e1b6415b557541bdbdffd8cae3b7c67/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c682ca5eb2a3ce510ab6cf569fdba5c5/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c682ca5eb2a3ce510ab6cf569fdba5c5/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c0f553221154d564e4a126f94473ee6e/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/c0f553221154d564e4a126f94473ee6e/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/90321877625c807b0923821aeced5134/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/90321877625c807b0923821aeced5134/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/024dcc20e4811879ffba7ffc548ed360/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/024dcc20e4811879ffba7ffc548ed360/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4c7a05656dd0359b48fcadbee5e64c93/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4c7a05656dd0359b48fcadbee5e64c93/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/845a382b35153c0a94bfeafbeb0c3693/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/845a382b35153c0a94bfeafbeb0c3693/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/24577612290ca909d12a99d8bd872625/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/24577612290ca909d12a99d8bd872625/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
+	android:targetSdkVersion
+		INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/app/src/main/AndroidManifest.xml
+queries
+ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:19:5-21:15
+package#com.google.android.wearable.healthservices
+ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:20:9-78
+	android:name
+		ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:20:18-75
+service#androidx.health.services.client.VersionApiService
+ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:24:9-31:19
+	android:exported
+		ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:26:13-36
+	android:permission
+		ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:27:13-108
+	android:name
+		ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:25:13-77
+intent-filter#action:name:hs.versionclient.BIND
+ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:28:13-30:29
+action#hs.versionclient.BIND
+ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:29:17-64
+	android:name
+		ADDED from [androidx.health:health-services-client:1.1.0-rc01] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/58c20fb8a9f0ed207dc41fbf15e9ea97/transformed/health-services-client-1.1.0-rc01/AndroidManifest.xml:29:25-61
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:20:9-22:45
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:22:19-43
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:21:19-78
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/4ab7a9e2eeb03330c82b6a0d0f5e374e/transformed/play-services-base-18.0.1/AndroidManifest.xml:20:19-85
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:21:9-23:69
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:23:13-66
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.0.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/3341e7d2996f084f88293da061d9e3f7/transformed/play-services-basement-18.0.0/AndroidManifest.xml:22:13-58
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+permission#com.woodpeckerbros.watchreminder.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+uses-permission#com.woodpeckerbros.watchreminder.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/cf7674189afb74d11c6eabd2c6b6e162/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/9e4f6eed0fbe6a09533e521f08e94ff7/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/refaelnakar/.gradle/caches/9.4.1/transforms/46168cdc5a8072ce81e65ee83a7fcabc/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:25-92

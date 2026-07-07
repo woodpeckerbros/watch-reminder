@@ -1,0 +1,26 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.woodpeckerbros.watchreminder.phone-mergeDebugResources-14:/values-en/values-en.xml",
+            "map": [
+                {
+                    "source": "/Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder/phone/src/main/res/values-en/strings.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "16",
+                        "endColumns": "58",
+                        "endOffsets": "70"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "58",
+                        "endOffsets": "109"
+                    }
+                }
+            ]
+        }
+    ]
+}

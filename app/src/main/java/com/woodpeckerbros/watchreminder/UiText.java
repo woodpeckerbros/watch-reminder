@@ -1,0 +1,311 @@
+package com.woodpeckerbros.watchreminder;
+
+import android.content.Context;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class UiText {
+    private static final Map<String, String> EN = new HashMap<>();
+    private static final Map<String, Integer> RES = new HashMap<>();
+
+    static {
+        res("תזכורת חדשה", R.string.ui_new_reminder);
+        res("עריכת תזכורת", R.string.ui_edit_reminder);
+        res("שם, זמן, סוג ופעילות", R.string.ui_reminder_editor_subtitle);
+        res("שם", R.string.ui_name);
+        res("תיאור (אופציונלי)", R.string.ui_description_optional);
+        res("תזכורת", R.string.ui_default_reminder_name);
+        res("צריך לבחור זמן עתידי", R.string.ui_choose_future_time);
+        res("מיקום", R.string.ui_location);
+        res("פעילה", R.string.ui_enabled_feminine);
+        res("חיונית", R.string.ui_critical);
+        res("קבועה", R.string.ui_fixed);
+        res("חד פעמית", R.string.ui_one_time);
+        res("מחזורית", R.string.ui_repeating);
+        res("מחזוריות", R.string.ui_repeating_title);
+        res("אירוע שנתי", R.string.ui_annual_event);
+        res("שעה", R.string.ui_hour);
+        res("דקה", R.string.ui_minute);
+        res("דקות", R.string.ui_minutes);
+        res("זמני הלכה", R.string.ui_halacha_times);
+        res("לפני / אחרי", R.string.ui_before_after);
+        res("שמירה", R.string.ui_save);
+        res("ביטול", R.string.ui_cancel);
+        res("כל", R.string.ui_every);
+        res("שעות", R.string.ui_hours);
+        res("ימים", R.string.ui_days);
+        res("שבועות", R.string.ui_weeks);
+        res("חודשים", R.string.ui_months);
+        res("שנים", R.string.ui_years);
+        res("תאריך עברי", R.string.ui_hebrew_date);
+        res("התאריך הוא נקודת ההתחלה. בשנים/חודשים לפי תאריך עברי, האפליקציה ממירה בכל פעם לתאריך לועזי מתאים.", R.string.ui_periodic_hebrew_hint);
+        res("שעות לפני", R.string.ui_hours_before);
+        res("מספר הבא", R.string.ui_next_number);
+        res("מספר התחלתי", R.string.ui_serial_number_hint);
+        res("אם הוזן מספר התחלתי, הוא יוצג בסוגריים ויעלה ב-1 בכל שנה.", R.string.ui_annual_counter_hint);
+        res("תאריך", R.string.ui_date);
+        res("יום", R.string.ui_day);
+        res("חודש", R.string.ui_month);
+        res("שנה", R.string.ui_year);
+        res("לא זמין", R.string.ui_unavailable);
+        res("היום", R.string.ui_today);
+        res("מחר", R.string.ui_tomorrow);
+        res("אתמול", R.string.ui_yesterday);
+        res("אין התראות שחלפו", R.string.ui_no_past_alerts);
+        res("ביטול בוצע", R.string.ui_done_undo);
+        res("החלה", R.string.ui_apply);
+        res("שחזור", R.string.ui_restore);
+        res("עריכה", R.string.ui_edit);
+        res("מחיקה", R.string.ui_delete);
+        res("יום לפני", R.string.ui_previous_day);
+        res("יום אחרי", R.string.ui_next_day);
+
+        put("הוספה", "Add");
+        put("היסטוריה", "History");
+        put("תזכורות", "Reminders");
+        put("לחיצה ארוכה על תזכורת פותחת פעולות אפשריות", "Long press a reminder to open actions");
+        put("אין תזכורות", "No reminders");
+        put("טוען תזכורות...", "Loading reminders...");
+        put("טוען עוד תזכורות...", "Loading more reminders...");
+        put("צריך לאשר Alarms & reminders כדי לקבל תזכורות בזמן", "Allow Alarms & reminders to receive reminders on time");
+        put("לחץ כאן כדי לאשר Alarms & reminders לתזכורות מדויקות", "Tap here to allow Alarms & reminders for exact reminders");
+        put("צריך לאשר התראות במסך מלא כדי שהתזכורת תיפתח על המסך", "Allow full-screen notifications so reminders can open on screen");
+        put("דחה", "Snooze");
+        put("זמני היום בהלכה", "Halachic Times");
+        put("זמני היום", "Halachic Times");
+        put("תזכורת לברכה", "Blessing Reminder");
+        put("תזכורת", "Reminder");
+        put("הגדרות", "Settings");
+        put("חזרה", "Back");
+        put("שמירה", "Save");
+        put("ביטול", "Cancel");
+        put("ניקוי הכל", "Clear All");
+        put("ניקוי לוגים", "Clear Logs");
+        put("לוגים", "Logs");
+        put("לוגים לטלפון", "Send Logs");
+        put("לבדיקת תזכורות שלא קופצות בזמן", "For diagnosing reminders that do not alert on time");
+        put("גיבוי ושחזור", "Backup and Restore");
+        put("גיבוי לטלפון", "Back Up to Phone");
+        put("שחזור מהטלפון", "Restore from Phone");
+        put("התראה", "Alert");
+        put("רטט", "Vibration");
+        put("צלצול", "Sound");
+        put("בחירת צלצול", "Choose Sound");
+        put("צלצול ברירת מחדל", "Default sound");
+        put("עוצמת צלצול", "Sound volume");
+        put("אורך התראה בשניות", "Alert length, seconds");
+        put("לא הצלחתי לפתוח בחירת צלצול", "Could not open sound picker");
+        put("רגיל", "Normal");
+        put("עדין", "Gentle");
+        put("חזק", "Strong");
+        put("ארוך", "Long");
+        put("ללא רטט", "No vibration");
+        put("אורך רטט בשניות", "Vibration length, seconds");
+        put("בדיקת רקע פעילה", "Background check active");
+        put("ברירת מחדל: כל 3 דקות", "Default: every 3 minutes");
+        put("דקות", "Minutes");
+        put("שניות", "Seconds");
+        put("דחייה אוטומטית", "Auto Snooze");
+        put("אם אין תגובה, המסך נסגר והתזכורת נדחית", "If there is no response, the screen closes and the reminder is snoozed");
+        put("המתנה בשניות", "Wait, seconds");
+        put("דחייה בדקות", "Snooze, minutes");
+        put("כמה דקות אחרי החיוב להזכיר לברך", "Minutes after becoming obligated to send the blessing reminder");
+        put("זמני שקט - לא להפריע", "Quiet Times - Do Not Disturb");
+        put("ברכת הלבנה", "Birkat Halevana");
+        put("סמן שבירכתי", "Mark as Recited");
+        put("דף היומי", "Daf Yomi");
+        put("ספירת העומר", "Omer Count");
+        put("מיקום זמני הלכה", "Halachic Times Location");
+        put("מיקום חדש", "Refresh Location");
+        put("המיקום עודכן", "Location updated");
+        put("לשליחה כשיש תקלה בתזכורות", "Send when there is a reminder issue");
+        put("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", "Backup and restore are handled through the phone app");
+        put("פעיל", "Active");
+        put("פעילה", "Active");
+        put("כבוי", "Off");
+        put("תזכורת דף היומי פעילה", "Daf Yomi reminder active");
+        put("תיקון סימון", "Fix Marking");
+        put("אם סימנת בטעות שלמדת, אפשר להחזיר דף לרשימת ההשלמות", "If you marked a page learned by mistake, you can move it back to the catch-up list");
+        put("אין דפים שסומנו כלמדתי בימים האחרונים", "No pages were marked learned in the last few days");
+        put("סמן כלא למדתי", "Mark Not Learned");
+        put("דפים להשלמה", "Pages to Catch Up");
+        put("אין דפים שמסומנים כלא למדתי", "No pages are marked as not learned");
+        put("למדתי את הדף", "I Learned This Page");
+        put("תזכורת ספירת העומר פעילה", "Omer reminder active");
+        put("כמה דקות אחרי צאת הכוכבים להזכיר", "Minutes after nightfall to send the reminder");
+        put("דקות אחרי צאת הכוכבים", "Minutes after nightfall");
+        put("מחוץ לימי הספירה כרגע", "Outside the Omer period right now");
+        put("בחירת תאריך", "Choose Date");
+        put("הצג", "Show");
+        put("בחירה לפי תאריך לועזי", "Choose by Gregorian Date");
+        put("בחירה לפי תאריך עברי", "Choose by Hebrew Date");
+        put("שפה", "Language");
+        put("שפת הממשק", "Interface language");
+        put("אוטומטי לפי השעון", "Automatic by watch language");
+        put("עברית", "Hebrew");
+        put("אנגלית", "English");
+        put("מצב יהודי", "Jewish Mode");
+        put("מציג תאריך עברי, זמני הלכה, ברכות, דף יומי וספירת העומר", "Shows Hebrew dates, halachic times, blessings, Daf Yomi, and the Omer count");
+        put("לתזכר ימים יהודיים", "Jewish day reminders");
+        put("ימים יהודיים", "Jewish days");
+        put("יום כיפור קטן", "Yom Kippur Katan");
+        put("פרשת השבוע", "Weekly Parsha");
+        put("שבת מיוחדת", "Special Shabbat");
+        put("עלות השחר", "Dawn");
+        put("זריחה", "Sunrise");
+        put("סוף זמן שמע מג״א", "Latest Shema (MGA)");
+        put("סוף זמן שמע גר״א", "Latest Shema (GRA)");
+        put("סוף זמן ברכות ק״ש", "Latest Shema Blessings");
+        put("חצות", "Halachic Midday");
+        put("מנחה גדולה", "Mincha Gedola");
+        put("מנחה קטנה", "Mincha Ketana");
+        put("פלג המנחה", "Plag HaMincha");
+        put("שקיעה", "Sunset");
+        put("צאת הכוכבים", "Nightfall");
+        put("לא זמין", "Unavailable");
+        put("תאריך", "Date");
+        put("ימים", "Days");
+        put("שעות", "Hours");
+        put("שבועות", "Weeks");
+        put("חודשים", "Months");
+        put("שנים", "Years");
+        put("כל", "Every");
+        put("דקה", "Minute");
+        put("שעה", "Hour");
+        put("התחלה", "Start");
+        put("סיום", "End");
+        put("לפני / אחרי", "Before / After");
+        put("שעות לפני", "Hours Before");
+        put("מספר הבא", "Starting Number");
+        put("קבועה", "Fixed");
+        put("חד פעמית", "One Time");
+        put("מחזורית", "Repeating");
+        put("מחזוריות", "Repeating");
+        put("תאריך עברי", "Hebrew date");
+        put("אירוע שנתי", "Annual Event");
+        put("זמני הלכה", "Halachic times");
+        put("לפי זמני הלכה", "By halachic time");
+        put("חיונית", "Critical");
+        put("קובץ", "File");
+        put("לטלפון", "To Phone");
+        put("שליחה", "Send");
+        put("העתקה", "Copy");
+        put("מהתיקייה", "From Folder");
+        put("בחר קובץ", "Choose File");
+        put("שחזור מהלוח", "Restore from Clipboard");
+        put("דחיית התזכורת", "Snooze Reminder");
+        put("המופע הקרוב יידחה מהזמן שלו", "The next occurrence will be snoozed from its scheduled time");
+        put("30 דקות", "30 min");
+        put("15 דקות", "15 min");
+        put("שעתיים", "2 hours");
+        put("שעה", "1 hour");
+        put("דחייה", "Snooze");
+        put("בוצע", "Done");
+        put("תזכר אותי בעוד:", "Remind me in:");
+        put("תזכר אותי לעוד שעה", "Remind me in 1 hour");
+        put("שעה מקורית", "Original time");
+        put("שעה אחרונה", "Latest time");
+        put("ספרתי", "I Counted");
+        put("דף", "Page");
+        put("מתוך", "of");
+        put("התראה מקדימה", "Advance reminder");
+        put("שאלת ברכת", "Blessing question");
+        put("הלילה יהיה אפשר להתחיל לברך ברכת הלבנה משעה", "Tonight Birkat Halevana can be recited starting at");
+        put("האם ברכת ברכת הלבנה?", "Did you recite Birkat Halevana?");
+        put("הלילה זה הלילה האחרון לברך ברכת הלבנה, ואפשר לברך כל הלילה.", "Tonight is the last night to recite Birkat Halevana, and it may be recited all night.");
+        put("הלילה זה הלילה האחרון לברך ברכת הלבנה. סוף הזמן בשעה", "Tonight is the last night to recite Birkat Halevana. The final time is");
+        put("אשר יצר", "Asher Yatzar");
+        put("קריאת שמע בזמנה", "Shema on Time");
+        put("בורא נפשות", "Borei Nefashot");
+        put("מעין שלוש - על המחיה", "Me'ein Shalosh - Al Hamichya");
+        put("מעין שלוש - על הגפן", "Me'ein Shalosh - Al Hagefen");
+        put("מעין שלוש - על העץ", "Me'ein Shalosh - Al Ha'etz");
+        put("ברכת המזון", "Birkat Hamazon");
+        put("פתח תקווה, ישראל", "Petah Tikva, Israel");
+        put("תזכורת חיונית לעוד", "Critical reminder in");
+        put("זמן הברכה יוצג לפי עכשיו +", "The blessing time will be shown as now +");
+        put("נוצרה תזכורת ל-", "Created reminder for ");
+        put("לא ניתן לחשב את זמן ההלכה להיום", "Could not calculate today's halachic time");
+        put("זמן התזכורת להיום כבר עבר", "Today's reminder time has already passed");
+        put("כן", "Yes");
+        put("לא", "No");
+        put("סומן שבירכת ברכת הלבנה החודש", "Marked Birkat Halevana as recited for this month");
+        put("הבא: מחשב...", "Next: calculating...");
+        put("ההתראה הקרובה", "Next reminder");
+        put("היום", "Today");
+        put("מחר", "Tomorrow");
+        put("אתמול", "Yesterday");
+        put("יום לפני", "Previous Day");
+        put("יום אחרי", "Next Day");
+        put("עריכה", "Edit");
+        put("מחיקה", "Delete");
+        put("אין התראות שחלפו", "No past alerts");
+        put("ביטול בוצע", "Undo Done");
+        put("החזר כלא בוצע", "Mark Not Done");
+        put("התזכורת כבר לא קיימת", "This reminder no longer exists");
+        put("זמני שקט", "Quiet Times");
+        put("בתקופות האלו רק תזכורות חיוניות יקפצו", "During these periods, only critical reminders will alert");
+        put("אין עדיין זמני שקט", "No quiet times yet");
+        put("זמן שקט חדש", "New Quiet Time");
+        put("עריכת זמן שקט", "Edit Quiet Time");
+        put("אפשר לבחור שעה רגילה או זמן הלכה", "Choose a regular time or a halachic time");
+        put("לפי זמני הלכה", "By halachic time");
+        put("התחלה", "Start");
+        put("סיום", "End");
+        put("תזכורות עד שעה", "Reminders until");
+        put("בחירה לפי תאריך עברי", "Choose by Hebrew Date");
+        put("יום", "Day");
+        put("חודש", "Month");
+        put("שנה", "Year");
+        put("הצג", "Show");
+        put("אין דפים שסומנו כלמדתי בימים האחרונים", "No pages were marked learned in the last few days");
+        put("הדף הועבר להשלמה", "The page was moved to catch-up");
+        put("התזכורת הקרובה:", "Next reminder:");
+        put("מחוץ לימי הספירה", "Outside the Omer period");
+        put("יום", "Day");
+        put("להחיל שינויים מהטלפון?", "Apply changes from phone?");
+        put("הטלפון שלח רק את השינויים שבוצעו שם. זה יעדכן/ימחק רק את מה שהשתנה ולא ידרוס דחיות, היסטוריה או מצב תפעולי אחר.", "The phone sent only the changes made there. This will update or delete only what changed and will not overwrite snoozes, history, or other runtime state.");
+        put("החלה", "Apply");
+        put("שחזור מהטלפון?", "Restore from phone?");
+        put("הטלפון שלח גיבוי לשעון. לשחזר אותו עכשיו? כל התזכורות הקיימות יוחלפו.", "The phone sent a backup to the watch. Restore it now? All existing reminders will be replaced.");
+        put("שחזור", "Restore");
+        put("עבר הזמן", "Time has passed");
+        put("אין מועד עתידי", "No future time");
+        put("בחירה לפי תאריך לועזי", "Choose by Gregorian Date");
+    }
+
+    private UiText() {
+    }
+
+    public static String t(Context context, String value) {
+        if (value == null) {
+            return value;
+        }
+        Integer resId = RES.get(value);
+        if (resId != null) {
+            return context.getString(resId);
+        }
+        if (!AppLanguage.isEnglish(context)) {
+            return value;
+        }
+        String exact = EN.get(value);
+        return exact == null ? value : exact;
+    }
+
+    public static String[] translate(Context context, String[] values) {
+        String[] translated = new String[values.length];
+        for (int i = 0; i < values.length; i++) {
+            translated[i] = t(context, values[i]);
+        }
+        return translated;
+    }
+
+    private static void put(String he, String en) {
+        EN.put(he, en);
+    }
+
+    private static void res(String he, int stringRes) {
+        RES.put(he, stringRes);
+    }
+}
