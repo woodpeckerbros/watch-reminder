@@ -20,6 +20,7 @@ public class ReminderSettings {
     public static final int DEFAULT_VIBRATION_DURATION_MS = 1800;
     public static final int DEFAULT_BLESSING_REMINDER_MINUTES = 65;
     public static final int DEFAULT_ALERT_VOLUME_PERCENT = 80;
+    public static final int DEFAULT_FASTING_HOURS = 16;
 
     private static final String PREFS_NAME = "reminder_settings";
     private static final String KEY_SERVICE_ENABLED = "service_enabled";
@@ -45,6 +46,10 @@ public class ReminderSettings {
     private static final String KEY_JEWISH_MODE = "jewish_mode";
     private static final String KEY_JEWISH_DAY_REMINDERS_ENABLED = "jewish_day_reminders_enabled";
     private static final String KEY_TEKUFA_REMINDERS_ENABLED = "tekufa_reminders_enabled";
+    private static final String KEY_INTERMITTENT_FASTING_ENABLED = "intermittent_fasting_enabled";
+    private static final String KEY_FASTING_HOURS = "fasting_hours";
+    private static final String KEY_FASTING_START_HOUR = "fasting_start_hour";
+    private static final String KEY_FASTING_START_MINUTE = "fasting_start_minute";
 
     private final SharedPreferences prefs;
     private final boolean defaultJewishMode;
@@ -227,6 +232,41 @@ public class ReminderSettings {
 
     public void setTekufaRemindersEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_TEKUFA_REMINDERS_ENABLED, enabled).apply();
+    }
+
+    public boolean intermittentFastingEnabled() {
+        return prefs.getBoolean(KEY_INTERMITTENT_FASTING_ENABLED, false);
+    }
+
+    public void setIntermittentFastingEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_INTERMITTENT_FASTING_ENABLED, enabled).apply();
+    }
+
+    public int fastingHours() {
+        return clamp(prefs.getInt(KEY_FASTING_HOURS, DEFAULT_FASTING_HOURS), 1, 23);
+    }
+
+    public int fastingEatingHours() {
+        return 24 - fastingHours();
+    }
+
+    public void setFastingHours(int hours) {
+        prefs.edit().putInt(KEY_FASTING_HOURS, clamp(hours, 1, 23)).apply();
+    }
+
+    public int fastingStartHour() {
+        return clamp(prefs.getInt(KEY_FASTING_START_HOUR, 12), 0, 23);
+    }
+
+    public int fastingStartMinute() {
+        return clamp(prefs.getInt(KEY_FASTING_START_MINUTE, 0), 0, 59);
+    }
+
+    public void setFastingStartTime(int hour, int minute) {
+        prefs.edit()
+                .putInt(KEY_FASTING_START_HOUR, clamp(hour, 0, 23))
+                .putInt(KEY_FASTING_START_MINUTE, clamp(minute, 0, 59))
+                .apply();
     }
 
     public String language() {

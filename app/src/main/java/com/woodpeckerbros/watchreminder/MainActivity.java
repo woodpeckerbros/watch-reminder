@@ -240,6 +240,7 @@ public class MainActivity extends Activity {
             DafYomiScheduler.schedule(MainActivity.this);
             OmerScheduler.schedule(MainActivity.this);
             TekufaScheduler.schedule(MainActivity.this);
+            IntermittentFastingScheduler.schedule(MainActivity.this);
             ReminderScheduler.scheduleWatchdog(MainActivity.this);
             if (settings.serviceEnabled()) {
                 ReminderForegroundService.start(MainActivity.this);
@@ -281,6 +282,7 @@ public class MainActivity extends Activity {
         OmerScheduler.dispatchIfDueNow(this);
         ReminderScheduler.scheduleWatchdog(this);
         ReminderReceiver.dispatchNextQueued(this);
+        IntermittentFastingScheduler.schedule(this);
     }
 
     @Override
@@ -398,6 +400,10 @@ public class MainActivity extends Activity {
             Button blessingButton = pillButton("תזכורת לברכה", COLOR_SURFACE_2);
             blessingButton.setOnClickListener(v -> showBlessingReminder());
             content.addView(blessingButton, matchParams());
+        }
+
+        if (new ReminderSettings(this).intermittentFastingEnabled()) {
+            addFastingStatusCard(content);
         }
 
         if (!ReminderScheduler.canScheduleExactAlarms(this)) {
@@ -779,6 +785,15 @@ public class MainActivity extends Activity {
         advancedSettings.setOnClickListener(v -> showAdvancedSettings());
         advancedSettingsCard.addView(advancedSettings, matchParams());
         content.addView(advancedSettingsCard, cardParams());
+
+        LinearLayout fastingSettingsCard = card();
+        Button fastingSettings = pillButton("צום לסירוגין", COLOR_SURFACE_2);
+        fastingSettings.setOnClickListener(v -> showFastingSettings());
+        fastingSettingsCard.addView(fastingSettings, matchParams());
+        TextView fastingHint = text(fastingSummary(settings), 11, COLOR_MUTED);
+        fastingHint.setPadding(0, dp(4), 0, 0);
+        fastingSettingsCard.addView(fastingHint);
+        content.addView(fastingSettingsCard, cardParams());
 
         QuietTimeRuleStore quietStore = new QuietTimeRuleStore(this);
         LinearLayout quietCard = card();
@@ -1231,6 +1246,170 @@ public class MainActivity extends Activity {
         actions.addView(back);
         content.addView(actions);
         setScrollableContent(content);
+    }
+
+    private void showFastingSettings() {
+        currentScreen = "fasting_settings";
+        ReminderSettings settings = new ReminderSettings(this);
+        LinearLayout content = baseContent();
+        addTitle(content, "צום לסירוגין", "");
+
+        LinearLayout enabledCard = card();
+        Switch enabledSwitch = new Switch(this);
+        setSwitchText(enabledSwitch, "פעיל");
+        enabledSwitch.setChecked(settings.intermittentFastingEnabled());
+        enabledCard.addView(enabledSwitch);
+        TextView enabledHint = text(fastingSummary(settings), 11, COLOR_MUTED);
+        enabledHint.setPadding(0, dp(4), 0, 0);
+        enabledCard.addView(enabledHint);
+        content.addView(enabledCard, cardParams());
+
+        LinearLayout hoursCard = card();
+        TextView hoursTitle = text("שעות צום וחלון אכילה", 15, COLOR_TEXT);
+        hoursTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        hoursCard.addView(hoursTitle);
+        TextView hoursHint = text("חלון האכילה מחושב אוטומטית מתוך 24 שעות", 11, COLOR_MUTED);
+        hoursHint.setPadding(0, dp(3), 0, dp(5));
+        hoursCard.addView(hoursHint);
+        NumberPicker fastingHoursPicker = numberPicker(1, 23, settings.fastingHours());
+        TextView eatingHours = text("חלון אכילה: " + settings.fastingEatingHours() + " שעות", 13, COLOR_ACCENT);
+        eatingHours.setPadding(0, dp(4), 0, 0);
+        fastingHoursPicker.setOnValueChangedListener((picker, oldValue, newValue) ->
+                eatingHours.setText("חלון אכילה: " + (24 - newValue) + " שעות"));
+        hoursCard.addView(pickerColumn("שעות צום", fastingHoursPicker));
+        hoursCard.addView(eatingHours);
+        content.addView(hoursCard, cardParams());
+
+        LinearLayout startCard = card();
+        TextView startTitle = text("התחלת אכילה ראשונית", 15, COLOR_TEXT);
+        startTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        startCard.addView(startTitle);
+        TextView startHint = text("לדוגמה 12:00 עם 19 שעות צום יוצר חלון 12:00-17:00", 11, COLOR_MUTED);
+        startHint.setPadding(0, dp(3), 0, dp(5));
+        startCard.addView(startHint);
+        LinearLayout startRow = new LinearLayout(this);
+        startRow.setGravity(Gravity.CENTER);
+        NumberPicker hourPicker = numberPicker(0, 23, settings.fastingStartHour());
+        NumberPicker minutePicker = numberPicker(0, 59, settings.fastingStartMinute());
+        startRow.addView(pickerColumn("שעה", hourPicker));
+        startRow.addView(pickerColumn("דקה", minutePicker));
+        startCard.addView(startRow);
+        content.addView(startCard, cardParams());
+
+        if (settings.intermittentFastingEnabled()) {
+            LinearLayout stateCard = card();
+            TextView stateTitle = text("מצב נוכחי", 15, COLOR_TEXT);
+            stateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            stateCard.addView(stateTitle);
+            stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
+            LinearLayout nowActions = actionRow();
+            Button startNow = pillButton("התחלתי לאכול", COLOR_ACCENT_DARK);
+            startNow.setOnClickListener(v -> markFastingStartedNow());
+            Button finishNow = pillButton("סיימתי לאכול", COLOR_SURFACE_2);
+            finishNow.setOnClickListener(v -> markFastingFinishedNow());
+            nowActions.addView(startNow);
+            nowActions.addView(finishNow);
+            stateCard.addView(nowActions);
+            content.addView(stateCard, cardParams());
+        }
+
+        LinearLayout actions = actionRow();
+        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
+        save.setOnClickListener(v -> {
+            boolean wasEnabled = settings.intermittentFastingEnabled();
+            int oldHours = settings.fastingHours();
+            int oldHour = settings.fastingStartHour();
+            int oldMinute = settings.fastingStartMinute();
+            settings.setIntermittentFastingEnabled(enabledSwitch.isChecked());
+            settings.setFastingHours(fastingHoursPicker.getValue());
+            settings.setFastingStartTime(hourPicker.getValue(), minutePicker.getValue());
+            if (!enabledSwitch.isChecked()) {
+                IntermittentFastingScheduler.cancel(this);
+                IntermittentFastingReceiver.cancelNotification(this);
+            } else {
+                if (!wasEnabled
+                        || oldHours != fastingHoursPicker.getValue()
+                        || oldHour != hourPicker.getValue()
+                        || oldMinute != minutePicker.getValue()) {
+                    new IntermittentFastingStore(this).resetToInitialStart();
+                }
+                IntermittentFastingScheduler.schedule(this);
+            }
+            showSettings();
+        });
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showSettings());
+        actions.addView(save);
+        actions.addView(back);
+        content.addView(actions);
+        setScrollableContent(content);
+    }
+
+    private void addFastingStatusCard(LinearLayout content) {
+        LinearLayout fastingCard = card();
+        TextView title = text("צום לסירוגין", 15, COLOR_TEXT);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        fastingCard.addView(title);
+        fastingCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
+        LinearLayout actions = actionRow();
+        Button startNow = pillButton("התחלתי לאכול", COLOR_ACCENT_DARK);
+        startNow.setOnClickListener(v -> markFastingStartedNow());
+        Button finishNow = pillButton("סיימתי לאכול", COLOR_SURFACE_2);
+        finishNow.setOnClickListener(v -> markFastingFinishedNow());
+        actions.addView(startNow);
+        actions.addView(finishNow);
+        fastingCard.addView(actions);
+        content.addView(fastingCard, cardParams());
+    }
+
+    private void markFastingStartedNow() {
+        new IntermittentFastingStore(this).startEatingNow();
+        IntermittentFastingReceiver.cancelNotification(this);
+        IntermittentFastingScheduler.schedule(this);
+        Toast.makeText(this, "חלון האכילה התחיל עכשיו", Toast.LENGTH_SHORT).show();
+        refreshVisibleScreen();
+    }
+
+    private void markFastingFinishedNow() {
+        IntermittentFastingStore store = new IntermittentFastingStore(this);
+        IntermittentFastingStore.Window window = store.window();
+        long now = System.currentTimeMillis();
+        if (!window.eatingOpen(now)) {
+            Toast.makeText(this, "אפשר לסמן סיום רק בתוך חלון האכילה", Toast.LENGTH_SHORT).show();
+            refreshVisibleScreen();
+            return;
+        }
+        store.finishEatingNow();
+        IntermittentFastingReceiver.cancelNotification(this);
+        IntermittentFastingScheduler.schedule(this);
+        Toast.makeText(this, "סומן שסיימת לאכול. חלון האכילה הבא יתעדכן לפי זמן הסיום.", Toast.LENGTH_SHORT).show();
+        refreshVisibleScreen();
+    }
+
+    private String fastingSummary(ReminderSettings settings) {
+        if (!settings.intermittentFastingEnabled()) {
+            return "כבוי";
+        }
+        return settings.fastingHours() + "/" + settings.fastingEatingHours()
+                + " | התחלה ראשונית " + formatTime(settings.fastingStartHour(), settings.fastingStartMinute());
+    }
+
+    private String fastingStateLine() {
+        ReminderSettings settings = new ReminderSettings(this);
+        IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
+        long now = System.currentTimeMillis();
+        if (window.eatingOpen(now)) {
+            return "חלון האכילה פתוח עד " + formatDateTime(window.endAt);
+        }
+        if (window.finished) {
+            return "סיימת לאכול ב-" + formatDateTime(window.finishedAt)
+                    + " | פתיחה הבאה: " + formatDateTime(window.nextStartAt);
+        }
+        if (now < window.startAt) {
+            return "בצום עכשיו | אפשר להתחיל לאכול ב-" + formatDateTime(window.startAt);
+        }
+        return "בצום עכשיו | החלון הבא: " + formatDateTime(window.nextStartAt)
+                + " | " + settings.fastingHours() + "/" + settings.fastingEatingHours();
     }
 
     private void applyJewishModeChange(boolean enabled) {
@@ -3720,6 +3899,10 @@ public class MainActivity extends Activity {
             return true;
         }
         if ("quiet_times".equals(currentScreen)) {
+            showSettings();
+            return true;
+        }
+        if ("fasting_settings".equals(currentScreen)) {
             showSettings();
             return true;
         }

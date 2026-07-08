@@ -78,6 +78,14 @@ public class ReminderPatchApplier {
             if (values.has("omerOffsetMinutes")) settings.setOmerOffsetMinutes(values.optInt("omerOffsetMinutes", settings.omerOffsetMinutes()));
             if (values.has("jewishDayRemindersEnabled")) settings.setJewishDayRemindersEnabled(values.optBoolean("jewishDayRemindersEnabled", settings.jewishDayRemindersEnabled()));
             if (values.has("tekufaRemindersEnabled")) settings.setTekufaRemindersEnabled(values.optBoolean("tekufaRemindersEnabled", settings.tekufaRemindersEnabled()));
+            if (values.has("intermittentFastingEnabled")) settings.setIntermittentFastingEnabled(values.optBoolean("intermittentFastingEnabled", settings.intermittentFastingEnabled()));
+            if (values.has("fastingHours")) settings.setFastingHours(values.optInt("fastingHours", settings.fastingHours()));
+            if (values.has("fastingStartHour") || values.has("fastingStartMinute")) {
+                settings.setFastingStartTime(
+                        values.optInt("fastingStartHour", settings.fastingStartHour()),
+                        values.optInt("fastingStartMinute", settings.fastingStartMinute())
+                );
+            }
             if (values.has("language")) settings.setLanguage(values.optString("language", settings.language()));
             if (values.has("jewishMode")) settings.setJewishMode(values.optBoolean("jewishMode", settings.jewishMode()));
             MoonBlessingScheduler.schedule(context);
@@ -85,6 +93,7 @@ public class ReminderPatchApplier {
             OmerScheduler.schedule(context);
             JewishDayScheduler.schedule(context);
             TekufaScheduler.schedule(context);
+            IntermittentFastingScheduler.schedule(context);
         }
         JSONArray quietRules = operation.optJSONArray("quietTimeRules");
         if (quietRules != null) {
