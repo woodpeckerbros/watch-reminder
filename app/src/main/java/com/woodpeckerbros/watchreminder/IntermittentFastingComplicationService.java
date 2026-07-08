@@ -30,26 +30,21 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     }
 
     private ComplicationData createData(ComplicationType type) {
-        ReminderSettings settings = new ReminderSettings(this);
-        String shortText = settings.intermittentFastingEnabled() ? settings.fastingHours() + "/" + settings.fastingEatingHours() : "כבוי";
-        String title = "צום";
-        String description = fastingDescription(settings);
+        String timeRange = fastingTimeRange();
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(shortText).build(),
-                    new PlainComplicationText.Builder(description).build()
+                    new PlainComplicationText.Builder(timeRange).build(),
+                    new PlainComplicationText.Builder(timeRange).build()
             )
-                    .setTitle(new PlainComplicationText.Builder(title).build())
                     .setMonochromaticImage(image())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(description).build(),
-                    new PlainComplicationText.Builder(description).build()
+                    new PlainComplicationText.Builder(timeRange).build(),
+                    new PlainComplicationText.Builder(timeRange).build()
             )
-                    .setTitle(new PlainComplicationText.Builder("צום לסירוגין").build())
                     .setMonochromaticImage(image())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
@@ -57,19 +52,20 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
         return new NoDataComplicationData();
     }
 
-    private String fastingDescription(ReminderSettings settings) {
+    private String fastingTimeRange() {
+        ReminderSettings settings = new ReminderSettings(this);
         if (!settings.intermittentFastingEnabled()) {
-            return "צום לסירוגין כבוי";
+            int startMinutes = settings.fastingStartHour() * 60 + settings.fastingStartMinute();
+            int endMinutes = (startMinutes + settings.fastingEatingHours() * 60) % (24 * 60);
+            return formatClock(startMinutes) + "-" + formatClock(endMinutes);
         }
         IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
-        long now = System.currentTimeMillis();
-        if (window.eatingOpen(now)) {
-            return "אכילה עד " + NextReminderCalculator.formatTime(window.endAt);
-        }
-        if (window.finished) {
-            return "הבא " + NextReminderCalculator.formatTime(window.nextStartAt);
-        }
-        return "אכילה ב-" + NextReminderCalculator.formatTime(window.startAt);
+        return NextReminderCalculator.formatTime(window.startAt) + "-" + NextReminderCalculator.formatTime(window.endAt);
+    }
+
+    private String formatClock(int minutesOfDay) {
+        int normalized = ((minutesOfDay % (24 * 60)) + (24 * 60)) % (24 * 60);
+        return String.format(java.util.Locale.US, "%02d:%02d", normalized / 60, normalized % 60);
     }
 
     private MonochromaticImage image() {
