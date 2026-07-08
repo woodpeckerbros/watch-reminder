@@ -15,6 +15,10 @@ public class ComplicationRefresh {
                     context,
                     new ComponentName(context, NextReminderComplicationService.class)
             ).requestUpdateAll();
+            ComplicationDataSourceUpdateRequester.create(
+                    context,
+                    new ComponentName(context, IntermittentFastingComplicationService.class)
+            ).requestUpdateAll();
         } catch (Exception ignored) {
         }
     }

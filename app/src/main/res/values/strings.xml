@@ -4,6 +4,7 @@
     <string name="complication_blessing_reminder">תזכורת לברכה</string>
     <string name="complication_zmanim">זמני היום</string>
     <string name="complication_hebrew_date">תאריך עברי</string>
+    <string name="complication_intermittent_fasting">צום לסירוגין</string>
     <string name="ui_new_reminder">תזכורת חדשה</string>
     <string name="ui_edit_reminder">עריכת תזכורת</string>
     <string name="ui_reminder_editor_subtitle">שם, זמן, סוג ופעילות</string>

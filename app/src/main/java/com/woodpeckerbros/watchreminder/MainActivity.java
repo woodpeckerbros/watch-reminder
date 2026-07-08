@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
     public static final String EXTRA_OPEN_BLESSING_REMINDER = "open_blessing_reminder";
     public static final String EXTRA_OPEN_PENDING_RESTORE = "open_pending_restore";
     public static final String EXTRA_OPEN_ZMANIM_DAY = "open_zmanim_day";
+    public static final String EXTRA_OPEN_FASTING_SETTINGS = "open_fasting_settings";
 
     private static final int REQUEST_POST_NOTIFICATIONS = 10;
     private static final int REQUEST_FINE_LOCATION = 11;
@@ -139,6 +140,7 @@ public class MainActivity extends Activity {
     private boolean pendingBlessingReminder;
     private boolean pendingRestoreFromPhone;
     private boolean pendingZmanimDay;
+    private boolean pendingFastingSettings;
     private boolean zmanimBackToSettings = true;
     private long lastForegroundDueCheckAt;
     private long createdAt;
@@ -173,6 +175,7 @@ public class MainActivity extends Activity {
             openPendingBlessingReminder();
             openPendingRestoreFromPhone();
             openPendingZmanimDay();
+            openPendingFastingSettings();
         }, 260L);
         scheduleStartupMaintenance();
     }
@@ -302,6 +305,7 @@ public class MainActivity extends Activity {
         openPendingBlessingReminder();
         openPendingRestoreFromPhone();
         openPendingZmanimDay();
+        openPendingFastingSettings();
     }
 
     @Override
@@ -400,10 +404,6 @@ public class MainActivity extends Activity {
             Button blessingButton = pillButton("תזכורת לברכה", COLOR_SURFACE_2);
             blessingButton.setOnClickListener(v -> showBlessingReminder());
             content.addView(blessingButton, matchParams());
-        }
-
-        if (new ReminderSettings(this).intermittentFastingEnabled()) {
-            addFastingStatusCard(content);
         }
 
         if (!ReminderScheduler.canScheduleExactAlarms(this)) {
@@ -1287,13 +1287,9 @@ public class MainActivity extends Activity {
         TextView startHint = text("לדוגמה 12:00 עם 19 שעות צום יוצר חלון 12:00-17:00", 11, COLOR_MUTED);
         startHint.setPadding(0, dp(3), 0, dp(5));
         startCard.addView(startHint);
-        LinearLayout startRow = new LinearLayout(this);
-        startRow.setGravity(Gravity.CENTER);
         NumberPicker hourPicker = numberPicker(0, 23, settings.fastingStartHour());
         NumberPicker minutePicker = numberPicker(0, 59, settings.fastingStartMinute());
-        startRow.addView(pickerColumn("שעה", hourPicker));
-        startRow.addView(pickerColumn("דקה", minutePicker));
-        startCard.addView(startRow);
+        startCard.addView(timePickerRow(hourPicker, minutePicker));
         content.addView(startCard, cardParams());
 
         if (settings.intermittentFastingEnabled()) {
@@ -1302,14 +1298,7 @@ public class MainActivity extends Activity {
             stateTitle.setTypeface(Typeface.DEFAULT_BOLD);
             stateCard.addView(stateTitle);
             stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
-            LinearLayout nowActions = actionRow();
-            Button startNow = pillButton("התחלתי לאכול", COLOR_ACCENT_DARK);
-            startNow.setOnClickListener(v -> markFastingStartedNow());
-            Button finishNow = pillButton("סיימתי לאכול", COLOR_SURFACE_2);
-            finishNow.setOnClickListener(v -> markFastingFinishedNow());
-            nowActions.addView(startNow);
-            nowActions.addView(finishNow);
-            stateCard.addView(nowActions);
+            stateCard.addView(fastingActionRow());
             content.addView(stateCard, cardParams());
         }
 
@@ -1335,6 +1324,7 @@ public class MainActivity extends Activity {
                 }
                 IntermittentFastingScheduler.schedule(this);
             }
+            ComplicationRefresh.request(this);
             showSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
@@ -1345,27 +1335,23 @@ public class MainActivity extends Activity {
         setScrollableContent(content);
     }
 
-    private void addFastingStatusCard(LinearLayout content) {
-        LinearLayout fastingCard = card();
-        TextView title = text("צום לסירוגין", 15, COLOR_TEXT);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        fastingCard.addView(title);
-        fastingCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
+    private LinearLayout fastingActionRow() {
         LinearLayout actions = actionRow();
-        Button startNow = pillButton("התחלתי לאכול", COLOR_ACCENT_DARK);
-        startNow.setOnClickListener(v -> markFastingStartedNow());
+        actions.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         Button finishNow = pillButton("סיימתי לאכול", COLOR_SURFACE_2);
         finishNow.setOnClickListener(v -> markFastingFinishedNow());
-        actions.addView(startNow);
+        Button startNow = pillButton("התחלתי לאכול", COLOR_ACCENT_DARK);
+        startNow.setOnClickListener(v -> markFastingStartedNow());
         actions.addView(finishNow);
-        fastingCard.addView(actions);
-        content.addView(fastingCard, cardParams());
+        actions.addView(startNow);
+        return actions;
     }
 
     private void markFastingStartedNow() {
         new IntermittentFastingStore(this).startEatingNow();
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
+        ComplicationRefresh.request(this);
         Toast.makeText(this, "חלון האכילה התחיל עכשיו", Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
@@ -1382,6 +1368,7 @@ public class MainActivity extends Activity {
         store.finishEatingNow();
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
+        ComplicationRefresh.request(this);
         Toast.makeText(this, "סומן שסיימת לאכול. חלון האכילה הבא יתעדכן לפי זמן הסיום.", Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
@@ -1523,13 +1510,9 @@ public class MainActivity extends Activity {
         setSwitchText(enabled, "תזכורת דף היומי פעילה");
         enabled.setChecked(settings.dafYomiEnabled());
         timeCard.addView(enabled);
-        LinearLayout timeRow = new LinearLayout(this);
-        timeRow.setGravity(Gravity.CENTER);
         NumberPicker hour = numberPicker(0, 23, settings.dafYomiHour());
         NumberPicker minute = numberPicker(0, 59, settings.dafYomiMinute());
-        timeRow.addView(pickerColumn("שעה", hour));
-        timeRow.addView(pickerColumn("דקות", minute));
-        timeCard.addView(timeRow);
+        timeCard.addView(timePickerRow(hour, minute));
         content.addView(timeCard, cardParams());
 
         LinearLayout correctionCard = card();
@@ -1889,12 +1872,9 @@ public class MainActivity extends Activity {
         views.useZmanim.setChecked(QuietTimeRuleStore.Rule.MODE_ZMANIM.equals(mode));
         views.card.addView(views.useZmanim);
 
-        views.fixedRow = new LinearLayout(this);
-        views.fixedRow.setGravity(Gravity.CENTER);
         views.hour = numberPicker(0, 23, hourValue);
         views.minute = numberPicker(0, 59, minuteValue);
-        views.fixedRow.addView(pickerColumn("שעה", views.hour));
-        views.fixedRow.addView(pickerColumn("דקה", views.minute));
+        views.fixedRow = timePickerRow(views.hour, views.minute);
         views.card.addView(views.fixedRow);
 
         views.zmanimSection = new LinearLayout(this);
@@ -2927,19 +2907,13 @@ public class MainActivity extends Activity {
 
         LinearLayout timeCard = card();
         LinearLayout zmanimCard = card();
-        LinearLayout timePickers = new LinearLayout(this);
-        timePickers.setGravity(Gravity.CENTER);
-        timePickers.setPadding(0, dp(2), 0, 0);
-
         NumberPicker hourPicker = numberPicker(0, 23, selectedHour);
         hourPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedHour = newValue);
         NumberPicker minutePicker = numberPicker(0, 59, selectedMinute);
         minutePicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedMinute = newValue);
 
-        LinearLayout hourColumn = pickerColumn("שעה", hourPicker);
-        LinearLayout minuteColumn = pickerColumn("דקה", minutePicker);
-        timePickers.addView(hourColumn);
-        timePickers.addView(minuteColumn);
+        LinearLayout timePickers = timePickerRow(hourPicker, minutePicker);
+        timePickers.setPadding(0, dp(2), 0, 0);
         timeCard.addView(timePickers);
 
         Switch zmanimSwitch = new Switch(this);
@@ -3193,8 +3167,6 @@ public class MainActivity extends Activity {
         NumberPicker intervalPicker = numberPicker(1, 365, selectedPeriodicInterval);
         intervalPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedPeriodicInterval = newValue);
         repeatRow.addView(pickerColumn("כל", intervalPicker));
-        LinearLayout endTimeRow = new LinearLayout(this);
-        endTimeRow.setGravity(Gravity.CENTER);
         NumberPicker endHourPicker = numberPicker(0, 23, selectedPeriodicEndHour);
         NumberPicker endMinutePicker = numberPicker(0, 59, selectedPeriodicEndMinute);
         endHourPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedPeriodicEndHour = newValue);
@@ -3224,8 +3196,7 @@ public class MainActivity extends Activity {
         card.addView(repeatRow);
         TextView endTimeTitle = text("תזכורות עד שעה", 12, COLOR_MUTED);
         endTimeTitle.setPadding(0, dp(8), 0, 0);
-        endTimeRow.addView(pickerColumn("שעה", endHourPicker));
-        endTimeRow.addView(pickerColumn("דקה", endMinutePicker));
+        LinearLayout endTimeRow = timePickerRow(endHourPicker, endMinutePicker);
         LinearLayout endTimeSection = new LinearLayout(this);
         endTimeSection.setOrientation(LinearLayout.VERTICAL);
         endTimeSection.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -4010,6 +3981,9 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra(EXTRA_OPEN_ZMANIM_DAY, false)) {
             pendingZmanimDay = true;
         }
+        if (intent.getBooleanExtra(EXTRA_OPEN_FASTING_SETTINGS, false)) {
+            pendingFastingSettings = true;
+        }
     }
 
     private void openPendingBlessingReminder() {
@@ -4024,6 +3998,13 @@ public class MainActivity extends Activity {
             pendingZmanimDay = false;
             zmanimBackToSettings = false;
             showZmanimDay(System.currentTimeMillis());
+        }
+    }
+
+    private void openPendingFastingSettings() {
+        if (pendingFastingSettings) {
+            pendingFastingSettings = false;
+            showFastingSettings();
         }
     }
 
@@ -4309,6 +4290,15 @@ public class MainActivity extends Activity {
         column.addView(title);
         column.addView(picker);
         return column;
+    }
+
+    private LinearLayout timePickerRow(NumberPicker hourPicker, NumberPicker minutePicker) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER);
+        row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        row.addView(pickerColumn("שעה", hourPicker));
+        row.addView(pickerColumn("דקה", minutePicker));
+        return row;
     }
 
     private LinearLayout actionRow() {
