@@ -2,11 +2,13 @@ package com.woodpeckerbros.watchreminder;
 
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.graphics.drawable.Icon;
 import android.os.RemoteException;
 
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationType;
 import androidx.wear.watchface.complications.data.LongTextComplicationData;
+import androidx.wear.watchface.complications.data.MonochromaticImage;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
 import androidx.wear.watchface.complications.data.PlainComplicationText;
 import androidx.wear.watchface.complications.data.ShortTextComplicationData;
@@ -35,6 +37,7 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
                     new PlainComplicationText.Builder(timeRange.full).build()
             )
                     .setTitle(new PlainComplicationText.Builder(timeRange.endLine).build())
+                    .setMonochromaticImage(image())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
@@ -63,6 +66,12 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     private String formatClock(int minutesOfDay) {
         int normalized = ((minutesOfDay % (24 * 60)) + (24 * 60)) % (24 * 60);
         return String.format(java.util.Locale.US, "%02d:%02d", normalized / 60, normalized % 60);
+    }
+
+    private MonochromaticImage image() {
+        return new MonochromaticImage.Builder(
+                Icon.createWithResource(this, R.drawable.ic_complication_clock)
+        ).build();
     }
 
     private PendingIntent openFastingSettingsIntent() {
