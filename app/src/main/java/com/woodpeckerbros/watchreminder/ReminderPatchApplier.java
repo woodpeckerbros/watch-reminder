@@ -77,12 +77,14 @@ public class ReminderPatchApplier {
             if (values.has("omerEnabled")) settings.setOmerEnabled(values.optBoolean("omerEnabled", settings.omerEnabled()));
             if (values.has("omerOffsetMinutes")) settings.setOmerOffsetMinutes(values.optInt("omerOffsetMinutes", settings.omerOffsetMinutes()));
             if (values.has("jewishDayRemindersEnabled")) settings.setJewishDayRemindersEnabled(values.optBoolean("jewishDayRemindersEnabled", settings.jewishDayRemindersEnabled()));
+            if (values.has("tekufaRemindersEnabled")) settings.setTekufaRemindersEnabled(values.optBoolean("tekufaRemindersEnabled", settings.tekufaRemindersEnabled()));
             if (values.has("language")) settings.setLanguage(values.optString("language", settings.language()));
             if (values.has("jewishMode")) settings.setJewishMode(values.optBoolean("jewishMode", settings.jewishMode()));
             MoonBlessingScheduler.schedule(context);
             DafYomiScheduler.schedule(context);
             OmerScheduler.schedule(context);
             JewishDayScheduler.schedule(context);
+            TekufaScheduler.schedule(context);
         }
         JSONArray quietRules = operation.optJSONArray("quietTimeRules");
         if (quietRules != null) {
@@ -105,5 +107,6 @@ public class ReminderPatchApplier {
         }
         DafYomiScheduler.schedule(context);
         OmerScheduler.schedule(context);
+        TekufaScheduler.schedule(context);
     }
 }

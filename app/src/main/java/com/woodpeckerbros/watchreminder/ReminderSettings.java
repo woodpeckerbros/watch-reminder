@@ -44,6 +44,7 @@ public class ReminderSettings {
     private static final String KEY_LANGUAGE = "language";
     private static final String KEY_JEWISH_MODE = "jewish_mode";
     private static final String KEY_JEWISH_DAY_REMINDERS_ENABLED = "jewish_day_reminders_enabled";
+    private static final String KEY_TEKUFA_REMINDERS_ENABLED = "tekufa_reminders_enabled";
 
     private final SharedPreferences prefs;
     private final boolean defaultJewishMode;
@@ -220,6 +221,14 @@ public class ReminderSettings {
         prefs.edit().putBoolean(KEY_JEWISH_DAY_REMINDERS_ENABLED, enabled).apply();
     }
 
+    public boolean tekufaRemindersEnabled() {
+        return jewishMode() && prefs.getBoolean(KEY_TEKUFA_REMINDERS_ENABLED, true);
+    }
+
+    public void setTekufaRemindersEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_TEKUFA_REMINDERS_ENABLED, enabled).apply();
+    }
+
     public String language() {
         String value = prefs.getString(KEY_LANGUAGE, LANGUAGE_AUTO);
         if (LANGUAGE_HEBREW.equals(value) || LANGUAGE_ENGLISH.equals(value)) {
@@ -253,6 +262,9 @@ public class ReminderSettings {
         SharedPreferences.Editor editor = prefs.edit().putBoolean(KEY_JEWISH_MODE, enabled);
         if (enabled && !prefs.contains(KEY_JEWISH_DAY_REMINDERS_ENABLED)) {
             editor.putBoolean(KEY_JEWISH_DAY_REMINDERS_ENABLED, true);
+        }
+        if (enabled && !prefs.contains(KEY_TEKUFA_REMINDERS_ENABLED)) {
+            editor.putBoolean(KEY_TEKUFA_REMINDERS_ENABLED, true);
         }
         editor.apply();
     }

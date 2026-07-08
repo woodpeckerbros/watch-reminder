@@ -194,6 +194,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".TekufaReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".WatchdogReceiver"
             android:exported="false" />
 

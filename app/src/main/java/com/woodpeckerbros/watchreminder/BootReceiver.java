@@ -20,6 +20,7 @@ public class BootReceiver extends BroadcastReceiver {
         OmerScheduler.schedule(context);
         OmerScheduler.dispatchIfDueNow(context);
         JewishDayScheduler.schedule(context);
+        TekufaScheduler.schedule(context);
         ReminderScheduler.scheduleWatchdog(context);
         ReminderReceiver.dispatchNextQueued(context);
         if (new ReminderSettings(context).serviceEnabled()) {

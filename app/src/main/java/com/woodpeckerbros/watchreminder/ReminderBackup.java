@@ -73,6 +73,7 @@ public class ReminderBackup {
                             .put("omerEnabled", settings.omerEnabled())
                             .put("omerOffsetMinutes", settings.omerOffsetMinutes())
                             .put("jewishDayRemindersEnabled", settings.jewishDayRemindersEnabled())
+                            .put("tekufaRemindersEnabled", settings.tekufaRemindersEnabled())
                             .put("language", settings.language())
                             .put("jewishMode", settings.jewishMode()))
                     .put("quietTimeRules", new QuietTimeRuleStore(context).toJsonArray())
@@ -312,12 +313,14 @@ public class ReminderBackup {
         settings.setOmerEnabled(json.optBoolean("omerEnabled", settings.omerEnabled()));
         settings.setOmerOffsetMinutes(json.optInt("omerOffsetMinutes", settings.omerOffsetMinutes()));
         settings.setJewishDayRemindersEnabled(json.optBoolean("jewishDayRemindersEnabled", settings.jewishDayRemindersEnabled()));
+        settings.setTekufaRemindersEnabled(json.optBoolean("tekufaRemindersEnabled", settings.tekufaRemindersEnabled()));
         settings.setLanguage(json.optString("language", settings.language()));
         settings.setJewishMode(json.optBoolean("jewishMode", settings.jewishMode()));
         MoonBlessingScheduler.schedule(context);
         DafYomiScheduler.schedule(context);
         OmerScheduler.schedule(context);
         JewishDayScheduler.schedule(context);
+        TekufaScheduler.schedule(context);
     }
 
     private static File documentsDir(Context context) {

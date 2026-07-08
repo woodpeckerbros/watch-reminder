@@ -184,6 +184,7 @@ public class MainActivity extends Activity {
             store.rescheduleAll();
             DafYomiScheduler.schedule(this);
             OmerScheduler.schedule(this);
+            TekufaScheduler.schedule(this);
             ReminderScheduler.scheduleWatchdog(this);
             showList();
         } else if (exactAlarmRequestStarted) {
@@ -237,6 +238,7 @@ public class MainActivity extends Activity {
             store.rescheduleAll();
             DafYomiScheduler.schedule(MainActivity.this);
             OmerScheduler.schedule(MainActivity.this);
+            TekufaScheduler.schedule(MainActivity.this);
             ReminderScheduler.scheduleWatchdog(MainActivity.this);
             if (settings.serviceEnabled()) {
                 ReminderForegroundService.start(MainActivity.this);
@@ -251,6 +253,7 @@ public class MainActivity extends Activity {
                 ReminderReceiver.dispatchNextQueued(MainActivity.this);
                 DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
                 OmerScheduler.dispatchIfDueNow(MainActivity.this);
+                TekufaScheduler.schedule(MainActivity.this);
                 refreshVisibleScreen();
                 requestMissingAccessIfNeeded();
             });
@@ -697,10 +700,14 @@ public class MainActivity extends Activity {
                 settings.setLanguage(selectedLanguage);
                 if (settings.jewishMode()) {
                     settings.setJewishDayRemindersEnabled(true);
+                    settings.setTekufaRemindersEnabled(true);
                     JewishDayScheduler.schedule(MainActivity.this);
+                    TekufaScheduler.schedule(MainActivity.this);
                 } else {
                     JewishDayScheduler.cancel(MainActivity.this);
                     JewishDayReceiver.cancelNotification(MainActivity.this);
+                    TekufaScheduler.cancel(MainActivity.this);
+                    TekufaReceiver.cancelNotification(MainActivity.this);
                 }
                 recreate();
             }
@@ -743,6 +750,28 @@ public class MainActivity extends Activity {
         });
         if (settings.jewishMode()) {
             content.addView(jewishDayCard, cardParams());
+        }
+
+        LinearLayout tekufaCard = card();
+        Switch tekufaSwitch = new Switch(this);
+        setSwitchText(tekufaSwitch, "לתזכר זמן תקופה");
+        tekufaSwitch.setChecked(settings.tekufaRemindersEnabled());
+        tekufaCard.addView(tekufaSwitch);
+        TextView tekufaHint = text(tekufaReminderSummary(settings), 11, COLOR_MUTED);
+        tekufaHint.setPadding(0, dp(4), 0, 0);
+        tekufaCard.addView(tekufaHint);
+        tekufaSwitch.setOnClickListener(v -> {
+            settings.setTekufaRemindersEnabled(tekufaSwitch.isChecked());
+            if (tekufaSwitch.isChecked()) {
+                TekufaScheduler.schedule(this);
+            } else {
+                TekufaScheduler.cancel(this);
+                TekufaReceiver.cancelNotification(this);
+            }
+            tekufaHint.setText(tekufaReminderSummary(settings));
+        });
+        if (settings.jewishMode()) {
+            content.addView(tekufaCard, cardParams());
         }
 
         LinearLayout vibrationCard = card();
@@ -1037,6 +1066,13 @@ public class MainActivity extends Activity {
                 JewishDayScheduler.cancel(this);
                 JewishDayReceiver.cancelNotification(this);
             }
+            settings.setTekufaRemindersEnabled(settings.jewishMode() && tekufaSwitch.isChecked());
+            if (settings.jewishMode() && settings.tekufaRemindersEnabled()) {
+                TekufaScheduler.schedule(this);
+            } else {
+                TekufaScheduler.cancel(this);
+                TekufaReceiver.cancelNotification(this);
+            }
             settings.setMoonBlessingEnabled(settings.jewishMode() && moonSwitch.isChecked());
             if (settings.jewishMode() && settings.moonBlessingEnabled()) {
                 MoonBlessingScheduler.schedule(this);
@@ -1098,15 +1134,20 @@ public class MainActivity extends Activity {
             settings.setDafYomiEnabled(false);
             settings.setOmerEnabled(false);
             settings.setJewishDayRemindersEnabled(false);
+            settings.setTekufaRemindersEnabled(false);
             MoonBlessingScheduler.cancel(this);
             MoonBlessingReceiver.cancelNotification(this);
             DafYomiScheduler.cancel(this);
             OmerScheduler.cancel(this);
             JewishDayScheduler.cancel(this);
             JewishDayReceiver.cancelNotification(this);
+            TekufaScheduler.cancel(this);
+            TekufaReceiver.cancelNotification(this);
         } else {
             settings.setJewishDayRemindersEnabled(true);
             JewishDayScheduler.schedule(this);
+            settings.setTekufaRemindersEnabled(true);
+            TekufaScheduler.schedule(this);
         }
         store.rescheduleAll();
         ComplicationRefresh.request(this);
@@ -1691,6 +1732,13 @@ public class MainActivity extends Activity {
                 ? UiText.t(this, "היום")
                 : UiText.t(this, "מחר");
         return prefix + " " + next.label + ": " + NextReminderCalculator.formatDateTime(next.triggerAt);
+    }
+
+    private String tekufaReminderSummary(ReminderSettings settings) {
+        if (!settings.tekufaRemindersEnabled()) {
+            return UiText.t(this, "כבוי");
+        }
+        return UiText.t(this, "פעיל") + " | " + TekufaHelper.summary(this, System.currentTimeMillis());
     }
 
     private String quietRuleDetails(QuietTimeRuleStore.Rule rule) {
@@ -2287,6 +2335,7 @@ public class MainActivity extends Activity {
         locationValue.setText(zmanimLocationLine());
         store.rescheduleAll();
         JewishDayScheduler.schedule(this);
+        TekufaScheduler.schedule(this);
         MoonBlessingScheduler.schedule(this);
         DafYomiScheduler.schedule(this);
         OmerScheduler.schedule(this);

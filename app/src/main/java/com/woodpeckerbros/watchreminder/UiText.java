@@ -149,6 +149,16 @@ public class UiText {
         put("מציג תאריך עברי, זמני הלכה, ברכות, דף יומי וספירת העומר", "Shows Hebrew dates, halachic times, blessings, Daf Yomi, and the Omer count");
         put("לתזכר ימים יהודיים", "Jewish day reminders");
         put("ימים יהודיים", "Jewish days");
+        put("תזכורת תקופה", "Tekufa Reminder");
+        put("לתזכר זמן תקופה", "Tekufa time reminder");
+        put("זמן התקופה", "Tekufa time");
+        put("תקופת ניסן", "Tekufat Nisan");
+        put("תקופת תמוז", "Tekufat Tammuz");
+        put("תקופת תשרי", "Tekufat Tishrei");
+        put("תקופת טבת", "Tekufat Tevet");
+        put("יש להימנע משתיית מים גלויים מ־", "Avoid drinking uncovered water from ");
+        put("עד", "to");
+        put("לא נמצאה תקופה קרובה", "No upcoming tekufa found");
         put("יום כיפור קטן", "Yom Kippur Katan");
         put("פרשת השבוע", "Weekly Parsha");
         put("שבת מיוחדת", "Special Shabbat");
