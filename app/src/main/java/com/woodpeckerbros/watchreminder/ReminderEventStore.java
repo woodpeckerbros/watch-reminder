@@ -24,18 +24,21 @@ public class ReminderEventStore {
 
     private static final String PREFS_NAME = "reminder_events";
     private static final String KEY_ITEMS = "items";
+    private static final String KEY_CLEAR_GENERATION = "clear_generation";
     private static final int MAX_EVENTS = 80;
     private static final int MAX_EVENTS_TO_READ = MAX_EVENTS * 3;
     private static final long SNOOZE_CHAIN_WINDOW_MS = 8 * 60 * 60 * 1000L;
 
     private final Context context;
     private final SharedPreferences prefs;
+    private int clearGeneration;
     private ArrayList<Event> rawCache;
     private ArrayList<Event> collapsedCache;
 
     public ReminderEventStore(Context context) {
         this.context = context.getApplicationContext();
         prefs = this.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        clearGeneration = prefs.getInt(KEY_CLEAR_GENERATION, 0);
     }
 
     public void markFired(String occurrenceId, String reminderId, String reminderName, long scheduledAt, boolean snooze) {
@@ -286,7 +289,12 @@ public class ReminderEventStore {
 
     public void clear() {
         preserveOperationalState(getAll());
-        prefs.edit().remove(KEY_ITEMS).apply();
+        int nextGeneration = prefs.getInt(KEY_CLEAR_GENERATION, 0) + 1;
+        prefs.edit()
+                .putInt(KEY_CLEAR_GENERATION, nextGeneration)
+                .remove(KEY_ITEMS)
+                .commit();
+        clearGeneration = nextGeneration;
         rawCache = null;
         collapsedCache = null;
         ReminderDueChecker.markCheckedNow(context);
@@ -366,6 +374,11 @@ public class ReminderEventStore {
     }
 
     private void save(ArrayList<Event> events) {
+        if (clearGeneration != prefs.getInt(KEY_CLEAR_GENERATION, 0)) {
+            rawCache = null;
+            collapsedCache = null;
+            return;
+        }
         events = collapseSnoozeChains(events);
         events.sort(Comparator.comparingLong((Event event) -> event.scheduledAt).reversed());
         while (events.size() > MAX_EVENTS) {
