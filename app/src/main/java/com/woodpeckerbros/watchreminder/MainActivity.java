@@ -734,19 +734,47 @@ public class MainActivity extends Activity {
         jewishModeCard.addView(jewishModeHint);
         content.addView(jewishModeCard, cardParams());
 
-        LinearLayout navigationCard = card();
         if (settings.jewishMode()) {
+            LinearLayout jewishSettingsCard = card();
             Button jewishSettings = pillButton("זמנים יהודיים", COLOR_SURFACE_2);
             jewishSettings.setOnClickListener(v -> showJewishSettings());
-            navigationCard.addView(jewishSettings, matchParams());
+            jewishSettingsCard.addView(jewishSettings, matchParams());
+            content.addView(jewishSettingsCard, cardParams());
         }
+        LinearLayout alertSettingsCard = card();
         Button alertSettings = pillButton("רטט וצלילים", COLOR_SURFACE_2);
         alertSettings.setOnClickListener(v -> showAlertSettings());
-        navigationCard.addView(alertSettings, matchParams());
+        alertSettingsCard.addView(alertSettings, matchParams());
+        content.addView(alertSettingsCard, cardParams());
+        LinearLayout advancedSettingsCard = card();
         Button advancedSettings = pillButton("הגדרות מתקדמות", COLOR_SURFACE_2);
         advancedSettings.setOnClickListener(v -> showAdvancedSettings());
-        navigationCard.addView(advancedSettings, matchParams());
-        content.addView(navigationCard, cardParams());
+        advancedSettingsCard.addView(advancedSettings, matchParams());
+        content.addView(advancedSettingsCard, cardParams());
+
+        QuietTimeRuleStore quietStore = new QuietTimeRuleStore(this);
+        LinearLayout quietCard = card();
+        Switch quietSwitch = new Switch(this);
+        setSwitchText(quietSwitch, "זמני שקט - לא להפריע");
+        quietSwitch.setChecked(settings.quietMinchaMaariv());
+        quietCard.addView(quietSwitch);
+        TextView quietHint = text(quietTimesSummary(quietStore), 11, COLOR_MUTED);
+        quietHint.setPadding(0, dp(4), 0, 0);
+        quietCard.addView(quietHint);
+        quietCard.setOnClickListener(v -> showQuietTimes());
+        quietSwitch.setOnClickListener(v -> {
+            boolean enabled = quietSwitch.isChecked();
+            settings.setQuietMinchaMaariv(enabled);
+            if (enabled) {
+                quietStore.ensureDefaultMinchaMaarivRule();
+                showQuietTimes();
+            } else {
+                store.rescheduleAll();
+                ComplicationRefresh.request(this);
+                quietHint.setText(quietTimesSummary(quietStore));
+            }
+        });
+        content.addView(quietCard, cardParams());
 
         LinearLayout backupCard = card();
         TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
@@ -862,30 +890,6 @@ public class MainActivity extends Activity {
             content.addView(blessingCard, cardParams());
         }
 
-        QuietTimeRuleStore quietStore = new QuietTimeRuleStore(this);
-        LinearLayout quietCard = card();
-        Switch quietSwitch = new Switch(this);
-        setSwitchText(quietSwitch, "זמני שקט - לא להפריע");
-        quietSwitch.setChecked(settings.quietMinchaMaariv());
-        quietCard.addView(quietSwitch);
-        TextView quietHint = text(quietTimesSummary(quietStore), 11, COLOR_MUTED);
-        quietHint.setPadding(0, dp(4), 0, 0);
-        quietCard.addView(quietHint);
-        quietCard.setOnClickListener(v -> showQuietTimes());
-        quietSwitch.setOnClickListener(v -> {
-            boolean enabled = quietSwitch.isChecked();
-            settings.setQuietMinchaMaariv(enabled);
-            if (enabled) {
-                quietStore.ensureDefaultMinchaMaarivRule();
-                showQuietTimes();
-            } else {
-                store.rescheduleAll();
-                ComplicationRefresh.request(this);
-                quietHint.setText(quietTimesSummary(quietStore));
-            }
-        });
-        content.addView(quietCard, cardParams());
-
         LinearLayout moonCard = card();
         Switch moonSwitch = new Switch(this);
         setSwitchText(moonSwitch, "ברכת הלבנה");
@@ -895,8 +899,11 @@ public class MainActivity extends Activity {
         moonHint.setPadding(0, dp(4), 0, 0);
         moonCard.addView(moonHint);
         Button moonHandled = smallWideButton("סמן שבירכתי", COLOR_SURFACE_2);
-        moonHandled.setVisibility(settings.moonBlessingEnabled() ? View.VISIBLE : View.GONE);
-        moonHandled.setOnClickListener(v -> markMoonBlessingHandled(moonHint));
+        moonHandled.setVisibility(canMarkMoonBlessingHandled(settings) ? View.VISIBLE : View.GONE);
+        moonHandled.setOnClickListener(v -> {
+            markMoonBlessingHandled(moonHint);
+            moonHandled.setVisibility(View.GONE);
+        });
         moonCard.addView(moonHandled);
         moonSwitch.setOnClickListener(v -> {
             settings.setMoonBlessingEnabled(moonSwitch.isChecked());
@@ -906,7 +913,7 @@ public class MainActivity extends Activity {
                 MoonBlessingScheduler.cancel(this);
                 MoonBlessingReceiver.cancelNotification(this);
             }
-            moonHandled.setVisibility(moonSwitch.isChecked() ? View.VISIBLE : View.GONE);
+            moonHandled.setVisibility(canMarkMoonBlessingHandled(settings) ? View.VISIBLE : View.GONE);
             moonHint.setText(moonBlessingSummary(settings));
         });
         if (settings.jewishMode()) {
@@ -976,10 +983,6 @@ public class MainActivity extends Activity {
         LinearLayout actions = actionRow();
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
         save.setOnClickListener(v -> {
-            settings.setQuietMinchaMaariv(quietSwitch.isChecked());
-            if (quietSwitch.isChecked()) {
-                new QuietTimeRuleStore(this).ensureDefaultMinchaMaarivRule();
-            }
             settings.setBlessingReminderMinutes(blessingMinutesPicker.getValue());
             settings.setJewishDayRemindersEnabled(settings.jewishMode() && jewishDaySwitch.isChecked());
             if (settings.jewishMode() && settings.jewishDayRemindersEnabled()) {
@@ -1042,6 +1045,7 @@ public class MainActivity extends Activity {
         Switch soundSwitch = new Switch(this);
         setSwitchText(soundSwitch, "צלצול");
         soundSwitch.setChecked(settings.alertSoundEnabled());
+        soundSwitch.setOnClickListener(v -> settings.setAlertSoundEnabled(soundSwitch.isChecked()));
         vibrationCard.addView(soundSwitch);
 
         TextView ringtoneValue = text(ringtoneTitle(settings.alertSoundUri()), 11, COLOR_MUTED);
@@ -1093,6 +1097,7 @@ public class MainActivity extends Activity {
             }
         });
         vibrationSwitch.setOnClickListener(v -> {
+            settings.setVibrationEnabled(vibrationSwitch.isChecked());
             if (vibrationSwitch.isChecked()) {
                 previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], alertDuration.getValue() * 1000);
             } else {
@@ -1138,6 +1143,16 @@ public class MainActivity extends Activity {
         Switch serviceSwitch = new Switch(this);
         setSwitchText(serviceSwitch, "בדיקת רקע פעילה");
         serviceSwitch.setChecked(settings.serviceEnabled());
+        serviceSwitch.setOnClickListener(v -> {
+            settings.setServiceEnabled(serviceSwitch.isChecked());
+            if (settings.serviceEnabled()) {
+                ReminderScheduler.scheduleWatchdog(this);
+                ReminderForegroundService.start(this);
+            } else {
+                ReminderForegroundService.stop(this);
+                ReminderScheduler.scheduleWatchdog(this);
+            }
+        });
         serviceCard.addView(serviceSwitch);
         TextView serviceHint = text("אם ההתראות לא מתקבלות בזמן, אפשר להפעיל בדיקת רקע ולבחור כל כמה דקות לדגום. הגדרה זו עלולה לצרוך יותר סוללה.", 11, COLOR_MUTED);
         serviceHint.setPadding(0, dp(4), 0, dp(4));
@@ -1281,7 +1296,7 @@ public class MainActivity extends Activity {
         Button add = pillButton("הוספה", COLOR_ACCENT_DARK);
         add.setOnClickListener(v -> showQuietRuleEditor(null));
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> showJewishSettings());
+        back.setOnClickListener(v -> showSettings());
         actions.addView(add);
         actions.addView(back);
         content.addView(actions);
@@ -1772,6 +1787,18 @@ public class MainActivity extends Activity {
         MoonBlessingScheduler.schedule(this);
         moonHint.setText(moonBlessingSummary(new ReminderSettings(this)));
         Toast.makeText(this, UiText.t(this, "סומן שבירכת ברכת הלבנה החודש"), Toast.LENGTH_SHORT).show();
+    }
+
+    private boolean canMarkMoonBlessingHandled(ReminderSettings settings) {
+        if (!settings.jewishMode() || !settings.moonBlessingEnabled()) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        MoonBlessingHelper.Window window = MoonBlessingHelper.windowFor(this, now);
+        if (now < window.startAt || now > window.endAt) {
+            return false;
+        }
+        return !new MoonBlessingStore(this).isHandled(MoonBlessingHelper.monthKey(window));
     }
 
     private String omerSummary(ReminderSettings settings) {
@@ -3665,7 +3692,7 @@ public class MainActivity extends Activity {
             return true;
         }
         if ("quiet_times".equals(currentScreen)) {
-            showJewishSettings();
+            showSettings();
             return true;
         }
         if ("daf_yomi".equals(currentScreen)) {
