@@ -9,6 +9,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class TekufaReceiver extends BroadcastReceiver {
     private static final String CHANNEL_ID = "tekufa_alerts_no_system_vibration_v1";
     private static final int NOTIFICATION_ID = "tekufa_alert".hashCode();
@@ -20,7 +24,7 @@ public class TekufaReceiver extends BroadcastReceiver {
             AppLog.d(context, "tekufa receiver skipped disabled");
             return;
         }
-        TekufaHelper.Event event = eventFromIntent(intent);
+        TekufaScheduler.ScheduledEvent event = eventFromIntent(intent);
         if (event == null) {
             event = TekufaScheduler.nextEvent(System.currentTimeMillis() - 60_000L);
         }
@@ -30,36 +34,53 @@ public class TekufaReceiver extends BroadcastReceiver {
         TekufaScheduler.schedule(context);
     }
 
-    private static TekufaHelper.Event eventFromIntent(Intent intent) {
+    private static TekufaScheduler.ScheduledEvent eventFromIntent(Intent intent) {
         if (intent == null || !intent.hasExtra(TekufaScheduler.EXTRA_WINDOW_START_AT)) {
             return null;
         }
-        return new TekufaHelper.Event(
+        TekufaHelper.Event tekufa = new TekufaHelper.Event(
                 intent.getIntExtra(TekufaScheduler.EXTRA_SEASON_INDEX, 0),
                 intent.getLongExtra(TekufaScheduler.EXTRA_LOCAL_MEAN_AT, 0),
                 intent.getLongExtra(TekufaScheduler.EXTRA_OFFICIAL_AT, 0),
                 intent.getLongExtra(TekufaScheduler.EXTRA_WINDOW_START_AT, 0),
                 intent.getLongExtra(TekufaScheduler.EXTRA_WINDOW_END_AT, 0)
         );
+        return new TekufaScheduler.ScheduledEvent(
+                intent.getStringExtra(TekufaScheduler.EXTRA_KIND),
+                0,
+                tekufa
+        );
     }
 
-    private static void showNotification(Context context, TekufaHelper.Event event) {
+    private static void showNotification(Context context, TekufaScheduler.ScheduledEvent event) {
         createChannel(context);
         String title = UiText.t(context, "תזכורת תקופה");
-        String text = TekufaHelper.name(context, event.seasonIndex)
-                + ": "
-                + UiText.t(context, "זמן התקופה")
-                + " "
-                + NextReminderCalculator.formatTime(event.localMeanAt)
-                + " / "
-                + NextReminderCalculator.formatTime(event.officialAt)
+        TekufaHelper.Event tekufa = event.tekufa;
+        String prefix = TekufaScheduler.KIND_START.equals(event.kind)
+                ? UiText.t(context, "זמן התקופה מתחיל עכשיו")
+                : UiText.t(context, "תזכורת מקדימה לזמן התקופה");
+        String text = prefix
                 + ". "
+                + TekufaHelper.name(context, tekufa.seasonIndex)
+                + " | "
+                + UiText.t(context, "תאריך")
+                + ": "
+                + new SimpleDateFormat("dd/MM", Locale.US).format(new Date(tekufa.windowStartAt))
+                + " | "
+                + UiText.t(context, "זמן התקופה")
+                + ": "
+                + NextReminderCalculator.formatTime(tekufa.localMeanAt)
+                + " / "
+                + NextReminderCalculator.formatTime(tekufa.officialAt)
+                + " | "
+                + UiText.t(context, "חלון")
+                + ": "
                 + UiText.t(context, "יש להימנע משתיית מים גלויים מ־")
-                + NextReminderCalculator.formatTime(event.windowStartAt)
+                + NextReminderCalculator.formatTime(tekufa.windowStartAt)
                 + " "
                 + UiText.t(context, "עד")
                 + " "
-                + NextReminderCalculator.formatTime(event.windowEndAt);
+                + NextReminderCalculator.formatTime(tekufa.windowEndAt);
         Intent openIntent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(

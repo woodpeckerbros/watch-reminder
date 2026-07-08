@@ -161,6 +161,9 @@ public class UiText {
         put("תקופת תמוז", "Tekufat Tammuz");
         put("תקופת תשרי", "Tekufat Tishrei");
         put("תקופת טבת", "Tekufat Tevet");
+        put("תזכורת מקדימה לזמן התקופה", "Advance tekufa reminder");
+        put("זמן התקופה מתחיל עכשיו", "The tekufa window starts now");
+        put("חלון", "Window");
         put("יש להימנע משתיית מים גלויים מ־", "Avoid drinking uncovered water from ");
         put("עד", "to");
         put("לא נמצאה תקופה קרובה", "No upcoming tekufa found");

@@ -2,7 +2,9 @@ package com.woodpeckerbros.watchreminder;
 
 import android.content.Context;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 
 public class TekufaHelper {
@@ -21,13 +23,23 @@ public class TekufaHelper {
 
     public static Event next(long now) {
         Event best = null;
-        for (int offset = -24; offset <= 80; offset++) {
-            Event event = eventAtOffset(offset);
+        for (Event event : upcoming(now)) {
             if (event.windowEndAt > now && (best == null || event.windowStartAt < best.windowStartAt)) {
                 best = event;
             }
         }
         return best;
+    }
+
+    public static List<Event> upcoming(long now) {
+        List<Event> events = new ArrayList<>();
+        for (int offset = -24; offset <= 80; offset++) {
+            Event event = eventAtOffset(offset);
+            if (event.windowEndAt > now) {
+                events.add(event);
+            }
+        }
+        return events;
     }
 
     public static String summary(Context context, long now) {
