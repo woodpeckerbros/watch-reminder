@@ -145,8 +145,13 @@ public class UiText {
         put("אוטומטי לפי השעון", "Automatic by watch language");
         put("עברית", "Hebrew");
         put("אנגלית", "English");
+        put("זמנים יהודיים", "Jewish Times");
+        put("רטט וצלילים", "Vibration and Sounds");
+        put("הגדרות מתקדמות", "Advanced Settings");
+        put("מצב יהודי כבוי", "Jewish Mode is off");
         put("מצב יהודי", "Jewish Mode");
         put("מציג תאריך עברי, זמני הלכה, ברכות, דף יומי וספירת העומר", "Shows Hebrew dates, halachic times, blessings, Daf Yomi, and the Omer count");
+        put("אם ההתראות לא מתקבלות בזמן, אפשר להפעיל בדיקת רקע ולבחור כל כמה דקות לדגום. הגדרה זו עלולה לצרוך יותר סוללה.", "If reminders are not arriving on time, enable background checks and choose how often to sample. This setting may use more battery.");
         put("לתזכר ימים יהודיים", "Jewish day reminders");
         put("ימים יהודיים", "Jewish days");
         put("תזכורת תקופה", "Tekufa Reminder");

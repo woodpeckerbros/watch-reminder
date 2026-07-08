@@ -284,7 +284,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
-        if ("settings".equals(currentScreen)) {
+        if ("settings".equals(currentScreen) || "alert_settings".equals(currentScreen)) {
             stopVibrationPreview();
         }
         super.onPause();
@@ -316,8 +316,12 @@ public class MainActivity extends Activity {
             DeferredReminderDispatcher.run(this);
         } else if (requestCode == REQUEST_FINE_LOCATION) {
             permissionRequestInFlight = false;
-            if ("settings".equals(currentScreen)) {
-                showSettings();
+            if ("settings".equals(currentScreen) || "jewish_settings".equals(currentScreen)) {
+                if ("jewish_settings".equals(currentScreen)) {
+                    showJewishSettings();
+                } else {
+                    showSettings();
+                }
             }
         }
         requestMissingAccessIfNeeded();
@@ -730,6 +734,77 @@ public class MainActivity extends Activity {
         jewishModeCard.addView(jewishModeHint);
         content.addView(jewishModeCard, cardParams());
 
+        LinearLayout navigationCard = card();
+        if (settings.jewishMode()) {
+            Button jewishSettings = pillButton("זמנים יהודיים", COLOR_SURFACE_2);
+            jewishSettings.setOnClickListener(v -> showJewishSettings());
+            navigationCard.addView(jewishSettings, matchParams());
+        }
+        Button alertSettings = pillButton("רטט וצלילים", COLOR_SURFACE_2);
+        alertSettings.setOnClickListener(v -> showAlertSettings());
+        navigationCard.addView(alertSettings, matchParams());
+        Button advancedSettings = pillButton("הגדרות מתקדמות", COLOR_SURFACE_2);
+        advancedSettings.setOnClickListener(v -> showAdvancedSettings());
+        navigationCard.addView(advancedSettings, matchParams());
+        content.addView(navigationCard, cardParams());
+
+        LinearLayout backupCard = card();
+        TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
+        backupTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        backupCard.addView(backupTitle);
+        TextView backupHint = text("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", 11, COLOR_MUTED);
+        backupHint.setPadding(0, dp(3), 0, dp(6));
+        backupCard.addView(backupHint);
+        LinearLayout backupActions = actionRow();
+        Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
+        backupToPhone.setOnClickListener(v -> sendBackupToPhone());
+        Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
+        restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
+        backupActions.addView(backupToPhone);
+        backupActions.addView(restoreFromPhone);
+        backupCard.addView(backupActions);
+        content.addView(backupCard, cardParams());
+
+        LinearLayout logsCard = card();
+        TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
+        logsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        logsCard.addView(logsTitle);
+        TextView logsHint = text("לבדיקת תזכורות שלא קופצות בזמן", 11, COLOR_MUTED);
+        logsHint.setPadding(0, dp(3), 0, dp(6));
+        logsCard.addView(logsHint);
+        LinearLayout logsActions = actionRow();
+        Button sendLogs = pillButton("לוגים לטלפון", COLOR_ACCENT_DARK);
+        sendLogs.setOnClickListener(v -> sendLogsToPhone());
+        logsActions.addView(sendLogs);
+        logsCard.addView(logsActions);
+        Button clearLogs = pillButton("ניקוי לוגים", COLOR_SURFACE_2);
+        clearLogs.setOnClickListener(v -> confirmClearLogs());
+        logsCard.addView(clearLogs);
+        content.addView(logsCard, cardParams());
+
+        LinearLayout actions = actionRow();
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showList());
+        actions.addView(back);
+        content.addView(actions);
+
+        setScrollableContent(content);
+    }
+
+    private void showJewishSettings() {
+        currentScreen = "jewish_settings";
+        ReminderSettings settings = new ReminderSettings(this);
+        LinearLayout content = baseContent();
+        addTitle(content, "זמנים יהודיים", "");
+        if (!settings.jewishMode()) {
+            content.addView(emptyState("מצב יהודי כבוי"));
+            Button back = pillButton("חזרה", COLOR_SURFACE_2);
+            back.setOnClickListener(v -> showSettings());
+            content.addView(back);
+            setScrollableContent(content);
+            return;
+        }
+
         LinearLayout jewishDayCard = card();
         Switch jewishDaySwitch = new Switch(this);
         setSwitchText(jewishDaySwitch, "לתזכר ימים יהודיים");
@@ -773,109 +848,6 @@ public class MainActivity extends Activity {
         if (settings.jewishMode()) {
             content.addView(tekufaCard, cardParams());
         }
-
-        LinearLayout vibrationCard = card();
-        TextView vibrationTitle = text("התראה", 15, COLOR_TEXT);
-        vibrationTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        vibrationCard.addView(vibrationTitle);
-
-        Switch soundSwitch = new Switch(this);
-        setSwitchText(soundSwitch, "צלצול");
-        soundSwitch.setChecked(settings.alertSoundEnabled());
-        vibrationCard.addView(soundSwitch);
-
-        TextView ringtoneValue = text(ringtoneTitle(settings.alertSoundUri()), 11, COLOR_MUTED);
-        ringtoneValue.setPadding(0, dp(3), 0, dp(5));
-        vibrationCard.addView(ringtoneValue);
-        Button chooseRingtone = pillButton("בחירת צלצול", COLOR_SURFACE_2);
-        chooseRingtone.setOnClickListener(v -> openRingtonePicker(settings.alertSoundUri()));
-        vibrationCard.addView(chooseRingtone);
-
-        NumberPicker volumePicker = numberPicker(1, 10, settings.alertVolumeLevel());
-        vibrationCard.addView(pickerColumn("עוצמת צלצול", volumePicker));
-
-        Switch vibrationSwitch = new Switch(this);
-        setSwitchText(vibrationSwitch, "רטט");
-        vibrationSwitch.setChecked(settings.vibrationEnabled());
-        vibrationCard.addView(vibrationSwitch);
-
-        String[] vibrationLabels = {"רגיל", "עדין", "חזק", "ארוך"};
-        String[] vibrationValues = {
-                ReminderSettings.VIBRATION_NORMAL,
-                ReminderSettings.VIBRATION_GENTLE,
-                ReminderSettings.VIBRATION_STRONG,
-                ReminderSettings.VIBRATION_LONG
-        };
-        Spinner vibrationSpinner = new Spinner(this);
-        ArrayAdapter<String> vibrationAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(vibrationLabels));
-        vibrationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        vibrationSpinner.setAdapter(vibrationAdapter);
-        vibrationSpinner.setSelection(indexOf(vibrationValues, settings.vibrationStyle()));
-        vibrationCard.addView(vibrationSpinner, matchParams());
-
-        NumberPicker alertDuration = numberPicker(1, 10, Math.max(1, Math.round(settings.alertDurationMs() / 1000f)));
-        vibrationCard.addView(pickerColumn("אורך התראה בשניות", alertDuration));
-        final boolean[] vibrationSelectionReady = {false};
-        vibrationSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                if (!vibrationSelectionReady[0]) {
-                    vibrationSelectionReady[0] = true;
-                    return;
-                }
-                if (vibrationSwitch.isChecked()) {
-                    previewVibration(vibrationValues[position], alertDuration.getValue() * 1000);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-            }
-        });
-        vibrationSwitch.setOnClickListener(v -> {
-            if (vibrationSwitch.isChecked()) {
-                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], alertDuration.getValue() * 1000);
-            } else {
-                stopVibrationPreview();
-            }
-        });
-        alertDuration.setOnValueChangedListener((picker, oldValue, newValue) -> {
-            if (vibrationSwitch.isChecked()) {
-                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], newValue * 1000);
-            }
-        });
-        content.addView(vibrationCard, cardParams());
-
-        LinearLayout serviceCard = card();
-        Switch serviceSwitch = new Switch(this);
-        setSwitchText(serviceSwitch, "בדיקת רקע פעילה");
-        serviceSwitch.setChecked(settings.serviceEnabled());
-        serviceCard.addView(serviceSwitch);
-        TextView serviceHint = text("ברירת מחדל: כל 3 דקות", 11, COLOR_MUTED);
-        serviceHint.setPadding(0, dp(4), 0, dp(4));
-        serviceCard.addView(serviceHint);
-        int intervalSeconds = settings.checkIntervalSeconds();
-        LinearLayout intervalRow = new LinearLayout(this);
-        intervalRow.setGravity(Gravity.CENTER);
-        NumberPicker intervalMinutesPicker = numberPicker(0, 60, intervalSeconds / 60);
-        NumberPicker intervalSecondsPicker = numberPicker(0, 59, intervalSeconds % 60);
-        intervalRow.addView(pickerColumn("דקות", intervalMinutesPicker));
-        intervalRow.addView(pickerColumn("שניות", intervalSecondsPicker));
-        serviceCard.addView(intervalRow);
-        content.addView(serviceCard, cardParams());
-
-        LinearLayout autoCard = card();
-        TextView autoTitle = text("דחייה אוטומטית", 15, COLOR_TEXT);
-        autoTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        autoCard.addView(autoTitle);
-        TextView autoHint = text("אם אין תגובה, המסך נסגר והתזכורת נדחית", 11, COLOR_MUTED);
-        autoHint.setPadding(0, dp(3), 0, dp(5));
-        autoCard.addView(autoHint);
-        NumberPicker autoDelayPicker = numberPicker(5, 600, settings.autoSnoozeDelaySeconds());
-        autoCard.addView(pickerColumn("המתנה בשניות", autoDelayPicker));
-        NumberPicker autoSnoozePicker = numberPicker(1, 240, settings.autoSnoozeMinutes());
-        autoCard.addView(pickerColumn("דחייה בדקות", autoSnoozePicker));
-        content.addView(autoCard, cardParams());
 
         LinearLayout blessingCard = card();
         TextView blessingTitle = text("תזכורת לברכה", 15, COLOR_TEXT);
@@ -1001,59 +973,9 @@ public class MainActivity extends Activity {
             content.addView(locationCard, cardParams());
         }
 
-        LinearLayout backupCard = card();
-        TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
-        backupTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        backupCard.addView(backupTitle);
-        TextView backupHint = text("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", 11, COLOR_MUTED);
-        backupHint.setPadding(0, dp(3), 0, dp(6));
-        backupCard.addView(backupHint);
-        LinearLayout backupActions = actionRow();
-        Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
-        backupToPhone.setOnClickListener(v -> sendBackupToPhone());
-        Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
-        restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
-        backupActions.addView(backupToPhone);
-        backupActions.addView(restoreFromPhone);
-        backupCard.addView(backupActions);
-        content.addView(backupCard, cardParams());
-
-        LinearLayout logsCard = card();
-        TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
-        logsTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        logsCard.addView(logsTitle);
-        TextView logsHint = text("לבדיקת תזכורות שלא קופצות בזמן", 11, COLOR_MUTED);
-        logsHint.setPadding(0, dp(3), 0, dp(6));
-        logsCard.addView(logsHint);
-        LinearLayout logsActions = actionRow();
-        Button sendLogs = pillButton("לוגים לטלפון", COLOR_ACCENT_DARK);
-        sendLogs.setOnClickListener(v -> sendLogsToPhone());
-        logsActions.addView(sendLogs);
-        logsCard.addView(logsActions);
-        Button clearLogs = pillButton("ניקוי לוגים", COLOR_SURFACE_2);
-        clearLogs.setOnClickListener(v -> confirmClearLogs());
-        logsCard.addView(clearLogs);
-        content.addView(logsCard, cardParams());
-
         LinearLayout actions = actionRow();
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
         save.setOnClickListener(v -> {
-            stopVibrationPreview();
-            String previousLanguage = settings.language();
-            boolean previousJewishMode = settings.jewishMode();
-            String selectedLanguage = languageValues[languageSpinner.getSelectedItemPosition()];
-            settings.setLanguage(selectedLanguage);
-            settings.setJewishMode(AppLanguage.isHebrewLanguageSetting(selectedLanguage) || jewishModeSwitch.isChecked());
-            settings.setAlertSoundEnabled(soundSwitch.isChecked());
-            settings.setAlertVolumeLevel(volumePicker.getValue());
-            settings.setVibrationEnabled(vibrationSwitch.isChecked());
-            settings.setVibrationStyle(vibrationValues[vibrationSpinner.getSelectedItemPosition()]);
-            settings.setAlertDurationMs(alertDuration.getValue() * 1000);
-            settings.setServiceEnabled(serviceSwitch.isChecked());
-            int seconds = intervalMinutesPicker.getValue() * 60 + intervalSecondsPicker.getValue();
-            settings.setCheckIntervalSeconds(seconds);
-            settings.setAutoSnoozeDelaySeconds(autoDelayPicker.getValue());
-            settings.setAutoSnoozeMinutes(autoSnoozePicker.getValue());
             settings.setQuietMinchaMaariv(quietSwitch.isChecked());
             if (quietSwitch.isChecked()) {
                 new QuietTimeRuleStore(this).ensureDefaultMinchaMaarivRule();
@@ -1095,6 +1017,162 @@ public class MainActivity extends Activity {
             }
             store.rescheduleAll();
             ComplicationRefresh.request(this);
+            showSettings();
+        });
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showSettings());
+        actions.addView(save);
+        actions.addView(back);
+        content.addView(actions);
+
+        setScrollableContent(content);
+    }
+
+    private void showAlertSettings() {
+        currentScreen = "alert_settings";
+        ReminderSettings settings = new ReminderSettings(this);
+        LinearLayout content = baseContent();
+        addTitle(content, "רטט וצלילים", "");
+
+        LinearLayout vibrationCard = card();
+        TextView vibrationTitle = text("התראה", 15, COLOR_TEXT);
+        vibrationTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        vibrationCard.addView(vibrationTitle);
+
+        Switch soundSwitch = new Switch(this);
+        setSwitchText(soundSwitch, "צלצול");
+        soundSwitch.setChecked(settings.alertSoundEnabled());
+        vibrationCard.addView(soundSwitch);
+
+        TextView ringtoneValue = text(ringtoneTitle(settings.alertSoundUri()), 11, COLOR_MUTED);
+        ringtoneValue.setPadding(0, dp(3), 0, dp(5));
+        vibrationCard.addView(ringtoneValue);
+        Button chooseRingtone = pillButton("בחירת צלצול", COLOR_SURFACE_2);
+        chooseRingtone.setOnClickListener(v -> openRingtonePicker(settings.alertSoundUri()));
+        vibrationCard.addView(chooseRingtone);
+
+        NumberPicker volumePicker = numberPicker(1, 10, settings.alertVolumeLevel());
+        vibrationCard.addView(pickerColumn("עוצמת צלצול", volumePicker));
+
+        Switch vibrationSwitch = new Switch(this);
+        setSwitchText(vibrationSwitch, "רטט");
+        vibrationSwitch.setChecked(settings.vibrationEnabled());
+        vibrationCard.addView(vibrationSwitch);
+
+        String[] vibrationLabels = {"רגיל", "עדין", "חזק", "ארוך"};
+        String[] vibrationValues = {
+                ReminderSettings.VIBRATION_NORMAL,
+                ReminderSettings.VIBRATION_GENTLE,
+                ReminderSettings.VIBRATION_STRONG,
+                ReminderSettings.VIBRATION_LONG
+        };
+        Spinner vibrationSpinner = new Spinner(this);
+        ArrayAdapter<String> vibrationAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(vibrationLabels));
+        vibrationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        vibrationSpinner.setAdapter(vibrationAdapter);
+        vibrationSpinner.setSelection(indexOf(vibrationValues, settings.vibrationStyle()));
+        vibrationCard.addView(vibrationSpinner, matchParams());
+
+        NumberPicker alertDuration = numberPicker(1, 10, Math.max(1, Math.round(settings.alertDurationMs() / 1000f)));
+        vibrationCard.addView(pickerColumn("אורך התראה בשניות", alertDuration));
+        final boolean[] vibrationSelectionReady = {false};
+        vibrationSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (!vibrationSelectionReady[0]) {
+                    vibrationSelectionReady[0] = true;
+                    return;
+                }
+                if (vibrationSwitch.isChecked()) {
+                    previewVibration(vibrationValues[position], alertDuration.getValue() * 1000);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+        vibrationSwitch.setOnClickListener(v -> {
+            if (vibrationSwitch.isChecked()) {
+                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], alertDuration.getValue() * 1000);
+            } else {
+                stopVibrationPreview();
+            }
+        });
+        alertDuration.setOnValueChangedListener((picker, oldValue, newValue) -> {
+            if (vibrationSwitch.isChecked()) {
+                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], newValue * 1000);
+            }
+        });
+        content.addView(vibrationCard, cardParams());
+
+        LinearLayout actions = actionRow();
+        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
+        save.setOnClickListener(v -> {
+            stopVibrationPreview();
+            settings.setAlertSoundEnabled(soundSwitch.isChecked());
+            settings.setAlertVolumeLevel(volumePicker.getValue());
+            settings.setVibrationEnabled(vibrationSwitch.isChecked());
+            settings.setVibrationStyle(vibrationValues[vibrationSpinner.getSelectedItemPosition()]);
+            settings.setAlertDurationMs(alertDuration.getValue() * 1000);
+            showSettings();
+        });
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> {
+            stopVibrationPreview();
+            showSettings();
+        });
+        actions.addView(save);
+        actions.addView(back);
+        content.addView(actions);
+        setScrollableContent(content);
+    }
+
+    private void showAdvancedSettings() {
+        currentScreen = "advanced_settings";
+        ReminderSettings settings = new ReminderSettings(this);
+        LinearLayout content = baseContent();
+        addTitle(content, "הגדרות מתקדמות", "");
+
+        LinearLayout serviceCard = card();
+        Switch serviceSwitch = new Switch(this);
+        setSwitchText(serviceSwitch, "בדיקת רקע פעילה");
+        serviceSwitch.setChecked(settings.serviceEnabled());
+        serviceCard.addView(serviceSwitch);
+        TextView serviceHint = text("אם ההתראות לא מתקבלות בזמן, אפשר להפעיל בדיקת רקע ולבחור כל כמה דקות לדגום. הגדרה זו עלולה לצרוך יותר סוללה.", 11, COLOR_MUTED);
+        serviceHint.setPadding(0, dp(4), 0, dp(4));
+        serviceCard.addView(serviceHint);
+        int intervalSeconds = settings.checkIntervalSeconds();
+        LinearLayout intervalRow = new LinearLayout(this);
+        intervalRow.setGravity(Gravity.CENTER);
+        NumberPicker intervalMinutesPicker = numberPicker(0, 60, intervalSeconds / 60);
+        NumberPicker intervalSecondsPicker = numberPicker(0, 59, intervalSeconds % 60);
+        intervalRow.addView(pickerColumn("דקות", intervalMinutesPicker));
+        intervalRow.addView(pickerColumn("שניות", intervalSecondsPicker));
+        serviceCard.addView(intervalRow);
+        content.addView(serviceCard, cardParams());
+
+        LinearLayout autoCard = card();
+        TextView autoTitle = text("דחייה אוטומטית", 15, COLOR_TEXT);
+        autoTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        autoCard.addView(autoTitle);
+        TextView autoHint = text("אם אין תגובה, המסך נסגר והתזכורת נדחית", 11, COLOR_MUTED);
+        autoHint.setPadding(0, dp(3), 0, dp(5));
+        autoCard.addView(autoHint);
+        NumberPicker autoDelayPicker = numberPicker(5, 600, settings.autoSnoozeDelaySeconds());
+        autoCard.addView(pickerColumn("המתנה בשניות", autoDelayPicker));
+        NumberPicker autoSnoozePicker = numberPicker(1, 240, settings.autoSnoozeMinutes());
+        autoCard.addView(pickerColumn("דחייה בדקות", autoSnoozePicker));
+        content.addView(autoCard, cardParams());
+
+        LinearLayout actions = actionRow();
+        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
+        save.setOnClickListener(v -> {
+            settings.setServiceEnabled(serviceSwitch.isChecked());
+            int seconds = intervalMinutesPicker.getValue() * 60 + intervalSecondsPicker.getValue();
+            settings.setCheckIntervalSeconds(seconds);
+            settings.setAutoSnoozeDelaySeconds(autoDelayPicker.getValue());
+            settings.setAutoSnoozeMinutes(autoSnoozePicker.getValue());
             if (settings.serviceEnabled()) {
                 ReminderScheduler.scheduleWatchdog(this);
                 ReminderForegroundService.start(this);
@@ -1102,24 +1180,13 @@ public class MainActivity extends Activity {
                 ReminderForegroundService.stop(this);
                 ReminderScheduler.scheduleWatchdog(this);
             }
-            if (!previousJewishMode && settings.jewishMode() && requestLocationAccessIfNeeded()) {
-                return;
-            }
-            if (!previousLanguage.equals(settings.language()) || previousJewishMode != settings.jewishMode()) {
-                recreate();
-                return;
-            }
-            showList();
+            showSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> {
-            stopVibrationPreview();
-            showList();
-        });
+        back.setOnClickListener(v -> showSettings());
         actions.addView(save);
         actions.addView(back);
         content.addView(actions);
-
         setScrollableContent(content);
     }
 
@@ -1214,7 +1281,7 @@ public class MainActivity extends Activity {
         Button add = pillButton("הוספה", COLOR_ACCENT_DARK);
         add.setOnClickListener(v -> showQuietRuleEditor(null));
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> showSettings());
+        back.setOnClickListener(v -> showJewishSettings());
         actions.addView(add);
         actions.addView(back);
         content.addView(actions);
@@ -1302,10 +1369,10 @@ public class MainActivity extends Activity {
             } else {
                 DafYomiScheduler.cancel(this);
             }
-            showSettings();
+            showJewishSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> showSettings());
+        back.setOnClickListener(v -> showJewishSettings());
         actions.addView(save);
         actions.addView(back);
         content.addView(actions);
@@ -1349,10 +1416,10 @@ public class MainActivity extends Activity {
             } else {
                 OmerScheduler.cancel(this);
             }
-            showSettings();
+            showJewishSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> showSettings());
+        back.setOnClickListener(v -> showJewishSettings());
         actions.addView(save);
         actions.addView(back);
         content.addView(actions);
@@ -3584,22 +3651,29 @@ public class MainActivity extends Activity {
 
     private boolean navigateBack() {
         if ("settings".equals(currentScreen)
+                || "jewish_settings".equals(currentScreen)
+                || "alert_settings".equals(currentScreen)
+                || "advanced_settings".equals(currentScreen)
                 || "backup_export".equals(currentScreen)
                 || "backup_import".equals(currentScreen)) {
             stopVibrationPreview();
-            showList();
+            if ("settings".equals(currentScreen) || "backup_export".equals(currentScreen) || "backup_import".equals(currentScreen)) {
+                showList();
+            } else {
+                showSettings();
+            }
             return true;
         }
         if ("quiet_times".equals(currentScreen)) {
-            showSettings();
+            showJewishSettings();
             return true;
         }
         if ("daf_yomi".equals(currentScreen)) {
-            showSettings();
+            showJewishSettings();
             return true;
         }
         if ("omer".equals(currentScreen)) {
-            showSettings();
+            showJewishSettings();
             return true;
         }
         if ("zmanim_day".equals(currentScreen)) {
