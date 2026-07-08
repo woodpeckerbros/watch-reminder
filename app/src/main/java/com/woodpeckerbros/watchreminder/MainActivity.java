@@ -44,6 +44,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -614,10 +615,7 @@ public class MainActivity extends Activity {
             content.addView(emptyState("אין התראות שחלפו"));
         } else {
             Button clearHistory = pillButton("ניקוי הכל", 0xFF7E2A35);
-            clearHistory.setOnClickListener(v -> {
-                eventStore.clear();
-                showHistory();
-            });
+            clearHistory.setOnClickListener(v -> clearHistoryInBackground());
             topActions.addView(clearHistory);
             topActions.addView(back);
             content.addView(topActions);
@@ -658,6 +656,36 @@ public class MainActivity extends Activity {
         }
 
         setScrollableContent(content);
+    }
+
+    private void clearHistoryInBackground() {
+        currentScreen = "history";
+        LinearLayout content = baseContent();
+        addTitle(content, "היסטוריה", "");
+        LinearLayout loadingCard = card();
+        ProgressBar progress = new ProgressBar(this);
+        loadingCard.addView(progress);
+        TextView loadingText = text("מנקה היסטוריה...", 13, COLOR_MUTED);
+        loadingText.setPadding(0, dp(8), 0, 0);
+        loadingCard.addView(loadingText);
+        content.addView(loadingCard, cardParams());
+        setScrollableContent(content);
+
+        new Thread(() -> {
+            try {
+                new ReminderEventStore(MainActivity.this).clear();
+                mainHandler.post(() -> {
+                    Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "ההיסטוריה נמחקה"), Toast.LENGTH_SHORT).show();
+                    showHistory();
+                });
+            } catch (Exception exception) {
+                AppLog.e(MainActivity.this, "clear history failed", exception);
+                mainHandler.post(() -> {
+                    Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "לא הצלחתי לנקות את ההיסטוריה"), Toast.LENGTH_SHORT).show();
+                    showHistory();
+                });
+            }
+        }, "wr-clear-history").start();
     }
 
     private void showHistory(int scrollY) {

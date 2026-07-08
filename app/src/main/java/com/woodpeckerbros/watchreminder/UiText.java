@@ -81,6 +81,9 @@ public class UiText {
         put("שמירה", "Save");
         put("ביטול", "Cancel");
         put("ניקוי הכל", "Clear All");
+        put("מנקה היסטוריה...", "Clearing history...");
+        put("ההיסטוריה נמחקה", "History cleared");
+        put("לא הצלחתי לנקות את ההיסטוריה", "Could not clear history");
         put("ניקוי לוגים", "Clear Logs");
         put("לוגים", "Logs");
         put("לוגים לטלפון", "Send Logs");
