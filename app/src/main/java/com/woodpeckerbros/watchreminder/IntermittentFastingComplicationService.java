@@ -2,13 +2,11 @@ package com.woodpeckerbros.watchreminder;
 
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.graphics.drawable.Icon;
 import android.os.RemoteException;
 
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationType;
 import androidx.wear.watchface.complications.data.LongTextComplicationData;
-import androidx.wear.watchface.complications.data.MonochromaticImage;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
 import androidx.wear.watchface.complications.data.PlainComplicationText;
 import androidx.wear.watchface.complications.data.ShortTextComplicationData;
@@ -30,48 +28,41 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     }
 
     private ComplicationData createData(ComplicationType type) {
-        String timeRange = fastingTimeRange();
+        TimeRange timeRange = fastingTimeRange();
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange).build(),
-                    new PlainComplicationText.Builder(timeRange).build()
+                    new PlainComplicationText.Builder(timeRange.start).build(),
+                    new PlainComplicationText.Builder(timeRange.full).build()
             )
-                    .setMonochromaticImage(image())
+                    .setTitle(new PlainComplicationText.Builder(timeRange.end).build())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange).build(),
-                    new PlainComplicationText.Builder(timeRange).build()
+                    new PlainComplicationText.Builder(timeRange.full).build(),
+                    new PlainComplicationText.Builder(timeRange.full).build()
             )
-                    .setMonochromaticImage(image())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         return new NoDataComplicationData();
     }
 
-    private String fastingTimeRange() {
+    private TimeRange fastingTimeRange() {
         ReminderSettings settings = new ReminderSettings(this);
         if (!settings.intermittentFastingEnabled()) {
             int startMinutes = settings.fastingStartHour() * 60 + settings.fastingStartMinute();
             int endMinutes = (startMinutes + settings.fastingEatingHours() * 60) % (24 * 60);
-            return formatClock(startMinutes) + "-" + formatClock(endMinutes);
+            return new TimeRange(formatClock(startMinutes), formatClock(endMinutes));
         }
         IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
-        return NextReminderCalculator.formatTime(window.startAt) + "-" + NextReminderCalculator.formatTime(window.endAt);
+        return new TimeRange(NextReminderCalculator.formatTime(window.startAt), NextReminderCalculator.formatTime(window.endAt));
     }
 
     private String formatClock(int minutesOfDay) {
         int normalized = ((minutesOfDay % (24 * 60)) + (24 * 60)) % (24 * 60);
         return String.format(java.util.Locale.US, "%02d:%02d", normalized / 60, normalized % 60);
-    }
-
-    private MonochromaticImage image() {
-        return new MonochromaticImage.Builder(
-                Icon.createWithResource(this, R.drawable.ic_complication_clock)
-        ).build();
     }
 
     private PendingIntent openFastingSettingsIntent() {
@@ -84,5 +75,17 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
                 intent,
                 PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+    }
+
+    private static class TimeRange {
+        final String start;
+        final String end;
+        final String full;
+
+        TimeRange(String start, String end) {
+            this.start = start;
+            this.end = end;
+            this.full = start + "-" + end;
+        }
     }
 }

@@ -406,6 +406,12 @@ public class MainActivity extends Activity {
             content.addView(blessingButton, matchParams());
         }
 
+        if (new ReminderSettings(this).intermittentFastingEnabled()) {
+            Button fastingButton = pillButton("צום לסירוגין", COLOR_SURFACE_2);
+            fastingButton.setOnClickListener(v -> showFastingSettings());
+            content.addView(fastingButton, matchParams());
+        }
+
         if (!ReminderScheduler.canScheduleExactAlarms(this)) {
             TextView warning = infoPill("לחץ כאן כדי לאשר Alarms & reminders לתזכורות מדויקות", COLOR_WARNING);
             warning.setOnClickListener(v -> requestExactAlarmAccessIfNeeded(true));
@@ -769,31 +775,21 @@ public class MainActivity extends Activity {
         content.addView(jewishModeCard, cardParams());
 
         if (settings.jewishMode()) {
-            LinearLayout jewishSettingsCard = card();
             Button jewishSettings = pillButton("זמנים יהודיים", COLOR_SURFACE_2);
             jewishSettings.setOnClickListener(v -> showJewishSettings());
-            jewishSettingsCard.addView(jewishSettings, matchParams());
-            content.addView(jewishSettingsCard, cardParams());
+            content.addView(jewishSettings, matchParams());
         }
-        LinearLayout alertSettingsCard = card();
         Button alertSettings = pillButton("רטט וצלילים", COLOR_SURFACE_2);
         alertSettings.setOnClickListener(v -> showAlertSettings());
-        alertSettingsCard.addView(alertSettings, matchParams());
-        content.addView(alertSettingsCard, cardParams());
-        LinearLayout advancedSettingsCard = card();
+        content.addView(alertSettings, matchParams());
+
         Button advancedSettings = pillButton("הגדרות מתקדמות", COLOR_SURFACE_2);
         advancedSettings.setOnClickListener(v -> showAdvancedSettings());
-        advancedSettingsCard.addView(advancedSettings, matchParams());
-        content.addView(advancedSettingsCard, cardParams());
+        content.addView(advancedSettings, matchParams());
 
-        LinearLayout fastingSettingsCard = card();
         Button fastingSettings = pillButton("צום לסירוגין", COLOR_SURFACE_2);
         fastingSettings.setOnClickListener(v -> showFastingSettings());
-        fastingSettingsCard.addView(fastingSettings, matchParams());
-        TextView fastingHint = text(fastingSummary(settings), 11, COLOR_MUTED);
-        fastingHint.setPadding(0, dp(4), 0, 0);
-        fastingSettingsCard.addView(fastingHint);
-        content.addView(fastingSettingsCard, cardParams());
+        content.addView(fastingSettings, matchParams());
 
         QuietTimeRuleStore quietStore = new QuietTimeRuleStore(this);
         LinearLayout quietCard = card();
@@ -1254,6 +1250,16 @@ public class MainActivity extends Activity {
         LinearLayout content = baseContent();
         addTitle(content, "צום לסירוגין", "");
 
+        if (settings.intermittentFastingEnabled()) {
+            LinearLayout stateCard = card();
+            TextView stateTitle = text("מצב נוכחי", 15, COLOR_TEXT);
+            stateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            stateCard.addView(stateTitle);
+            stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
+            stateCard.addView(fastingActionRow());
+            content.addView(stateCard, cardParams());
+        }
+
         LinearLayout enabledCard = card();
         Switch enabledSwitch = new Switch(this);
         setSwitchText(enabledSwitch, "פעיל");
@@ -1291,16 +1297,6 @@ public class MainActivity extends Activity {
         NumberPicker minutePicker = numberPicker(0, 59, settings.fastingStartMinute());
         startCard.addView(timePickerRow(hourPicker, minutePicker));
         content.addView(startCard, cardParams());
-
-        if (settings.intermittentFastingEnabled()) {
-            LinearLayout stateCard = card();
-            TextView stateTitle = text("מצב נוכחי", 15, COLOR_TEXT);
-            stateTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            stateCard.addView(stateTitle);
-            stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
-            stateCard.addView(fastingActionRow());
-            content.addView(stateCard, cardParams());
-        }
 
         LinearLayout actions = actionRow();
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
