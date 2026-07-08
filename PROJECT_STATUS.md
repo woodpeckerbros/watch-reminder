@@ -47,6 +47,7 @@ WatchReminder/
 - נוצר `PROJECT_STATUS.md`.
 - נוצר `AGENTS.md` עם הנחיות עבודה קצרות לסשנים הבאים.
 - עודכן `AGENTS.md` עם הנחיה לבצע commit עם הערה ברורה ו-push אחרי כל שינוי.
+- עודכן `AGENTS.md` עם הנחיה לענות למשתמש תמיד בעברית.
 - לא בוצעו שינויי קוד.
 - הורץ build מקומי לאימות מצב הפרויקט: `./gradlew assembleDebug`.
 

@@ -1,6 +1,7 @@
 # AGENTS.md
 
 - This is the WatchReminder Android project.
+- Always answer the user in Hebrew.
 - At the start of every session, read `PROJECT_STATUS.md` first.
 - Do not move folders or restructure the project without asking.
 - Do not upgrade Gradle, Android Gradle Plugin, SDK versions, or package names without approval.
