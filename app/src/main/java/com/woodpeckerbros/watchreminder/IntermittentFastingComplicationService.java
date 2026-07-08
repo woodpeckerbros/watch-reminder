@@ -33,19 +33,20 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
         TimeRange timeRange = fastingTimeRange();
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange.startLine).build(),
+                    new PlainComplicationText.Builder(timeRange.endLine).build(),
                     new PlainComplicationText.Builder(timeRange.full).build()
             )
-                    .setTitle(new PlainComplicationText.Builder(timeRange.endLine).build())
+                    .setTitle(new PlainComplicationText.Builder(timeRange.startLine).build())
                     .setMonochromaticImage(image())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange.startLine + "\n" + timeRange.endLine).build(),
+                    new PlainComplicationText.Builder(timeRange.endLine).build(),
                     new PlainComplicationText.Builder(timeRange.full).build()
             )
+                    .setTitle(new PlainComplicationText.Builder(timeRange.startLine).build())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
