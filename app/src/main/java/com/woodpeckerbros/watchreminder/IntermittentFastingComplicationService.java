@@ -31,16 +31,16 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
         TimeRange timeRange = fastingTimeRange();
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange.start).build(),
+                    new PlainComplicationText.Builder(timeRange.startLine).build(),
                     new PlainComplicationText.Builder(timeRange.full).build()
             )
-                    .setTitle(new PlainComplicationText.Builder(timeRange.end).build())
+                    .setTitle(new PlainComplicationText.Builder(timeRange.endLine).build())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange.full).build(),
+                    new PlainComplicationText.Builder(timeRange.startLine + "\n" + timeRange.endLine).build(),
                     new PlainComplicationText.Builder(timeRange.full).build()
             )
                     .setTapAction(openFastingSettingsIntent())
@@ -80,12 +80,16 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     private static class TimeRange {
         final String start;
         final String end;
+        final String startLine;
+        final String endLine;
         final String full;
 
         TimeRange(String start, String end) {
             this.start = start;
             this.end = end;
-            this.full = start + "-" + end;
+            this.startLine = "מ-" + start;
+            this.endLine = "עד-" + end;
+            this.full = startLine + " " + endLine;
         }
     }
 }
