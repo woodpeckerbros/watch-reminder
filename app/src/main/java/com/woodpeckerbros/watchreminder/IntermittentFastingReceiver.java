@@ -43,7 +43,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, eventType, triggerAt, "עוד חצי שעה חלון האכילה נסגר", "עוד חצי שעה נגמר חלון זמן האכילה להיום.");
+            showNotification(context, eventType, triggerAt, "עוד חצי שעה לסיום", "חלון האכילה ייסגר בעוד חצי שעה.");
         } else if (IntermittentFastingScheduler.EVENT_END.equals(eventType)) {
             window = store.window(System.currentTimeMillis());
             if (!retry && window.finished) {

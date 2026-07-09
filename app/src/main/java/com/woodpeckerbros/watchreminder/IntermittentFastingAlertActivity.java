@@ -64,28 +64,28 @@ public class IntermittentFastingAlertActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(12), dp(14), dp(12), dp(14));
+        content.setPadding(dp(10), dp(10), dp(10), dp(10));
         content.setBackgroundColor(COLOR_BG);
 
         LinearLayout textArea = new LinearLayout(this);
         textArea.setOrientation(LinearLayout.VERTICAL);
         textArea.setGravity(Gravity.CENTER);
 
-        TextView title = text(titleText, 19, COLOR_ACCENT);
+        TextView title = text(titleText, 17, COLOR_ACCENT);
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         textArea.addView(title);
 
-        TextView message = text(messageText, 16, COLOR_TEXT);
-        message.setPadding(dp(4), dp(8), dp(4), dp(4));
+        TextView message = text(messageText, 14, COLOR_TEXT);
+        message.setPadding(dp(4), dp(6), dp(4), dp(3));
         textArea.addView(message);
 
-        TextView hint = text("התזכורת תחזור עד שתלחץ הבנתי.", 12, COLOR_MUTED);
-        hint.setPadding(dp(4), dp(2), dp(4), dp(4));
+        TextView hint = text("תחזור עד שתלחץ הבנתי.", 11, COLOR_MUTED);
+        hint.setPadding(dp(4), dp(1), dp(4), dp(3));
         textArea.addView(hint);
         content.addView(textArea, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
-                0.9f
+                1.25f
         ));
 
         Button understood = button("הבנתי", COLOR_ACCENT_DARK);
@@ -96,7 +96,7 @@ public class IntermittentFastingAlertActivity extends Activity {
         content.addView(buttonArea, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
-                1.1f
+                0.75f
         ));
 
         FrameLayout root = new FrameLayout(this);
@@ -178,7 +178,7 @@ public class IntermittentFastingAlertActivity extends Activity {
         button.setTextSize(14);
         button.setAllCaps(false);
         button.setBackground(new android.graphics.drawable.ColorDrawable(color));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46));
         params.setMargins(dp(10), dp(5), dp(10), dp(5));
         button.setLayoutParams(params);
         return button;
