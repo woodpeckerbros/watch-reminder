@@ -66,13 +66,23 @@ public class AnnualReminderHelper {
     }
 
     private static Occurrence occurrenceFor(Context context, Reminder reminder, Calendar main, int eventYear, boolean early, boolean applyQuietTime) {
-        long originalAt = ReminderScheduler.floorToMinute(main.getTimeInMillis());
+        long originalAt = originalTime(context, reminder, main);
         long scheduledAt = originalAt;
         if (early && reminder.annualAdvanceHours > 0) {
             scheduledAt -= reminder.annualAdvanceHours * 60L * 60_000L;
         }
         scheduledAt = ReminderScheduler.floorToMinute(applyQuietTime ? QuietTimeHelper.adjust(context, scheduledAt, reminder) : scheduledAt);
         return new Occurrence(scheduledAt, originalAt, eventYear, early && reminder.annualAdvanceHours > 0);
+    }
+
+    private static long originalTime(Context context, Reminder reminder, Calendar main) {
+        if (context != null && reminder.useZmanim) {
+            long zmanAt = ZmanimHelper.timeFor(context, reminder, main.getTimeInMillis());
+            if (zmanAt != Long.MAX_VALUE) {
+                return ReminderScheduler.floorToMinute(zmanAt);
+            }
+        }
+        return ReminderScheduler.floorToMinute(main.getTimeInMillis());
     }
 
     private static Calendar annualMain(Reminder reminder, int year) {
