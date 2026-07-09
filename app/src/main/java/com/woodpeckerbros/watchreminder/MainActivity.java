@@ -1379,7 +1379,7 @@ public class MainActivity extends Activity {
         NumberPicker hourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
         NumberPicker minutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
         section.addView(timePickerRow(hourPicker, minutePicker));
-        Button apply = pillButton("סמן זמן סיום", COLOR_SURFACE_2);
+        Button apply = pillButton("בחר זמן סיום", COLOR_SURFACE_2);
         apply.setOnClickListener(v -> markFastingFinishedAt(hourPicker.getValue(), minutePicker.getValue()));
         LinearLayout row = actionRow();
         row.addView(apply);
@@ -1391,21 +1391,18 @@ public class MainActivity extends Activity {
         IntermittentFastingStore store = new IntermittentFastingStore(this);
         IntermittentFastingStore.Window window = store.window();
         long now = System.currentTimeMillis();
-        if (!window.eatingOpen(now)) {
-            Toast.makeText(this, "אפשר לסמן סיום רק בתוך חלון האכילה", Toast.LENGTH_SHORT).show();
-            refreshVisibleScreen();
-            return;
-        }
-        long finishedAt = manualTimeInsideWindow(window, hour, minute);
-        if (finishedAt < window.startAt || finishedAt >= window.endAt) {
-            Toast.makeText(this, "הזמן שבחרת מחוץ לחלון האכילה", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        long[] finishTime = manualFinishTime(window, hour, minute, now);
+        long finishedAt = finishTime[0];
+        long sessionStartAt = finishTime[1];
         if (finishedAt > now) {
-            Toast.makeText(this, "אי אפשר לסמן זמן סיום עתידי", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "אי אפשר לבחור זמן סיום עתידי", Toast.LENGTH_SHORT).show();
             return;
         }
-        store.finishEatingAt(finishedAt);
+        if (finishedAt < sessionStartAt) {
+            Toast.makeText(this, "אפשר לבחור זמן סיום רק אחרי פתיחת חלון האכילה", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        store.finishEatingAt(finishedAt, sessionStartAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         ComplicationRefresh.request(this);
@@ -1413,19 +1410,24 @@ public class MainActivity extends Activity {
         refreshVisibleScreen();
     }
 
-    private long manualTimeInsideWindow(IntermittentFastingStore.Window window, int hour, int minute) {
+    private long[] manualFinishTime(IntermittentFastingStore.Window window, int hour, int minute, long now) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(window.startAt);
+        calendar.setTimeInMillis(now);
         calendar.set(Calendar.HOUR_OF_DAY, hour);
         calendar.set(Calendar.MINUTE, minute);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
         long candidate = calendar.getTimeInMillis();
-        if (candidate < window.startAt) {
-            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        if (candidate > now) {
+            calendar.add(Calendar.DAY_OF_YEAR, -1);
             candidate = calendar.getTimeInMillis();
         }
-        return ReminderScheduler.floorToMinute(candidate);
+        candidate = ReminderScheduler.floorToMinute(candidate);
+        long sessionStartAt = window.startAt;
+        if (candidate < sessionStartAt && window.startAt > now) {
+            sessionStartAt -= 24L * 60L * 60_000L;
+        }
+        return new long[]{candidate, sessionStartAt};
     }
 
     private String fastingSummary(ReminderSettings settings) {

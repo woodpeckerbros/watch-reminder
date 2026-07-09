@@ -32,7 +32,7 @@ public class IntermittentFastingStore {
         int eatingHours = settings.fastingEatingHours();
         long endAt = startAt + eatingHours * 60L * 60_000L;
         long finishedAt = prefs.getLong(KEY_FINISHED_AT, 0L);
-        if (finishedAt >= startAt && finishedAt < endAt) {
+        if (finishedAt >= startAt) {
             long nextStartAt = finishedAt + settings.fastingHours() * 60L * 60_000L;
             if (now < nextStartAt) {
                 return new Window(startAt, endAt, finishedAt, nextStartAt, true);
@@ -80,6 +80,13 @@ public class IntermittentFastingStore {
 
     public void finishEatingAt(long finishedAt) {
         prefs.edit()
+                .putLong(KEY_FINISHED_AT, ReminderScheduler.floorToMinute(finishedAt))
+                .apply();
+    }
+
+    public void finishEatingAt(long finishedAt, long startAt) {
+        prefs.edit()
+                .putLong(KEY_CURRENT_START_AT, ReminderScheduler.floorToMinute(startAt))
                 .putLong(KEY_FINISHED_AT, ReminderScheduler.floorToMinute(finishedAt))
                 .apply();
     }
