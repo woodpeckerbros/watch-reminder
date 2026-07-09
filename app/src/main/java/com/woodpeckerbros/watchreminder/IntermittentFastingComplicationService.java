@@ -30,38 +30,43 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     }
 
     private ComplicationData createData(ComplicationType type) {
-        TimeRange timeRange = fastingTimeRange();
+        FastingComplicationText text = fastingText();
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange.endLine).build(),
-                    new PlainComplicationText.Builder(timeRange.full).build()
+                    new PlainComplicationText.Builder(text.time).build(),
+                    new PlainComplicationText.Builder(text.full).build()
             )
-                    .setTitle(new PlainComplicationText.Builder(timeRange.startLine).build())
+                    .setTitle(new PlainComplicationText.Builder(text.label).build())
                     .setMonochromaticImage(image())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(timeRange.endLine).build(),
-                    new PlainComplicationText.Builder(timeRange.full).build()
+                    new PlainComplicationText.Builder(text.time).build(),
+                    new PlainComplicationText.Builder(text.full).build()
             )
-                    .setTitle(new PlainComplicationText.Builder(timeRange.startLine).build())
+                    .setTitle(new PlainComplicationText.Builder(text.label).build())
                     .setTapAction(openFastingSettingsIntent())
                     .build();
         }
         return new NoDataComplicationData();
     }
 
-    private TimeRange fastingTimeRange() {
+    private FastingComplicationText fastingText() {
         ReminderSettings settings = new ReminderSettings(this);
         if (!settings.intermittentFastingEnabled()) {
             int startMinutes = settings.fastingStartHour() * 60 + settings.fastingStartMinute();
             int endMinutes = (startMinutes + settings.fastingEatingHours() * 60) % (24 * 60);
-            return new TimeRange(formatClock(startMinutes), formatClock(endMinutes));
+            return new FastingComplicationText("הצום מתחיל ב:", formatClock(endMinutes));
         }
+        long now = System.currentTimeMillis();
         IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
-        return new TimeRange(NextReminderCalculator.formatTime(window.startAt), NextReminderCalculator.formatTime(window.endAt));
+        if (window.eatingOpen(now)) {
+            return new FastingComplicationText("הצום מתחיל ב:", NextReminderCalculator.formatTime(window.endAt));
+        }
+        long fastEndsAt = window.finished ? window.nextStartAt : window.startAt;
+        return new FastingComplicationText("הצום נגמר ב:", NextReminderCalculator.formatTime(fastEndsAt));
     }
 
     private String formatClock(int minutesOfDay) {
@@ -87,19 +92,15 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
         );
     }
 
-    private static class TimeRange {
-        final String start;
-        final String end;
-        final String startLine;
-        final String endLine;
+    private static class FastingComplicationText {
+        final String label;
+        final String time;
         final String full;
 
-        TimeRange(String start, String end) {
-            this.start = start;
-            this.end = end;
-            this.startLine = "מ-" + start;
-            this.endLine = "עד-" + end;
-            this.full = startLine + " " + endLine;
+        FastingComplicationText(String label, String time) {
+            this.label = label;
+            this.time = time;
+            this.full = label + " " + time;
         }
     }
 }
