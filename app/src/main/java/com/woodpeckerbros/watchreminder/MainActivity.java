@@ -1357,12 +1357,13 @@ public class MainActivity extends Activity {
         IntermittentFastingStore store = new IntermittentFastingStore(this);
         IntermittentFastingStore.Window window = store.window();
         long now = System.currentTimeMillis();
-        if (!window.eatingOpen(now)) {
-            Toast.makeText(this, "אפשר לסמן סיום רק בתוך חלון האכילה", Toast.LENGTH_SHORT).show();
-            refreshVisibleScreen();
+        long finishedAt = ReminderScheduler.floorToMinute(now);
+        long sessionStartAt = sessionStartForFinish(window, finishedAt, now);
+        if (finishedAt < sessionStartAt) {
+            Toast.makeText(this, "אפשר לבחור זמן סיום רק אחרי פתיחת חלון האכילה", Toast.LENGTH_SHORT).show();
             return;
         }
-        store.finishEatingNow();
+        store.finishEatingAt(finishedAt, sessionStartAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         ComplicationRefresh.request(this);
@@ -1423,11 +1424,15 @@ public class MainActivity extends Activity {
             candidate = calendar.getTimeInMillis();
         }
         candidate = ReminderScheduler.floorToMinute(candidate);
+        return new long[]{candidate, sessionStartForFinish(window, candidate, now)};
+    }
+
+    private long sessionStartForFinish(IntermittentFastingStore.Window window, long finishedAt, long now) {
         long sessionStartAt = window.startAt;
-        if (candidate < sessionStartAt && window.startAt > now) {
-            sessionStartAt -= 24L * 60L * 60_000L;
+        if (finishedAt < sessionStartAt && window.startAt > now) {
+            return sessionStartAt - 24L * 60L * 60_000L;
         }
-        return new long[]{candidate, sessionStartAt};
+        return sessionStartAt;
     }
 
     private String fastingSummary(ReminderSettings settings) {
