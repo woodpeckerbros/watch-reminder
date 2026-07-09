@@ -1257,6 +1257,7 @@ public class MainActivity extends Activity {
             stateCard.addView(stateTitle);
             stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
             stateCard.addView(fastingActionRow());
+            stateCard.addView(fastingManualFinishSection());
             content.addView(stateCard, cardParams());
         }
 
@@ -1367,6 +1368,64 @@ public class MainActivity extends Activity {
         ComplicationRefresh.request(this);
         Toast.makeText(this, "סומן שסיימת לאכול. חלון האכילה הבא יתעדכן לפי זמן הסיום.", Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
+    }
+
+    private LinearLayout fastingManualFinishSection() {
+        Calendar now = Calendar.getInstance();
+        LinearLayout section = section();
+        TextView title = text("סיום אכילה ידני", 13, COLOR_MUTED);
+        title.setPadding(0, dp(8), 0, dp(3));
+        section.addView(title);
+        NumberPicker hourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
+        NumberPicker minutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
+        section.addView(timePickerRow(hourPicker, minutePicker));
+        Button apply = pillButton("סמן זמן סיום", COLOR_SURFACE_2);
+        apply.setOnClickListener(v -> markFastingFinishedAt(hourPicker.getValue(), minutePicker.getValue()));
+        LinearLayout row = actionRow();
+        row.addView(apply);
+        section.addView(row);
+        return section;
+    }
+
+    private void markFastingFinishedAt(int hour, int minute) {
+        IntermittentFastingStore store = new IntermittentFastingStore(this);
+        IntermittentFastingStore.Window window = store.window();
+        long now = System.currentTimeMillis();
+        if (!window.eatingOpen(now)) {
+            Toast.makeText(this, "אפשר לסמן סיום רק בתוך חלון האכילה", Toast.LENGTH_SHORT).show();
+            refreshVisibleScreen();
+            return;
+        }
+        long finishedAt = manualTimeInsideWindow(window, hour, minute);
+        if (finishedAt < window.startAt || finishedAt >= window.endAt) {
+            Toast.makeText(this, "הזמן שבחרת מחוץ לחלון האכילה", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (finishedAt > now) {
+            Toast.makeText(this, "אי אפשר לסמן זמן סיום עתידי", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        store.finishEatingAt(finishedAt);
+        IntermittentFastingReceiver.cancelNotification(this);
+        IntermittentFastingScheduler.schedule(this);
+        ComplicationRefresh.request(this);
+        Toast.makeText(this, "סומן שסיימת לאכול ב-" + NextReminderCalculator.formatTime(finishedAt), Toast.LENGTH_SHORT).show();
+        refreshVisibleScreen();
+    }
+
+    private long manualTimeInsideWindow(IntermittentFastingStore.Window window, int hour, int minute) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(window.startAt);
+        calendar.set(Calendar.HOUR_OF_DAY, hour);
+        calendar.set(Calendar.MINUTE, minute);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long candidate = calendar.getTimeInMillis();
+        if (candidate < window.startAt) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1);
+            candidate = calendar.getTimeInMillis();
+        }
+        return ReminderScheduler.floorToMinute(candidate);
     }
 
     private String fastingSummary(ReminderSettings settings) {
