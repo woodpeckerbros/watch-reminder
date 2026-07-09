@@ -223,6 +223,7 @@ public class UiText {
         put("שעה", "1 hour");
         put("דחייה", "Snooze");
         put("בוצע", "Done");
+        put("הבנתי", "Got it");
         put("תזכר אותי בעוד:", "Remind me in:");
         put("תזכר אותי לעוד שעה", "Remind me in 1 hour");
         put("שעה מקורית", "Original time");

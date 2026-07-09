@@ -10,7 +10,7 @@ import android.content.Intent;
 import android.os.Build;
 
 public class IntermittentFastingReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_ID = "intermittent_fasting_alerts_v1";
+    private static final String CHANNEL_ID = "intermittent_fasting_alerts_no_system_vibration_v2";
     private static final int NOTIFICATION_ID = "intermittent_fasting".hashCode();
 
     @Override
@@ -22,26 +22,41 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
         }
         String eventType = intent == null ? "" : intent.getStringExtra(IntermittentFastingScheduler.EXTRA_EVENT_TYPE);
         long triggerAt = intent == null ? 0L : intent.getLongExtra(IntermittentFastingScheduler.EXTRA_TRIGGER_AT, 0L);
+        boolean retry = intent != null && intent.getBooleanExtra(IntermittentFastingScheduler.EXTRA_RETRY, false);
+        if (triggerAt <= 0L) {
+            triggerAt = ReminderScheduler.floorToMinute(System.currentTimeMillis());
+        }
         IntermittentFastingStore store = new IntermittentFastingStore(context);
+        if (store.isAlertAcknowledged(eventType, triggerAt)) {
+            AppLog.d(context, "fasting receiver skipped acknowledged type=" + eventType + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
+            return;
+        }
         IntermittentFastingStore.Window window = store.window(System.currentTimeMillis());
-        AppLog.d(context, "fasting receiver type=" + eventType + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
+        AppLog.d(context, "fasting receiver type=" + eventType + " retry=" + retry + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
         if (IntermittentFastingScheduler.EVENT_START.equals(eventType)) {
-            store.startEatingAt(triggerAt > 0L ? triggerAt : System.currentTimeMillis());
-            showNotification(context, "אפשר להתחיל לאכול", "חלון האכילה שלך נפתח עכשיו. הוא יימשך " + settings.fastingEatingHours() + " שעות.");
+            if (!retry) {
+                store.startEatingAt(triggerAt);
+            }
+            showNotification(context, eventType, triggerAt, "אפשר להתחיל לאכול", "חלון האכילה שלך נפתח עכשיו. הוא יימשך " + settings.fastingEatingHours() + " שעות.");
         } else if (IntermittentFastingScheduler.EVENT_END_WARNING.equals(eventType)) {
-            if (!window.eatingOpen(System.currentTimeMillis())) {
+            if (!retry && !window.eatingOpen(System.currentTimeMillis())) {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, "עוד חצי שעה חלון האכילה נסגר", "כדאי לסיים את האכילה בזמן. אפשר לסמן באפליקציה שסיימת לאכול עכשיו.");
+            showNotification(context, eventType, triggerAt, "עוד חצי שעה חלון האכילה נסגר", "עוד חצי שעה נגמר חלון זמן האכילה להיום.");
         } else if (IntermittentFastingScheduler.EVENT_END.equals(eventType)) {
             window = store.window(System.currentTimeMillis());
-            if (window.finished) {
+            if (!retry && window.finished) {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, "חלון האכילה נסגר", "נגמר חלון זמן האכילה להיום. הצום הבא מתחיל עכשיו.");
+            showNotification(context, eventType, triggerAt, "חלון האכילה נסגר", "נגמר חלון זמן האכילה להיום.");
+        } else {
+            AppLog.w(context, "fasting receiver skipped unknown type=" + eventType);
+            IntermittentFastingScheduler.schedule(context);
+            return;
         }
+        IntermittentFastingScheduler.scheduleRetry(context, eventType, triggerAt);
         IntermittentFastingScheduler.schedule(context);
     }
 
@@ -52,13 +67,17 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
         }
     }
 
-    private static void showNotification(Context context, String title, String message) {
+    private static void showNotification(Context context, String eventType, long triggerAt, String title, String message) {
         createChannel(context);
-        Intent openIntent = new Intent(context, MainActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        Intent openIntent = new Intent(context, IntermittentFastingAlertActivity.class)
+                .putExtra(IntermittentFastingScheduler.EXTRA_EVENT_TYPE, eventType)
+                .putExtra(IntermittentFastingScheduler.EXTRA_TRIGGER_AT, triggerAt)
+                .putExtra("fasting_alert_title", title)
+                .putExtra("fasting_alert_message", message)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
-                NOTIFICATION_ID,
+                (eventType + ":" + triggerAt).hashCode(),
                 openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
@@ -72,6 +91,10 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setContentIntent(pendingIntent)
                 .setFullScreenIntent(pendingIntent, true)
+                .setVibrate(new long[]{0})
+                .setSound(null)
+                .setDefaults(0)
+                .setOnlyAlertOnce(true)
                 .setAutoCancel(true);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
@@ -89,6 +112,9 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
                 "צום לסירוגין",
                 NotificationManager.IMPORTANCE_HIGH
         );
+        channel.enableVibration(false);
+        channel.setVibrationPattern(new long[]{0});
+        channel.setSound(null, null);
         manager.createNotificationChannel(channel);
     }
 }

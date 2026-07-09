@@ -9,6 +9,7 @@ public class IntermittentFastingStore {
     private static final String PREFS_NAME = "intermittent_fasting";
     private static final String KEY_CURRENT_START_AT = "current_start_at";
     private static final String KEY_FINISHED_AT = "finished_at";
+    private static final String KEY_ACKED_ALERT_ID = "acked_alert_id";
 
     private final Context context;
     private final SharedPreferences prefs;
@@ -80,6 +81,21 @@ public class IntermittentFastingStore {
     public void finishEatingAt(long finishedAt) {
         prefs.edit()
                 .putLong(KEY_FINISHED_AT, ReminderScheduler.floorToMinute(finishedAt))
+                .apply();
+    }
+
+    public String alertId(String eventType, long triggerAt) {
+        return eventType + ":" + ReminderScheduler.floorToMinute(triggerAt);
+    }
+
+    public boolean isAlertAcknowledged(String eventType, long triggerAt) {
+        String alertId = alertId(eventType, triggerAt);
+        return alertId.equals(prefs.getString(KEY_ACKED_ALERT_ID, ""));
+    }
+
+    public void acknowledgeAlert(String eventType, long triggerAt) {
+        prefs.edit()
+                .putString(KEY_ACKED_ALERT_ID, alertId(eventType, triggerAt))
                 .apply();
     }
 
