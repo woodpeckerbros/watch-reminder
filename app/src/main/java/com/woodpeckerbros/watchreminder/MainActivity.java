@@ -3757,7 +3757,7 @@ public class MainActivity extends Activity {
         AppLog.w(this, "request setting IGNORE_BATTERY_OPTIMIZATIONS");
         new AlertDialog.Builder(this)
                 .setTitle("אישור פעילות ברקע")
-                .setMessage("כדי שהתזכורות יעבדו בזמן גם אחרי איפוס או התקנה מחדש, מומלץ לאפשר לאפליקציה לפעול ברקע בלי הגבלת סוללה. במסך שייפתח אשר Allow / אל תגביל.")
+                .setMessage("כדי שהתזכורות יעבדו בזמן גם אחרי איפוס או התקנה מחדש, מומלץ לאפשר לאפליקציה לפעול ברקע בלי הגבלת סוללה. במסך שייפתח חפש Watch Reminder ואשר Allow / אל תגביל.")
                 .setPositiveButton("פתיחת הגדרות", (dialog, which) -> openBatteryOptimizationSettings())
                 .setNegativeButton("מאוחר יותר", null)
                 .show();
@@ -3765,15 +3765,28 @@ public class MainActivity extends Activity {
     }
 
     private void openBatteryOptimizationSettings() {
-        Toast.makeText(this, "במסך שייפתח אשר Allow / אל תגביל סוללה עבור Watch Reminder.", Toast.LENGTH_LONG).show();
-        Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+        Toast.makeText(this, "במסך שייפתח חפש Watch Reminder ואשר Allow / אל תגביל סוללה.", Toast.LENGTH_LONG).show();
+        Intent optimizationList = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        if (tryStartSettingsActivity(optimizationList)) {
+            return;
+        }
+        Intent appDetails = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:" + getPackageName()));
+        if (tryStartSettingsActivity(appDetails)) {
+            return;
+        }
+        Toast.makeText(this, "לא נמצא מסך הגדרות מתאים בשעון הזה", Toast.LENGTH_LONG).show();
+    }
+
+    private boolean tryStartSettingsActivity(Intent intent) {
+        if (intent.resolveActivity(getPackageManager()) == null) {
+            return false;
+        }
         try {
             startActivity(intent);
+            return true;
         } catch (Exception ignored) {
-            Intent fallback = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    .setData(Uri.parse("package:" + getPackageName()));
-            startActivity(fallback);
+            return false;
         }
     }
 
