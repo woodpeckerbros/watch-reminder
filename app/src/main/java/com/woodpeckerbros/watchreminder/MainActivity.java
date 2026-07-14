@@ -143,6 +143,7 @@ public class MainActivity extends Activity {
     private boolean pendingFastingSettings;
     private boolean zmanimBackToSettings = true;
     private long lastForegroundDueCheckAt;
+    private String lastReminderListFingerprint = "";
     private long createdAt;
     private boolean startupMaintenancePending;
     private boolean startupMaintenanceRunning;
@@ -207,7 +208,7 @@ public class MainActivity extends Activity {
         }
         if (!startupMaintenancePending && !startupMaintenanceRunning) {
             runForegroundDueCheckIfNeeded();
-            refreshVisibleScreen();
+            refreshVisibleScreenIfRemindersChanged();
             requestMissingAccessIfNeeded();
         }
     }
@@ -427,6 +428,7 @@ public class MainActivity extends Activity {
             TextView loading = infoPill("טוען תזכורות...", COLOR_MUTED);
             content.addView(loading);
             setScrollableContent(content);
+            rememberReminderListFingerprint();
             activeScrollView.postDelayed(() -> {
                 if ("list".equals(currentScreen) && !startupMaintenanceDone && startupListPass == 1) {
                     showList();
@@ -539,6 +541,7 @@ public class MainActivity extends Activity {
         if (shouldFocus) {
             scrollToFocusedReminder(focusTarget[0]);
         }
+        rememberReminderListFingerprint();
     }
 
     private boolean shouldUseFastStartupList() {
@@ -4156,6 +4159,32 @@ public class MainActivity extends Activity {
         } else if ("fasting_settings".equals(currentScreen)) {
             showFastingSettings();
         }
+    }
+
+    private void refreshVisibleScreenIfRemindersChanged() {
+        String currentFingerprint = reminderListFingerprint();
+        if (currentFingerprint.equals(lastReminderListFingerprint)) {
+            return;
+        }
+        lastReminderListFingerprint = currentFingerprint;
+        store = new ReminderStore(this);
+        refreshVisibleScreen();
+    }
+
+    private void rememberReminderListFingerprint() {
+        lastReminderListFingerprint = reminderListFingerprint();
+    }
+
+    private String reminderListFingerprint() {
+        StringBuilder builder = new StringBuilder();
+        for (Reminder reminder : new ReminderStore(this).getAll()) {
+            try {
+                builder.append(reminder.toJson()).append('\n');
+            } catch (Exception exception) {
+                builder.append(reminder.id).append('|').append(reminder.name).append('\n');
+            }
+        }
+        return builder.toString();
     }
 
     private void addTitle(LinearLayout content, String title, String subtitle) {
