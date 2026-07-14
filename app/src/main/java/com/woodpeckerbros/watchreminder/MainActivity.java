@@ -25,7 +25,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -130,7 +129,6 @@ public class MainActivity extends Activity {
     private boolean askedBodySensorsThisSession;
     private boolean askedExactAlarmThisSession;
     private boolean askedFullScreenThisSession;
-    private boolean askedBatteryOptimizationThisSession;
     private String currentScreen = "list";
     private float swipeStartX;
     private float swipeStartY;
@@ -422,11 +420,6 @@ public class MainActivity extends Activity {
         if (!canUseFullScreenIntent()) {
             TextView warning = infoPill("צריך לאשר התראות במסך מלא כדי שהתזכורת תיפתח על המסך", COLOR_WARNING);
             warning.setOnClickListener(v -> requestFullScreenIntentAccessIfNeeded(true));
-            content.addView(warning);
-        }
-        if (!isIgnoringBatteryOptimizations()) {
-            TextView warning = infoPill("לחץ כאן כדי לאפשר פעילות ברקע ולמנוע הגבלת סוללה", COLOR_WARNING);
-            warning.setOnClickListener(v -> requestBatteryOptimizationAccessIfNeeded(true));
             content.addView(warning);
         }
 
@@ -3744,58 +3737,6 @@ public class MainActivity extends Activity {
         }
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         return manager.canUseFullScreenIntent();
-    }
-
-    private boolean requestBatteryOptimizationAccessIfNeeded(boolean force) {
-        if (isIgnoringBatteryOptimizations()) {
-            return false;
-        }
-        if (askedBatteryOptimizationThisSession && !force) {
-            return false;
-        }
-        askedBatteryOptimizationThisSession = true;
-        AppLog.w(this, "request setting IGNORE_BATTERY_OPTIMIZATIONS");
-        new AlertDialog.Builder(this)
-                .setTitle("אישור פעילות ברקע")
-                .setMessage("כדי שהתזכורות יעבדו בזמן גם אחרי איפוס או התקנה מחדש, מומלץ לאפשר לאפליקציה לפעול ברקע בלי הגבלת סוללה. במסך שייפתח חפש Watch Reminder ואשר Allow / אל תגביל.")
-                .setPositiveButton("פתיחת הגדרות", (dialog, which) -> openBatteryOptimizationSettings())
-                .setNegativeButton("מאוחר יותר", null)
-                .show();
-        return true;
-    }
-
-    private void openBatteryOptimizationSettings() {
-        Toast.makeText(this, "במסך שייפתח חפש Watch Reminder ואשר Allow / אל תגביל סוללה.", Toast.LENGTH_LONG).show();
-        Intent optimizationList = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-        if (tryStartSettingsActivity(optimizationList)) {
-            return;
-        }
-        Intent appDetails = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                .setData(Uri.parse("package:" + getPackageName()));
-        if (tryStartSettingsActivity(appDetails)) {
-            return;
-        }
-        Toast.makeText(this, "לא נמצא מסך הגדרות מתאים בשעון הזה", Toast.LENGTH_LONG).show();
-    }
-
-    private boolean tryStartSettingsActivity(Intent intent) {
-        if (intent.resolveActivity(getPackageManager()) == null) {
-            return false;
-        }
-        try {
-            startActivity(intent);
-            return true;
-        } catch (Exception ignored) {
-            return false;
-        }
-    }
-
-    private boolean isIgnoringBatteryOptimizations() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return true;
-        }
-        PowerManager manager = (PowerManager) getSystemService(POWER_SERVICE);
-        return manager == null || manager.isIgnoringBatteryOptimizations(getPackageName());
     }
 
     private LinearLayout baseContent() {
