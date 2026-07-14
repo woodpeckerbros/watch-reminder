@@ -1385,34 +1385,57 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout fastingManualTimeSection() {
-        Calendar now = Calendar.getInstance();
         LinearLayout section = section();
         TextView title = text("בחירת זמן ידנית", 13, COLOR_MUTED);
         title.setPadding(0, dp(8), 0, dp(3));
         section.addView(title);
 
-        NumberPicker startHourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
-        NumberPicker startMinutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
-        section.addView(text("התחלתי לאכול בשעה", 12, COLOR_MUTED));
-        section.addView(timePickerRow(startHourPicker, startMinutePicker));
-        Button applyStart = pillButton("בחר זמן התחלה", COLOR_ACCENT_DARK);
-        applyStart.setOnClickListener(v -> markFastingStartedAt(startHourPicker.getValue(), startMinutePicker.getValue()));
-        LinearLayout startRow = actionRow();
-        startRow.addView(applyStart);
-        section.addView(startRow);
-
-        NumberPicker finishHourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
-        NumberPicker finishMinutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
-        TextView finishTitle = text("סיימתי לאכול בשעה", 12, COLOR_MUTED);
-        finishTitle.setPadding(0, dp(6), 0, 0);
-        section.addView(finishTitle);
-        section.addView(timePickerRow(finishHourPicker, finishMinutePicker));
-        Button applyFinish = pillButton("בחר זמן סיום", COLOR_SURFACE_2);
-        applyFinish.setOnClickListener(v -> markFastingFinishedAt(finishHourPicker.getValue(), finishMinutePicker.getValue()));
-        LinearLayout finishRow = actionRow();
-        finishRow.addView(applyFinish);
-        section.addView(finishRow);
+        LinearLayout row = actionRow();
+        row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        Button manualFinish = pillButton("זמן סיום", COLOR_SURFACE_2);
+        manualFinish.setOnClickListener(v -> showFastingManualTimeDialog(false));
+        Button manualStart = pillButton("זמן התחלה", COLOR_ACCENT_DARK);
+        manualStart.setOnClickListener(v -> showFastingManualTimeDialog(true));
+        row.addView(manualFinish);
+        row.addView(manualStart);
+        section.addView(row);
         return section;
+    }
+
+    private void showFastingManualTimeDialog(boolean startEating) {
+        Calendar now = Calendar.getInstance();
+        NumberPicker hourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
+        NumberPicker minutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
+        LinearLayout content = section();
+        TextView title = text(startEating ? "התחלתי לאכול בשעה" : "סיימתי לאכול בשעה", 13, COLOR_TEXT);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setPadding(0, dp(8), 0, dp(4));
+        content.addView(title);
+        content.addView(timePickerRow(hourPicker, minutePicker));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(content)
+                .create();
+        content.addView(fastingManualDialogActions(dialog, startEating, hourPicker, minutePicker));
+        dialog.show();
+    }
+
+    private LinearLayout fastingManualDialogActions(AlertDialog dialog, boolean startEating, NumberPicker hourPicker, NumberPicker minutePicker) {
+        LinearLayout actions = actionRow();
+        Button apply = pillButton(startEating ? "בחר זמן התחלה" : "בחר זמן סיום", startEating ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
+        apply.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (startEating) {
+                markFastingStartedAt(hourPicker.getValue(), minutePicker.getValue());
+            } else {
+                markFastingFinishedAt(hourPicker.getValue(), minutePicker.getValue());
+            }
+        });
+        Button cancel = pillButton("ביטול", COLOR_SURFACE_2);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        actions.addView(apply);
+        actions.addView(cancel);
+        return actions;
     }
 
     private void markFastingFinishedAt(int hour, int minute) {
