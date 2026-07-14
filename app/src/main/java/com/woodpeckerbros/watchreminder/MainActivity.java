@@ -4153,6 +4153,8 @@ public class MainActivity extends Activity {
             showList(scrollY);
         } else if ("history".equals(currentScreen)) {
             showHistory(scrollY);
+        } else if ("fasting_settings".equals(currentScreen)) {
+            showFastingSettings();
         }
     }
 
