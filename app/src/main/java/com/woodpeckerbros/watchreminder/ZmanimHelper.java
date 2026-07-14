@@ -18,6 +18,7 @@ public class ZmanimHelper {
     public static final String KEY_SHMA_GRA = "SHMA_GRA";
     public static final String KEY_TFILA_GRA = "TFILA_GRA";
     public static final String KEY_CHATZOS = "CHATZOS";
+    public static final String KEY_CHATZOS_NIGHT = "CHATZOS_NIGHT";
     public static final String KEY_MINCHA_GEDOLA = "MINCHA_GEDOLA";
     public static final String KEY_MINCHA_KETANA = "MINCHA_KETANA";
     public static final String KEY_PLAG = "PLAG";
@@ -31,6 +32,7 @@ public class ZmanimHelper {
             KEY_SHMA_GRA,
             KEY_TFILA_GRA,
             KEY_CHATZOS,
+            KEY_CHATZOS_NIGHT,
             KEY_MINCHA_GEDOLA,
             KEY_MINCHA_KETANA,
             KEY_PLAG,
@@ -44,7 +46,8 @@ public class ZmanimHelper {
             "סוף זמן שמע מג״א",
             "סוף זמן שמע גר״א",
             "סוף זמן ברכות ק״ש",
-            "חצות",
+            "חצות יום",
+            "חצות לילה",
             "מנחה גדולה",
             "מנחה קטנה",
             "פלג המנחה",
@@ -169,6 +172,12 @@ public class ZmanimHelper {
         }
         if (KEY_TFILA_GRA.equals(key)) {
             return offset(calendar.getSofZmanTfilaGRA(), TFILA_GRA_OHR_HACHAIM_OFFSET);
+        }
+        if (KEY_CHATZOS.equals(key)) {
+            return calendar.getChatzos();
+        }
+        if (KEY_CHATZOS_NIGHT.equals(key)) {
+            return calendar.getSolarMidnight();
         }
         if (KEY_MINCHA_GEDOLA.equals(key)) {
             return offset(calendar.getMinchaGedola(), MINCHA_GEDOLA_OHR_HACHAIM_OFFSET);

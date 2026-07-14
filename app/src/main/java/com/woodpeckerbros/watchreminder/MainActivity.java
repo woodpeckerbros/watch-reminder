@@ -1257,7 +1257,7 @@ public class MainActivity extends Activity {
             stateCard.addView(stateTitle);
             stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
             stateCard.addView(fastingActionRow());
-            stateCard.addView(fastingManualFinishSection());
+            stateCard.addView(fastingManualTimeSection());
             content.addView(stateCard, cardParams());
         }
 
@@ -1353,6 +1353,16 @@ public class MainActivity extends Activity {
         refreshVisibleScreen();
     }
 
+    private void markFastingStartedAt(int hour, int minute) {
+        long startedAt = manualTime(hour, minute, System.currentTimeMillis());
+        new IntermittentFastingStore(this).startEatingAt(startedAt);
+        IntermittentFastingReceiver.cancelNotification(this);
+        IntermittentFastingScheduler.schedule(this);
+        ComplicationRefresh.request(this);
+        Toast.makeText(this, "סומן שהתחלת לאכול ב-" + NextReminderCalculator.formatTime(startedAt), Toast.LENGTH_SHORT).show();
+        refreshVisibleScreen();
+    }
+
     private void markFastingFinishedNow() {
         IntermittentFastingStore store = new IntermittentFastingStore(this);
         IntermittentFastingStore.Window window = store.window();
@@ -1371,20 +1381,34 @@ public class MainActivity extends Activity {
         refreshVisibleScreen();
     }
 
-    private LinearLayout fastingManualFinishSection() {
+    private LinearLayout fastingManualTimeSection() {
         Calendar now = Calendar.getInstance();
         LinearLayout section = section();
-        TextView title = text("סיום אכילה ידני", 13, COLOR_MUTED);
+        TextView title = text("בחירת זמן ידנית", 13, COLOR_MUTED);
         title.setPadding(0, dp(8), 0, dp(3));
         section.addView(title);
-        NumberPicker hourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
-        NumberPicker minutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
-        section.addView(timePickerRow(hourPicker, minutePicker));
-        Button apply = pillButton("בחר זמן סיום", COLOR_SURFACE_2);
-        apply.setOnClickListener(v -> markFastingFinishedAt(hourPicker.getValue(), minutePicker.getValue()));
-        LinearLayout row = actionRow();
-        row.addView(apply);
-        section.addView(row);
+
+        NumberPicker startHourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
+        NumberPicker startMinutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
+        section.addView(text("התחלתי לאכול בשעה", 12, COLOR_MUTED));
+        section.addView(timePickerRow(startHourPicker, startMinutePicker));
+        Button applyStart = pillButton("בחר זמן התחלה", COLOR_ACCENT_DARK);
+        applyStart.setOnClickListener(v -> markFastingStartedAt(startHourPicker.getValue(), startMinutePicker.getValue()));
+        LinearLayout startRow = actionRow();
+        startRow.addView(applyStart);
+        section.addView(startRow);
+
+        NumberPicker finishHourPicker = numberPicker(0, 23, now.get(Calendar.HOUR_OF_DAY));
+        NumberPicker finishMinutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
+        TextView finishTitle = text("סיימתי לאכול בשעה", 12, COLOR_MUTED);
+        finishTitle.setPadding(0, dp(6), 0, 0);
+        section.addView(finishTitle);
+        section.addView(timePickerRow(finishHourPicker, finishMinutePicker));
+        Button applyFinish = pillButton("בחר זמן סיום", COLOR_SURFACE_2);
+        applyFinish.setOnClickListener(v -> markFastingFinishedAt(finishHourPicker.getValue(), finishMinutePicker.getValue()));
+        LinearLayout finishRow = actionRow();
+        finishRow.addView(applyFinish);
+        section.addView(finishRow);
         return section;
     }
 
@@ -1412,6 +1436,11 @@ public class MainActivity extends Activity {
     }
 
     private long[] manualFinishTime(IntermittentFastingStore.Window window, int hour, int minute, long now) {
+        long candidate = manualTime(hour, minute, now);
+        return new long[]{candidate, sessionStartForFinish(window, candidate, now)};
+    }
+
+    private long manualTime(int hour, int minute, long now) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(now);
         calendar.set(Calendar.HOUR_OF_DAY, hour);
@@ -1423,8 +1452,7 @@ public class MainActivity extends Activity {
             calendar.add(Calendar.DAY_OF_YEAR, -1);
             candidate = calendar.getTimeInMillis();
         }
-        candidate = ReminderScheduler.floorToMinute(candidate);
-        return new long[]{candidate, sessionStartForFinish(window, candidate, now)};
+        return ReminderScheduler.floorToMinute(candidate);
     }
 
     private long sessionStartForFinish(IntermittentFastingStore.Window window, long finishedAt, long now) {
