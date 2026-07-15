@@ -2,13 +2,11 @@ package com.woodpeckerbros.watchreminder;
 
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.graphics.drawable.Icon;
 import android.os.RemoteException;
 
 import androidx.wear.watchface.complications.data.ComplicationData;
 import androidx.wear.watchface.complications.data.ComplicationType;
 import androidx.wear.watchface.complications.data.LongTextComplicationData;
-import androidx.wear.watchface.complications.data.MonochromaticImage;
 import androidx.wear.watchface.complications.data.NoDataComplicationData;
 import androidx.wear.watchface.complications.data.PlainComplicationText;
 import androidx.wear.watchface.complications.data.ShortTextComplicationData;
@@ -37,24 +35,22 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
     private ComplicationData createData(ComplicationType type) {
         JewishCalendar jewishCalendar = JewishCalendarHelper.calendar(this, halachicDateCalendar());
         HebrewDate date = hebrewDate(jewishCalendar);
-        String description = getString(R.string.complication_hebrew_date) + ": " + date.day + " " + date.month;
+        String fullDate = date.day + " " + date.month;
+        String description = getString(R.string.complication_hebrew_date) + ": " + fullDate;
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
                     new PlainComplicationText.Builder(date.day).build(),
                     new PlainComplicationText.Builder(description).build()
             )
                     .setTitle(new PlainComplicationText.Builder(date.month).build())
-                    .setMonochromaticImage(image())
                     .setTapAction(openZmanimIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder(date.day).build(),
+                    new PlainComplicationText.Builder(fullDate).build(),
                     new PlainComplicationText.Builder(description).build()
             )
-                    .setTitle(new PlainComplicationText.Builder(date.month).build())
-                    .setMonochromaticImage(image())
                     .setTapAction(openZmanimIntent())
                     .build();
         }
@@ -77,12 +73,6 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
                 formatter.formatHebrewNumber(jewishCalendar.getJewishDayOfMonth()),
                 formatter.formatMonth(jewishCalendar)
         );
-    }
-
-    private MonochromaticImage image() {
-        return new MonochromaticImage.Builder(
-                Icon.createWithResource(this, R.drawable.ic_complication_clock)
-        ).build();
     }
 
     private PendingIntent openZmanimIntent() {
