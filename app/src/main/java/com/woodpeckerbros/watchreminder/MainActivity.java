@@ -8,6 +8,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -90,6 +91,10 @@ public class MainActivity extends Activity {
     private static final int COLOR_ACCENT_DARK = 0xFF136F45;
     private static final int COLOR_WARNING = 0xFFFFC857;
     private static final int COLOR_DANGER = 0xFFE15B64;
+    private static final String STARTUP_PREFS_NAME = "startup_reliability";
+    private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
+    private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
+    private static final long MISSED_ALERT_LOOKBACK_MS = 24 * 60 * 60_000L;
 
     private ReminderStore store;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -261,7 +266,9 @@ public class MainActivity extends Activity {
                 OmerScheduler.dispatchIfDueNow(MainActivity.this);
                 TekufaScheduler.schedule(MainActivity.this);
                 refreshVisibleScreen();
-                requestMissingAccessIfNeeded();
+                if (!showMissedReminderReliabilityPromptIfNeeded()) {
+                    requestMissingAccessIfNeeded();
+                }
             });
         }, "wr-startup-maintenance").start();
     }
@@ -287,6 +294,106 @@ public class MainActivity extends Activity {
         ReminderScheduler.scheduleWatchdog(this);
         ReminderReceiver.dispatchNextQueued(this);
         IntermittentFastingScheduler.schedule(this);
+    }
+
+    private boolean showMissedReminderReliabilityPromptIfNeeded() {
+        ReminderSettings settings = new ReminderSettings(this);
+        if (settings.serviceEnabled()) {
+            return false;
+        }
+        SharedPreferences prefs = getSharedPreferences(STARTUP_PREFS_NAME, MODE_PRIVATE);
+        String todayKey = todayPromptKey();
+        if (todayKey.equals(prefs.getString(KEY_LAST_MISSED_PROMPT_DAY, ""))) {
+            return false;
+        }
+        MissedReminderSummary summary = missedReminderSummary();
+        if (summary.count <= 0) {
+            return false;
+        }
+        prefs.edit().putString(KEY_LAST_MISSED_PROMPT_DAY, todayKey).apply();
+        String title = summary.count == 1
+                ? "ייתכן שתזכורת לא הופיעה בזמן"
+                : "ייתכן שתזכורות לא הופיעו בזמן";
+        String message = "האפליקציה זיהתה "
+                + (summary.count == 1 ? "שתזכורת אחרונה" : "שכמה תזכורות אחרונות")
+                + " לא הוצגה בזמן המתוכנן.\n\n"
+                + "זה יכול לקרות בגלל ניהול סוללה של Wear OS, עומס זמני של המערכת, או חסימה של פעילות ברקע.\n\n"
+                + "מומלץ להפעיל \"בדיקת רקע פעילה\". במצב זה האפליקציה תעיר את עצמה מדי פעם ותבדוק אם יש תזכורות שצריך להציג.\n\n"
+                + "שימו לב: הפעלת האפשרות עשויה לצרוך יותר סוללה. אפשר לשנות אחר כך את מספר הדקות בין בדיקות במסך ההגדרות המתקדמות.\n\n"
+                + "התזכורת האחרונה שזוהתה: " + summary.latestName + " בשעה " + NextReminderCalculator.formatTime(summary.latestScheduledAt);
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("הפעל בדיקת רקע", (dialog, which) -> enableBackgroundReliabilityCheck())
+                .setNegativeButton("לא עכשיו", null)
+                .show();
+        return true;
+    }
+
+    private void enableBackgroundReliabilityCheck() {
+        ReminderSettings settings = new ReminderSettings(this);
+        settings.setServiceEnabled(true);
+        ReminderScheduler.scheduleWatchdog(this);
+        ReminderForegroundService.start(this);
+        Toast.makeText(
+                this,
+                "בדיקת רקע פעילה הופעלה. ניתן לשנות את מרווח הדקות בהגדרות המתקדמות.",
+                Toast.LENGTH_LONG
+        ).show();
+        refreshVisibleScreen();
+    }
+
+    private MissedReminderSummary missedReminderSummary() {
+        long now = System.currentTimeMillis();
+        long lookbackStart = now - MISSED_ALERT_LOOKBACK_MS;
+        int count = 0;
+        ReminderEventStore.Event latest = null;
+        for (ReminderEventStore.Event event : new ReminderEventStore(this).getAll()) {
+            if (event.scheduledAt < lookbackStart || event.scheduledAt > now) {
+                continue;
+            }
+            if (!missedWithoutUserDeferral(event)) {
+                continue;
+            }
+            count++;
+            if (latest == null || event.scheduledAt > latest.scheduledAt) {
+                latest = event;
+            }
+        }
+        if (latest == null) {
+            return new MissedReminderSummary(0, "", 0L);
+        }
+        return new MissedReminderSummary(count, latest.reminderName, latest.scheduledAt);
+    }
+
+    private boolean missedWithoutUserDeferral(ReminderEventStore.Event event) {
+        if (!ReminderEventStore.STATUS_FIRED.equals(event.status)) {
+            return false;
+        }
+        if ("תזכורת שנדחתה".equals(event.note) || ReminderEventStore.NOTE_EARLY_DONE.equals(event.note)) {
+            return false;
+        }
+        if ("עבר הזמן".equals(event.note)) {
+            return true;
+        }
+        return event.firedAt - event.scheduledAt >= LATE_ALERT_THRESHOLD_MS;
+    }
+
+    private String todayPromptKey() {
+        Calendar calendar = Calendar.getInstance();
+        return calendar.get(Calendar.YEAR) + "-" + calendar.get(Calendar.DAY_OF_YEAR);
+    }
+
+    private static class MissedReminderSummary {
+        final int count;
+        final String latestName;
+        final long latestScheduledAt;
+
+        MissedReminderSummary(int count, String latestName, long latestScheduledAt) {
+            this.count = count;
+            this.latestName = latestName == null || latestName.trim().isEmpty() ? "תזכורת" : latestName;
+            this.latestScheduledAt = latestScheduledAt;
+        }
     }
 
     @Override

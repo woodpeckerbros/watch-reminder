@@ -35,7 +35,7 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
     }
 
     private ComplicationData createData(ComplicationType type) {
-        JewishCalendar jewishCalendar = JewishCalendarHelper.calendar(this, Calendar.getInstance());
+        JewishCalendar jewishCalendar = JewishCalendarHelper.calendar(this, halachicDateCalendar());
         HebrewDate date = hebrewDate(jewishCalendar);
         String description = getString(R.string.complication_hebrew_date) + ": " + date.day + " " + date.month;
         if (type.equals(ComplicationType.SHORT_TEXT)) {
@@ -59,6 +59,16 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
                     .build();
         }
         return new NoDataComplicationData();
+    }
+
+    private Calendar halachicDateCalendar() {
+        Calendar calendar = Calendar.getInstance();
+        long now = System.currentTimeMillis();
+        long tzeis = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_TZAIS, now);
+        if (tzeis != Long.MAX_VALUE && now >= tzeis) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        return calendar;
     }
 
     private HebrewDate hebrewDate(JewishCalendar jewishCalendar) {
