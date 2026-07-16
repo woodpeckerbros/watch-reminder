@@ -56,6 +56,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
             IntermittentFastingScheduler.schedule(context);
             return;
         }
+        ComplicationRefresh.request(context);
         IntermittentFastingScheduler.scheduleRetry(context, eventType, triggerAt);
         IntermittentFastingScheduler.schedule(context);
     }
