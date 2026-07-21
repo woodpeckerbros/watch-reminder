@@ -66,6 +66,7 @@ public class ReminderPatchApplier {
             if (values.has("alertVolumePercent")) settings.setAlertVolumePercent(values.optInt("alertVolumePercent", settings.alertVolumePercent()));
             if (values.has("quietMinchaMaariv")) settings.setQuietMinchaMaariv(values.optBoolean("quietMinchaMaariv", settings.quietMinchaMaariv()));
             if (values.has("blessingReminderMinutes")) settings.setBlessingReminderMinutes(values.optInt("blessingReminderMinutes", settings.blessingReminderMinutes()));
+            if (values.has("shemaOnTimeOffsetMinutes")) settings.setShemaOnTimeOffsetMinutes(values.optInt("shemaOnTimeOffsetMinutes", settings.shemaOnTimeOffsetMinutes()));
             if (values.has("moonBlessingEnabled")) settings.setMoonBlessingEnabled(values.optBoolean("moonBlessingEnabled", settings.moonBlessingEnabled()));
             if (values.has("dafYomiEnabled")) settings.setDafYomiEnabled(values.optBoolean("dafYomiEnabled", settings.dafYomiEnabled()));
             if (values.has("dafYomiHour") || values.has("dafYomiMinute")) {

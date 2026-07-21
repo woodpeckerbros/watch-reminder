@@ -95,6 +95,7 @@ class LocalReminderDocument {
                             .put("alertVolumePercent", 80)
                             .put("quietMinchaMaariv", false)
                             .put("blessingReminderMinutes", 65)
+                            .put("shemaOnTimeOffsetMinutes", 10)
                             .put("moonBlessingEnabled", false)
                             .put("dafYomiEnabled", false)
                             .put("dafYomiHour", 21)

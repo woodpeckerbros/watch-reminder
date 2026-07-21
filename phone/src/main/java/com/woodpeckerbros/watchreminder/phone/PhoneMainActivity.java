@@ -403,10 +403,12 @@ public class PhoneMainActivity extends Activity {
         LinearLayout settingsCard = card();
         Switch quiet = switchView("זמני שקט פעילים", finalSettings.optBoolean("quietMinchaMaariv", false));
         NumberPicker blessing = numberPicker(1, 71, finalSettings.optInt("blessingReminderMinutes", 65));
+        NumberPicker shemaOffset = numberPicker(0, 60, finalSettings.optInt("shemaOnTimeOffsetMinutes", 10));
         NumberPicker autoDelay = numberPicker(5, 600, finalSettings.optInt("autoSnoozeDelaySeconds", 30));
         NumberPicker autoMinutes = numberPicker(1, 240, finalSettings.optInt("autoSnoozeMinutes", 5));
         settingsCard.addView(quiet);
         settingsCard.addView(labeled("תזכורת ברכה בדקות", blessing));
+        settingsCard.addView(labeled("קריאת שמע אחרי צאת הכוכבים", shemaOffset));
         settingsCard.addView(labeled("סגירה אוטומטית בשניות", autoDelay));
         settingsCard.addView(labeled("דחייה אוטומטית בדקות", autoMinutes));
         Button saveSettings = button("שמירת הגדרות", ACCENT);
@@ -414,6 +416,7 @@ public class PhoneMainActivity extends Activity {
             try {
                 finalSettings.put("quietMinchaMaariv", quiet.isChecked());
                 finalSettings.put("blessingReminderMinutes", numberValue(blessing));
+                finalSettings.put("shemaOnTimeOffsetMinutes", numberValue(shemaOffset));
                 finalSettings.put("autoSnoozeDelaySeconds", numberValue(autoDelay));
                 finalSettings.put("autoSnoozeMinutes", numberValue(autoMinutes));
                 root.put("settings", finalSettings);

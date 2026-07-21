@@ -66,6 +66,7 @@ public class ReminderBackup {
                             .put("alertVolumePercent", settings.alertVolumePercent())
                             .put("quietMinchaMaariv", settings.quietMinchaMaariv())
                             .put("blessingReminderMinutes", settings.blessingReminderMinutes())
+                            .put("shemaOnTimeOffsetMinutes", settings.shemaOnTimeOffsetMinutes())
                             .put("moonBlessingEnabled", settings.moonBlessingEnabled())
                             .put("dafYomiEnabled", settings.dafYomiEnabled())
                             .put("dafYomiHour", settings.dafYomiHour())
@@ -308,6 +309,7 @@ public class ReminderBackup {
         settings.setAlertVolumePercent(json.optInt("alertVolumePercent", settings.alertVolumePercent()));
         settings.setQuietMinchaMaariv(json.optBoolean("quietMinchaMaariv", settings.quietMinchaMaariv()));
         settings.setBlessingReminderMinutes(json.optInt("blessingReminderMinutes", settings.blessingReminderMinutes()));
+        settings.setShemaOnTimeOffsetMinutes(json.optInt("shemaOnTimeOffsetMinutes", settings.shemaOnTimeOffsetMinutes()));
         settings.setMoonBlessingEnabled(json.optBoolean("moonBlessingEnabled", settings.moonBlessingEnabled()));
         settings.setDafYomiEnabled(json.optBoolean("dafYomiEnabled", settings.dafYomiEnabled()));
         settings.setDafYomiTime(

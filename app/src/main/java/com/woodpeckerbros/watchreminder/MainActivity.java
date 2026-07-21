@@ -1035,6 +1035,15 @@ public class MainActivity extends Activity {
         blessingCard.addView(blessingHint);
         NumberPicker blessingMinutesPicker = numberPicker(1, 71, settings.blessingReminderMinutes());
         blessingCard.addView(pickerColumn("דקות", blessingMinutesPicker));
+        TextView shemaTitle = text("קריאת שמע של ערבית בזמנה", 13, COLOR_TEXT);
+        shemaTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        shemaTitle.setPadding(0, dp(10), 0, dp(2));
+        blessingCard.addView(shemaTitle);
+        TextView shemaHint = text("כמה דקות אחרי צאת הכוכבים לתזכר. אם הזמן כבר עבר, התזכורת תוגדר לפי ההגדרה הכללית למעלה.", 10, COLOR_MUTED);
+        shemaHint.setPadding(0, 0, 0, dp(5));
+        blessingCard.addView(shemaHint);
+        NumberPicker shemaOffsetPicker = numberPicker(0, 60, settings.shemaOnTimeOffsetMinutes());
+        blessingCard.addView(pickerColumn("דקות אחרי צאת הכוכבים", shemaOffsetPicker));
         if (settings.jewishMode()) {
             content.addView(blessingCard, cardParams());
         }
@@ -1133,6 +1142,7 @@ public class MainActivity extends Activity {
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
         save.setOnClickListener(v -> {
             settings.setBlessingReminderMinutes(blessingMinutesPicker.getValue());
+            settings.setShemaOnTimeOffsetMinutes(shemaOffsetPicker.getValue());
             settings.setJewishDayRemindersEnabled(settings.jewishMode() && jewishDaySwitch.isChecked());
             if (settings.jewishMode() && settings.jewishDayRemindersEnabled()) {
                 JewishDayScheduler.schedule(this);
@@ -2670,7 +2680,8 @@ public class MainActivity extends Activity {
             Toast.makeText(this, UiText.t(this, "לא ניתן לחשב את זמן ההלכה להיום"), Toast.LENGTH_LONG).show();
             return true;
         }
-        long remindAt = tzeis + 10 * 60_000L;
+        int shemaOffsetMinutes = new ReminderSettings(this).shemaOnTimeOffsetMinutes();
+        long remindAt = tzeis + shemaOffsetMinutes * 60_000L;
         if (remindAt <= System.currentTimeMillis()) {
             return false;
         }
@@ -2688,7 +2699,7 @@ public class MainActivity extends Activity {
                 remindAt,
                 false,
                 ZmanimHelper.KEY_TZAIS,
-                10,
+                shemaOffsetMinutes,
                 true
         );
         store.upsert(reminder);

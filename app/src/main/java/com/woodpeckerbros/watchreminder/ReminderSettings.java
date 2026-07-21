@@ -19,6 +19,7 @@ public class ReminderSettings {
     public static final int DEFAULT_AUTO_SNOOZE_MINUTES = 5;
     public static final int DEFAULT_VIBRATION_DURATION_MS = 1800;
     public static final int DEFAULT_BLESSING_REMINDER_MINUTES = 65;
+    public static final int DEFAULT_SHEMA_ON_TIME_OFFSET_MINUTES = 10;
     public static final int DEFAULT_ALERT_VOLUME_PERCENT = 80;
     public static final int DEFAULT_FASTING_HOURS = 16;
 
@@ -35,6 +36,7 @@ public class ReminderSettings {
     private static final String KEY_ALERT_VOLUME_PERCENT = "alert_volume_percent";
     private static final String KEY_QUIET_MINCHA_MAARIV = "quiet_mincha_maariv";
     private static final String KEY_BLESSING_REMINDER_MINUTES = "blessing_reminder_minutes";
+    private static final String KEY_SHEMA_ON_TIME_OFFSET_MINUTES = "shema_on_time_offset_minutes";
     private static final String KEY_POWER_SAVE_DEFAULT_APPLIED = "power_save_default_applied";
     private static final String KEY_DAF_YOMI_ENABLED = "daf_yomi_enabled";
     private static final String KEY_DAF_YOMI_HOUR = "daf_yomi_hour";
@@ -169,6 +171,14 @@ public class ReminderSettings {
 
     public void setBlessingReminderMinutes(int minutes) {
         prefs.edit().putInt(KEY_BLESSING_REMINDER_MINUTES, clamp(minutes, 1, 71)).apply();
+    }
+
+    public int shemaOnTimeOffsetMinutes() {
+        return clamp(prefs.getInt(KEY_SHEMA_ON_TIME_OFFSET_MINUTES, DEFAULT_SHEMA_ON_TIME_OFFSET_MINUTES), 0, 60);
+    }
+
+    public void setShemaOnTimeOffsetMinutes(int minutes) {
+        prefs.edit().putInt(KEY_SHEMA_ON_TIME_OFFSET_MINUTES, clamp(minutes, 0, 60)).apply();
     }
 
     public boolean dafYomiEnabled() {
