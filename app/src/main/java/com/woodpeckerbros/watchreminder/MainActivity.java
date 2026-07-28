@@ -1784,8 +1784,15 @@ public class MainActivity extends Activity {
         } else {
             Button markAllLearned = pillButton("סמן הכל כהושלם", COLOR_ACCENT_DARK);
             markAllLearned.setOnClickListener(v -> {
-                new DafYomiStore(this).markLearned(missed);
-                showDafYomiSettings();
+                new AlertDialog.Builder(this)
+                        .setTitle(UiText.t(this, "סימון כל הדפים כהושלמו"))
+                        .setMessage(UiText.t(this, "האם לסמן את כל הדפים שברשימת ההשלמה כנלמדו? פעולה זו תסיר את כולם מהרשימה."))
+                        .setPositiveButton(UiText.t(this, "המשך"), (dialog, which) -> {
+                            new DafYomiStore(this).markLearned(missed);
+                            showDafYomiSettings();
+                        })
+                        .setNegativeButton(UiText.t(this, "ביטול"), null)
+                        .show();
             });
             missedCard.addView(markAllLearned);
             for (DafYomiHelper.Item item : missed) {
