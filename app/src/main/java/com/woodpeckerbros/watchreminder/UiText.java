@@ -92,6 +92,9 @@ public class UiText {
         put("גיבוי לטלפון", "Back Up to Phone");
         put("שחזור מהטלפון", "Restore from Phone");
         put("התראה", "Alert");
+        put("תזכורות רגילות", "Regular Reminders");
+        put("בדיקת רקע לתזכורות", "Background Reminder Check");
+        put("המתנה לענידת השעון", "Waiting for Watch to Be Worn");
         put("רטט", "Vibration");
         put("צלצול", "Sound");
         put("בחירת צלצול", "Choose Sound");

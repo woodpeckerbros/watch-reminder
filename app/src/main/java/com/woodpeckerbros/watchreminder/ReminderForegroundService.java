@@ -104,7 +104,7 @@ public class ReminderForegroundService extends Service {
     private void createChannel() {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.app_name),
+                UiText.t(this, "בדיקת רקע לתזכורות"),
                 NotificationManager.IMPORTANCE_LOW
         );
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);

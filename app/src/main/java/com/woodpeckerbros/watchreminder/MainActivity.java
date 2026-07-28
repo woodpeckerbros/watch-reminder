@@ -173,6 +173,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        NotificationChannelMaintenance.run(this);
         createdAt = System.currentTimeMillis();
         store = new ReminderStore(this);
         handleIntent(getIntent());

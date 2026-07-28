@@ -260,7 +260,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                context.getString(R.string.app_name),
+                UiText.t(context, "תזכורות רגילות"),
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.setDescription("Reminder alerts");
