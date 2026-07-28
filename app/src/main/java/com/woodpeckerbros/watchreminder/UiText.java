@@ -134,6 +134,7 @@ public class UiText {
         put("סמן כלא למדתי", "Mark Not Learned");
         put("דפים להשלמה", "Pages to Catch Up");
         put("אין דפים שמסומנים כלא למדתי", "No pages are marked as not learned");
+        put("סמן הכל כהושלם", "Mark All as Completed");
         put("למדתי את הדף", "I Learned This Page");
         put("תזכורת ספירת העומר פעילה", "Omer reminder active");
         put("כמה דקות אחרי צאת הכוכבים להזכיר", "Minutes after nightfall to send the reminder");

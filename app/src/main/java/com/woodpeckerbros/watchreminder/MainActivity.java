@@ -1782,6 +1782,12 @@ public class MainActivity extends Activity {
         if (missed.isEmpty()) {
             missedCard.addView(text("אין דפים שמסומנים כלא למדתי", 12, COLOR_MUTED));
         } else {
+            Button markAllLearned = pillButton("סמן הכל כהושלם", COLOR_ACCENT_DARK);
+            markAllLearned.setOnClickListener(v -> {
+                new DafYomiStore(this).markLearned(missed);
+                showDafYomiSettings();
+            });
+            missedCard.addView(markAllLearned);
             for (DafYomiHelper.Item item : missed) {
                 TextView itemText = text(item.label, 14, COLOR_TEXT);
                 itemText.setPadding(0, dp(6), 0, dp(2));
