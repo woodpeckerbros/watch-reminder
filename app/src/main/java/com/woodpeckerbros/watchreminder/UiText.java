@@ -229,6 +229,8 @@ public class UiText {
         put("שעתיים", "2 hours");
         put("שעה", "1 hour");
         put("דחייה", "Snooze");
+        put("דחה ביום", "Snooze 1 day");
+        put("ההתראה נדחתה למחר לשעה", "Reminder snoozed until tomorrow at");
         put("בוצע", "Done");
         put("הבנתי", "Got it");
         put("תזכר אותי בעוד:", "Remind me in:");

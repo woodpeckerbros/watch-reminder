@@ -20,9 +20,11 @@ import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class ReminderAlertActivity extends Activity {
@@ -164,6 +166,19 @@ public class ReminderAlertActivity extends Activity {
         secondRow.addView(snoozeButton("שעתיים", occurrenceId, occurrenceIds, reminderId, alertReminderName, 120, snoozeOriginalScheduledAt));
         card.addView(secondRow);
 
+        Button snoozeOneDay = actionButton("דחה ביום", COLOR_SURFACE_2);
+        LinearLayout.LayoutParams snoozeOneDayParams = new LinearLayout.LayoutParams(dp(158), dp(36));
+        snoozeOneDayParams.setMargins(dp(3), dp(5), dp(3), dp(2));
+        snoozeOneDay.setLayoutParams(snoozeOneDayParams);
+        snoozeOneDay.setOnClickListener(v -> snoozeOneDay(
+                occurrenceId,
+                occurrenceIds,
+                reminderId,
+                alertReminderName,
+                snoozeOriginalScheduledAt
+        ));
+        card.addView(snoozeOneDay);
+
         LinearLayout customRow = new LinearLayout(this);
         customRow.setGravity(Gravity.CENTER);
         customRow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
@@ -297,6 +312,53 @@ public class ReminderAlertActivity extends Activity {
             }
         }
         closeAfterAction();
+    }
+
+    private void snoozeOneDay(String activeOccurrenceId, List<String> occurrenceIds, String reminderId, String reminderName, long originalScheduledAt) {
+        stopVibration();
+        List<String> currentIds = currentOccurrenceIds(activeOccurrenceId, occurrenceIds);
+        long nextScheduledAt = nextDayAtOriginalTime(originalScheduledAt);
+        AppLog.d(this, "alert snooze one day occurrence=" + activeOccurrenceId
+                + " count=" + currentIds.size()
+                + " original=" + NextReminderCalculator.formatDateTime(originalScheduledAt)
+                + " next=" + NextReminderCalculator.formatDateTime(nextScheduledAt));
+        handler.removeCallbacksAndMessages(null);
+        cancelNotification(activeOccurrenceId);
+        if (reminderId != null) {
+            nextScheduledAt = ReminderScheduler.scheduleSnoozeAt(
+                    this,
+                    reminderId,
+                    reminderName,
+                    nextScheduledAt,
+                    originalScheduledAt
+            );
+            ReminderEventStore eventStore = new ReminderEventStore(this);
+            String note = "למחר בשעה " + NextReminderCalculator.formatTime(nextScheduledAt);
+            for (String occurrenceId : currentIds) {
+                if (occurrenceId != null) {
+                    eventStore.markSnoozedUntil(occurrenceId, nextScheduledAt, note);
+                    ReminderScheduler.cancelAutoSnooze(this, occurrenceId, reminderId, reminderName);
+                }
+            }
+        }
+        Toast.makeText(
+                this,
+                UiText.t(this, "ההתראה נדחתה למחר לשעה") + " " + NextReminderCalculator.formatTime(nextScheduledAt),
+                Toast.LENGTH_LONG
+        ).show();
+        closeAfterAction();
+    }
+
+    private long nextDayAtOriginalTime(long originalScheduledAt) {
+        Calendar original = Calendar.getInstance();
+        original.setTimeInMillis(originalScheduledAt);
+        Calendar tomorrow = Calendar.getInstance();
+        tomorrow.add(Calendar.DAY_OF_YEAR, 1);
+        tomorrow.set(Calendar.HOUR_OF_DAY, original.get(Calendar.HOUR_OF_DAY));
+        tomorrow.set(Calendar.MINUTE, original.get(Calendar.MINUTE));
+        tomorrow.set(Calendar.SECOND, 0);
+        tomorrow.set(Calendar.MILLISECOND, 0);
+        return tomorrow.getTimeInMillis();
     }
 
     private void runAutoSnoozeIfPending(String activeOccurrenceId, List<String> occurrenceIds, String reminderId, String reminderName, long originalScheduledAt) {

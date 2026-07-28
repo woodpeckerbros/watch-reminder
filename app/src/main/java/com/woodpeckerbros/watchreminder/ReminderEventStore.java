@@ -136,6 +136,10 @@ public class ReminderEventStore {
         updateStatus(occurrenceId, STATUS_SNOOZED, "לעוד " + formatMinutes(minutes), nextScheduledAt);
     }
 
+    public void markSnoozedUntil(String occurrenceId, long nextScheduledAt, String note) {
+        updateStatus(occurrenceId, STATUS_SNOOZED, note, nextScheduledAt);
+    }
+
     public void markAutoSnoozed(String occurrenceId, int minutes) {
         updateStatus(occurrenceId, STATUS_AUTO_SNOOZED, "לעוד " + formatMinutes(minutes));
     }
