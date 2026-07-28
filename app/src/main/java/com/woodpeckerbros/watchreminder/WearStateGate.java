@@ -30,11 +30,19 @@ public class WearStateGate {
             result.onReady(true);
             return;
         }
-        SensorManager sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-        Sensor sensor = sensorManager == null ? null : sensorManager.getDefaultSensor(Sensor.TYPE_LOW_LATENCY_OFFBODY_DETECT, true);
+        SensorManager sensorManager;
+        Sensor sensor;
+        try {
+            sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+            sensor = sensorManager == null ? null : sensorManager.getDefaultSensor(Sensor.TYPE_LOW_LATENCY_OFFBODY_DETECT, true);
+        } catch (RuntimeException error) {
+            AppLog.w(context, "WearStateGate sensor unavailable, allowing alert: " + error.getClass().getSimpleName());
+            result.onReady(false);
+            return;
+        }
         if (sensorManager == null || sensor == null) {
-            AppLog.d(context, "WearStateGate no off-body sensor, cached offBody=" + store.offBody());
-            result.onReady(store.offBody());
+            AppLog.w(context, "WearStateGate no off-body sensor, allowing alert");
+            result.onReady(false);
             return;
         }
         Handler handler = new Handler(Looper.getMainLooper());
@@ -47,7 +55,14 @@ public class WearStateGate {
                 }
                 finished[0] = true;
                 sensorManager.unregisterListener(this);
-                boolean onBody = event.values != null && event.values.length > 0 && event.values[0] == 1.0f;
+                if (event.values == null
+                        || event.values.length == 0
+                        || (event.values[0] != 0.0f && event.values[0] != 1.0f)) {
+                    AppLog.w(context, "WearStateGate invalid sensor value, allowing alert");
+                    result.onReady(false);
+                    return;
+                }
+                boolean onBody = event.values[0] == 1.0f;
                 store.setOffBody(!onBody);
                 AppLog.d(context, "WearStateGate sensor onBody=" + onBody);
                 result.onReady(!onBody);
@@ -57,15 +72,23 @@ public class WearStateGate {
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
             }
         };
-        boolean registered = sensorManager.registerListener(
-                listener,
-                sensor,
-                SensorManager.SENSOR_DELAY_NORMAL,
-                handler
-        );
+        boolean registered;
+        try {
+            registered = sensorManager.registerListener(
+                    listener,
+                    sensor,
+                    SensorManager.SENSOR_DELAY_NORMAL,
+                    handler
+            );
+        } catch (RuntimeException error) {
+            AppLog.w(context, "WearStateGate sensor registration error, allowing alert: "
+                    + error.getClass().getSimpleName());
+            result.onReady(false);
+            return;
+        }
         if (!registered) {
-            AppLog.w(context, "WearStateGate sensor register failed");
-            result.onReady(store.offBody());
+            AppLog.w(context, "WearStateGate sensor register failed, allowing alert");
+            result.onReady(false);
             return;
         }
         handler.postDelayed(() -> {
@@ -74,8 +97,8 @@ public class WearStateGate {
             }
             finished[0] = true;
             sensorManager.unregisterListener(listener);
-            AppLog.w(context, "WearStateGate sensor timeout cached offBody=" + store.offBody());
-            result.onReady(store.offBody());
+            AppLog.w(context, "WearStateGate sensor timeout, allowing alert");
+            result.onReady(false);
         }, OFF_BODY_PROBE_TIMEOUT_MS);
     }
 

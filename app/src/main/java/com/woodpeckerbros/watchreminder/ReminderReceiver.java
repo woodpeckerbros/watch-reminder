@@ -67,7 +67,15 @@ public class ReminderReceiver extends BroadcastReceiver {
                 if (defer) {
                     deferToQueue(context, reminderId, finalReminderName, scheduledAt, originalScheduledAt, day, isSnooze);
                 } else {
-                    fire(context, reminderId, finalReminderName, scheduledAt, originalScheduledAt, day, isSnooze);
+                    fireAfterWearStateEvaluation(
+                            context,
+                            reminderId,
+                            finalReminderName,
+                            scheduledAt,
+                            originalScheduledAt,
+                            day,
+                            isSnooze
+                    );
                 }
             } finally {
                 finish(completion);
@@ -86,6 +94,14 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     public static void fire(Context context, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze) {
+        fire(context, reminderId, reminderName, scheduledAt, originalScheduledAt, day, isSnooze, true);
+    }
+
+    private static void fireAfterWearStateEvaluation(Context context, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze) {
+        fire(context, reminderId, reminderName, scheduledAt, originalScheduledAt, day, isSnooze, false);
+    }
+
+    private static void fire(Context context, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze, boolean checkKnownWearState) {
         Reminder reminder = new ReminderStore(context).find(reminderId);
         if (reminder == null || !reminder.enabled) {
             AppLog.w(context, "fire skipped missing/disabled id=" + reminderId);
@@ -97,7 +113,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         } else if (reminder.name != null && !reminder.name.trim().isEmpty()) {
             reminderName = reminder.name;
         }
-        if (!reminder.critical && WearStateGate.shouldDeferKnown(context)) {
+        if (checkKnownWearState && !reminder.critical && WearStateGate.shouldDeferKnown(context)) {
             AppLog.w(context, "fire deferred by wear state id=" + reminderId + " at=" + NextReminderCalculator.formatDateTime(scheduledAt));
             deferToQueue(context, reminderId, reminderName, scheduledAt, originalScheduledAt, day, isSnooze);
             return;
