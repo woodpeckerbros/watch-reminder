@@ -66,6 +66,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
     public static final String EXTRA_FOCUS_REMINDER_ID = "focus_reminder_id";
@@ -95,6 +96,7 @@ public class MainActivity extends Activity {
     private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
     private static final long MISSED_ALERT_LOOKBACK_MS = 24 * 60 * 60_000L;
+    private static final long GEOCODER_TIMEOUT_MS = 8_000L;
 
     private ReminderStore store;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -1135,6 +1137,9 @@ public class MainActivity extends Activity {
         Button refreshLocation = pillButton("מיקום חדש", COLOR_SURFACE_2);
         refreshLocation.setOnClickListener(v -> requestFreshZmanimLocation(locationValue));
         locationCard.addView(refreshLocation);
+        Button resolveLocationName = pillButton("זהה שם עיר", COLOR_SURFACE_2);
+        resolveLocationName.setOnClickListener(v -> resolveStoredZmanimLocationName(locationValue, true));
+        locationCard.addView(resolveLocationName);
         if (settings.jewishMode()) {
             content.addView(locationCard, cardParams());
         }
@@ -2759,9 +2764,9 @@ public class MainActivity extends Activity {
 
     private String zmanimLocationLine() {
         ZmanimSettings zmanimSettings = new ZmanimSettings(this);
-        return displayLocationName(zmanimSettings.name())
-                + "\n"
-                + ZmanimSettings.coordinatesName(zmanimSettings.latitude(), zmanimSettings.longitude());
+        String coordinates = ZmanimSettings.coordinatesName(zmanimSettings.latitude(), zmanimSettings.longitude());
+        String name = displayLocationName(zmanimSettings.name());
+        return coordinates.equals(name) ? coordinates : name + "\n" + coordinates;
     }
 
     private String displayLocationName(String name) {
@@ -2850,18 +2855,15 @@ public class MainActivity extends Activity {
     }
 
     private void saveZmanimLocation(Location location, TextView locationValue) {
-        String name = readableLocationName(location);
-        if (name == null || name.trim().isEmpty()) {
-            name = ZmanimSettings.coordinatesName(location.getLatitude(), location.getLongitude());
-        }
+        String coordinates = ZmanimSettings.coordinatesName(location.getLatitude(), location.getLongitude());
         new ZmanimSettings(this).update(
-                name,
+                coordinates,
                 location.getLatitude(),
                 location.getLongitude(),
                 location.hasAltitude() ? location.getAltitude() : 0,
                 TimeZone.getDefault().getID()
         );
-        locationValue.setText(zmanimLocationLine());
+        locationValue.setText(coordinates + "\n" + UiText.t(this, "מזהה שם עיר..."));
         store.rescheduleAll();
         JewishDayScheduler.schedule(this);
         TekufaScheduler.schedule(this);
@@ -2870,24 +2872,136 @@ public class MainActivity extends Activity {
         OmerScheduler.schedule(this);
         ComplicationRefresh.request(this);
         Toast.makeText(this, "המיקום עודכן", Toast.LENGTH_SHORT).show();
+        resolveLocationName(location.getLatitude(), location.getLongitude(), locationValue, false);
     }
 
-    private String readableLocationName(Location location) {
-        try {
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-            List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-            if (addresses == null || addresses.isEmpty()) {
-                return null;
+    private void resolveStoredZmanimLocationName(TextView locationValue, boolean notifyUser) {
+        ZmanimSettings settings = new ZmanimSettings(this);
+        locationValue.setText(ZmanimSettings.coordinatesName(settings.latitude(), settings.longitude())
+                + "\n" + UiText.t(this, "מזהה שם עיר..."));
+        resolveLocationName(settings.latitude(), settings.longitude(), locationValue, notifyUser);
+    }
+
+    private void resolveLocationName(double latitude, double longitude, TextView locationValue, boolean notifyUser) {
+        if (!Geocoder.isPresent()) {
+            applyResolvedLocationName(latitude, longitude, null, locationValue, notifyUser);
+            return;
+        }
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        AtomicBoolean completed = new AtomicBoolean(false);
+        Runnable timeout = () -> {
+            if (completed.compareAndSet(false, true)) {
+                applyResolvedLocationName(latitude, longitude, null, locationValue, notifyUser);
             }
-            Address address = addresses.get(0);
-            String city = firstNonEmpty(address.getLocality(), address.getSubAdminArea(), address.getAdminArea());
-            String country = address.getCountryName();
-            if (city != null && country != null) {
-                return city + ", " + country;
+        };
+        mainHandler.postDelayed(timeout, GEOCODER_TIMEOUT_MS);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            try {
+                geocoder.getFromLocation(latitude, longitude, 1, new Geocoder.GeocodeListener() {
+                    @Override
+                    public void onGeocode(List<Address> addresses) {
+                        completeLocationNameResolution(
+                                completed,
+                                timeout,
+                                latitude,
+                                longitude,
+                                readableLocationName(addresses),
+                                locationValue,
+                                notifyUser
+                        );
+                    }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        completeLocationNameResolution(
+                                completed,
+                                timeout,
+                                latitude,
+                                longitude,
+                                null,
+                                locationValue,
+                                notifyUser
+                        );
+                    }
+                });
+            } catch (RuntimeException ignored) {
+                completeLocationNameResolution(
+                        completed,
+                        timeout,
+                        latitude,
+                        longitude,
+                        null,
+                        locationValue,
+                        notifyUser
+                );
             }
-            return city == null ? country : city;
-        } catch (Exception ignored) {
+            return;
+        }
+        new Thread(() -> {
+            String name = null;
+            try {
+                name = readableLocationName(geocoder.getFromLocation(latitude, longitude, 1));
+            } catch (Exception ignored) {
+            }
+            String resolvedName = name;
+            completeLocationNameResolution(
+                    completed,
+                    timeout,
+                    latitude,
+                    longitude,
+                    resolvedName,
+                    locationValue,
+                    notifyUser
+            );
+        }, "zmanim-geocoder").start();
+    }
+
+    private void completeLocationNameResolution(AtomicBoolean completed, Runnable timeout, double latitude, double longitude, String serverName, TextView locationValue, boolean notifyUser) {
+        mainHandler.post(() -> {
+            if (!completed.compareAndSet(false, true)) {
+                return;
+            }
+            mainHandler.removeCallbacks(timeout);
+            applyResolvedLocationName(latitude, longitude, serverName, locationValue, notifyUser);
+        });
+    }
+
+    private String readableLocationName(List<Address> addresses) {
+        if (addresses == null || addresses.isEmpty()) {
             return null;
+        }
+        Address address = addresses.get(0);
+        String city = firstNonEmpty(address.getLocality(), address.getSubAdminArea(), address.getAdminArea());
+        String country = address.getCountryName();
+        if (city != null && country != null) {
+            return city + ", " + country;
+        }
+        return city == null ? country : city;
+    }
+
+    private void applyResolvedLocationName(double latitude, double longitude, String serverName, TextView locationValue, boolean notifyUser) {
+        ZmanimSettings settings = new ZmanimSettings(this);
+        if (Math.abs(settings.latitude() - latitude) > 0.000001
+                || Math.abs(settings.longitude() - longitude) > 0.000001) {
+            return;
+        }
+        boolean serverResolved = serverName != null && !serverName.trim().isEmpty();
+        String resolvedName = serverResolved ? serverName : IsraeliCityResolver.nearestName(latitude, longitude);
+        if (resolvedName == null) {
+            resolvedName = ZmanimSettings.coordinatesName(latitude, longitude);
+        }
+        settings.update(resolvedName, latitude, longitude, settings.elevation(), settings.timeZoneId());
+        if (locationValue != null && locationValue.isAttachedToWindow()) {
+            locationValue.setText(zmanimLocationLine());
+        }
+        ComplicationRefresh.request(this);
+        if (notifyUser) {
+            String message = serverResolved
+                    ? "שם העיר עודכן"
+                    : resolvedName.endsWith("(בקירוב)")
+                    ? "אין תשובה מהשרת; הוצג יישוב קרוב"
+                    : "אין תשובה מהשרת; נשמרו הקואורדינטות";
+            Toast.makeText(this, UiText.t(this, message), Toast.LENGTH_LONG).show();
         }
     }
 

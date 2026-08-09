@@ -124,6 +124,11 @@ public class UiText {
         put("ספירת העומר", "Omer Count");
         put("מיקום זמני הלכה", "Halachic Times Location");
         put("מיקום חדש", "Refresh Location");
+        put("זהה שם עיר", "Identify City");
+        put("מזהה שם עיר...", "Identifying city...");
+        put("שם העיר עודכן", "City name updated");
+        put("אין תשובה מהשרת; הוצג יישוב קרוב", "No server response; showing a nearby locality");
+        put("אין תשובה מהשרת; נשמרו הקואורדינטות", "No server response; coordinates were saved");
         put("המיקום עודכן", "Location updated");
         put("לשליחה כשיש תקלה בתזכורות", "Send when there is a reminder issue");
         put("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", "Backup and restore are handled through the phone app");
