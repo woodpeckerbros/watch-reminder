@@ -317,18 +317,28 @@ public class MainActivity extends Activity {
         String title = summary.count == 1
                 ? "ייתכן שתזכורת לא הופיעה בזמן"
                 : "ייתכן שתזכורות לא הופיעו בזמן";
-        String message = "האפליקציה זיהתה "
-                + (summary.count == 1 ? "שתזכורת אחרונה" : "שכמה תזכורות אחרונות")
-                + " לא הוצגה בזמן המתוכנן.\n\n"
-                + "זה יכול לקרות בגלל ניהול סוללה של Wear OS, עומס זמני של המערכת, או חסימה של פעילות ברקע.\n\n"
-                + "מומלץ להפעיל \"בדיקת רקע פעילה\". במצב זה האפליקציה תעיר את עצמה מדי פעם ותבדוק אם יש תזכורות שצריך להציג.\n\n"
-                + "שימו לב: הפעלת האפשרות עשויה לצרוך יותר סוללה. אפשר לשנות אחר כך את מספר הדקות בין בדיקות במסך ההגדרות המתקדמות.\n\n"
-                + "התזכורת האחרונה שזוהתה: " + summary.latestName + " בשעה " + NextReminderCalculator.formatTime(summary.latestScheduledAt);
+        String message;
+        if (AppLanguage.isEnglish(this)) {
+            message = "The app detected " + (summary.count == 1 ? "a recent reminder" : "several recent reminders")
+                    + " that did not appear at the scheduled time.\n\n"
+                    + "This can happen because of Wear OS battery management, temporary system load, or restricted background activity.\n\n"
+                    + "We recommend enabling Background Check Active. The app will periodically wake and check for reminders that should be shown.\n\n"
+                    + "Note: this may use more battery. You can change the interval later in Advanced Settings.\n\n"
+                    + "Latest detected reminder: " + summary.latestName + " at " + NextReminderCalculator.formatTime(summary.latestScheduledAt);
+        } else {
+            message = "האפליקציה זיהתה "
+                    + (summary.count == 1 ? "שתזכורת אחרונה" : "שכמה תזכורות אחרונות")
+                    + " לא הוצגה בזמן המתוכנן.\n\n"
+                    + "זה יכול לקרות בגלל ניהול סוללה של Wear OS, עומס זמני של המערכת, או חסימה של פעילות ברקע.\n\n"
+                    + "מומלץ להפעיל \"בדיקת רקע פעילה\". במצב זה האפליקציה תעיר את עצמה מדי פעם ותבדוק אם יש תזכורות שצריך להציג.\n\n"
+                    + "שימו לב: הפעלת האפשרות עשויה לצרוך יותר סוללה. אפשר לשנות אחר כך את מספר הדקות בין בדיקות במסך ההגדרות המתקדמות.\n\n"
+                    + "התזכורת האחרונה שזוהתה: " + summary.latestName + " בשעה " + NextReminderCalculator.formatTime(summary.latestScheduledAt);
+        }
         new AlertDialog.Builder(this)
-                .setTitle(title)
+                .setTitle(UiText.t(this, title))
                 .setMessage(message)
-                .setPositiveButton("הפעל בדיקת רקע", (dialog, which) -> enableBackgroundReliabilityCheck())
-                .setNegativeButton("לא עכשיו", null)
+                .setPositiveButton(UiText.t(this, "הפעל בדיקת רקע"), (dialog, which) -> enableBackgroundReliabilityCheck())
+                .setNegativeButton(UiText.t(this, "לא עכשיו"), null)
                 .show();
         return true;
     }
@@ -340,7 +350,7 @@ public class MainActivity extends Activity {
         ReminderForegroundService.start(this);
         Toast.makeText(
                 this,
-                "בדיקת רקע פעילה הופעלה. ניתן לשנות את מרווח הדקות בהגדרות המתקדמות.",
+                UiText.t(this, "בדיקת רקע פעילה הופעלה. ניתן לשנות את מרווח הדקות בהגדרות המתקדמות."),
                 Toast.LENGTH_LONG
         ).show();
         refreshVisibleScreen();
@@ -459,11 +469,11 @@ public class MainActivity extends Activity {
         } else if (requestCode == REQUEST_CREATE_BACKUP_FILE) {
             try {
                 ReminderBackup.writeToUri(this, uri);
-                Toast.makeText(this, "הגיבוי נשמר", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, UiText.t(this, "הגיבוי נשמר"), Toast.LENGTH_SHORT).show();
                 showSettings();
             } catch (Exception exception) {
                 AppLog.e(this, "backup write uri failed", exception);
-                Toast.makeText(this, "לא הצלחתי לשמור את הקובץ", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, UiText.t(this, "לא הצלחתי לשמור את הקובץ"), Toast.LENGTH_SHORT).show();
             }
         } else if (requestCode == REQUEST_OPEN_BACKUP_FILE) {
             confirmRestoreBackupUri(uri);
@@ -1405,10 +1415,10 @@ public class MainActivity extends Activity {
         hoursHint.setPadding(0, dp(3), 0, dp(5));
         hoursCard.addView(hoursHint);
         NumberPicker fastingHoursPicker = numberPicker(1, 23, settings.fastingHours());
-        TextView eatingHours = text("חלון אכילה: " + settings.fastingEatingHours() + " שעות", 13, COLOR_ACCENT);
+        TextView eatingHours = text(fastingEatingWindowText(settings.fastingEatingHours()), 13, COLOR_ACCENT);
         eatingHours.setPadding(0, dp(4), 0, 0);
         fastingHoursPicker.setOnValueChangedListener((picker, oldValue, newValue) ->
-                eatingHours.setText("חלון אכילה: " + (24 - newValue) + " שעות"));
+                eatingHours.setText(fastingEatingWindowText(24 - newValue)));
         hoursCard.addView(pickerColumn("שעות צום", fastingHoursPicker));
         hoursCard.addView(eatingHours);
         content.addView(hoursCard, cardParams());
@@ -1475,7 +1485,7 @@ public class MainActivity extends Activity {
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         ComplicationRefresh.request(this);
-        Toast.makeText(this, "חלון האכילה התחיל עכשיו", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "חלון האכילה התחיל עכשיו"), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
 
@@ -1485,7 +1495,7 @@ public class MainActivity extends Activity {
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         ComplicationRefresh.request(this);
-        Toast.makeText(this, "סומן שהתחלת לאכול ב-" + NextReminderCalculator.formatTime(startedAt), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "סומן שהתחלת לאכול ב-") + NextReminderCalculator.formatTime(startedAt), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
 
@@ -1496,14 +1506,14 @@ public class MainActivity extends Activity {
         long finishedAt = ReminderScheduler.floorToMinute(now);
         long sessionStartAt = sessionStartForFinish(window, finishedAt, now);
         if (finishedAt < sessionStartAt) {
-            Toast.makeText(this, "אפשר לבחור זמן סיום רק אחרי פתיחת חלון האכילה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "אפשר לבחור זמן סיום רק אחרי פתיחת חלון האכילה"), Toast.LENGTH_SHORT).show();
             return;
         }
         store.finishEatingAt(finishedAt, sessionStartAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         ComplicationRefresh.request(this);
-        Toast.makeText(this, "סומן שסיימת לאכול. חלון האכילה הבא יתעדכן לפי זמן הסיום.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "סומן שסיימת לאכול. חלון האכילה הבא יתעדכן לפי זמן הסיום."), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
 
@@ -1569,18 +1579,18 @@ public class MainActivity extends Activity {
         long finishedAt = finishTime[0];
         long sessionStartAt = finishTime[1];
         if (finishedAt > now) {
-            Toast.makeText(this, "אי אפשר לבחור זמן סיום עתידי", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "אי אפשר לבחור זמן סיום עתידי"), Toast.LENGTH_SHORT).show();
             return;
         }
         if (finishedAt < sessionStartAt) {
-            Toast.makeText(this, "אפשר לבחור זמן סיום רק אחרי פתיחת חלון האכילה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "אפשר לבחור זמן סיום רק אחרי פתיחת חלון האכילה"), Toast.LENGTH_SHORT).show();
             return;
         }
         store.finishEatingAt(finishedAt, sessionStartAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         ComplicationRefresh.request(this);
-        Toast.makeText(this, "סומן שסיימת לאכול ב-" + NextReminderCalculator.formatTime(finishedAt), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "סומן שסיימת לאכול ב-") + NextReminderCalculator.formatTime(finishedAt), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
 
@@ -1614,7 +1624,11 @@ public class MainActivity extends Activity {
 
     private String fastingSummary(ReminderSettings settings) {
         if (!settings.intermittentFastingEnabled()) {
-            return "כבוי";
+            return UiText.t(this, "כבוי");
+        }
+        if (AppLanguage.isEnglish(this)) {
+            return settings.fastingHours() + "/" + settings.fastingEatingHours()
+                    + " | Initial start " + formatTime(settings.fastingStartHour(), settings.fastingStartMinute());
         }
         return settings.fastingHours() + "/" + settings.fastingEatingHours()
                 + " | התחלה ראשונית " + formatTime(settings.fastingStartHour(), settings.fastingStartMinute());
@@ -1624,18 +1638,26 @@ public class MainActivity extends Activity {
         ReminderSettings settings = new ReminderSettings(this);
         IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
         long now = System.currentTimeMillis();
+        boolean english = AppLanguage.isEnglish(this);
         if (window.eatingOpen(now)) {
-            return "חלון האכילה פתוח עד " + formatDateTime(window.endAt);
+            return (english ? "Eating window is open until " : "חלון האכילה פתוח עד ") + formatDateTime(window.endAt);
         }
         if (window.finished) {
-            return "סיימת לאכול ב-" + formatDateTime(window.finishedAt)
-                    + " | פתיחה הבאה: " + formatDateTime(window.nextStartAt);
+            return (english ? "Finished eating at " : "סיימת לאכול ב-") + formatDateTime(window.finishedAt)
+                    + (english ? " | Next opening: " : " | פתיחה הבאה: ") + formatDateTime(window.nextStartAt);
         }
         if (now < window.startAt) {
-            return "בצום עכשיו | אפשר להתחיל לאכול ב-" + formatDateTime(window.startAt);
+            return (english ? "Fasting now | You can start eating at " : "בצום עכשיו | אפשר להתחיל לאכול ב-")
+                    + formatDateTime(window.startAt);
         }
-        return "בצום עכשיו | החלון הבא: " + formatDateTime(window.nextStartAt)
+        return (english ? "Fasting now | Next window: " : "בצום עכשיו | החלון הבא: ") + formatDateTime(window.nextStartAt)
                 + " | " + settings.fastingHours() + "/" + settings.fastingEatingHours();
+    }
+
+    private String fastingEatingWindowText(int hours) {
+        return AppLanguage.isEnglish(this)
+                ? "Eating window: " + hours + " hours"
+                : "חלון אכילה: " + hours + " שעות";
     }
 
     private void applyJewishModeChange(boolean enabled) {
@@ -1772,7 +1794,7 @@ public class MainActivity extends Activity {
                 Button undoLearned = pillButton("סמן כלא למדתי", COLOR_SURFACE_2);
                 undoLearned.setOnClickListener(v -> {
                     new DafYomiStore(this).markMissed(item);
-                    Toast.makeText(this, "הדף הועבר להשלמה", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, UiText.t(this, "הדף הועבר להשלמה"), Toast.LENGTH_SHORT).show();
                     showDafYomiSettings();
                 });
                 correctionCard.addView(undoLearned);
@@ -2366,7 +2388,7 @@ public class MainActivity extends Activity {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null) {
                 clipboard.setPrimaryClip(ClipData.newPlainText("Watch Reminder backup", ReminderBackup.exportText(this)));
-                Toast.makeText(this, "הגיבוי הועתק", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, UiText.t(this, "הגיבוי הועתק"), Toast.LENGTH_SHORT).show();
             }
         });
         actions2.addView(phone);
@@ -2406,7 +2428,7 @@ public class MainActivity extends Activity {
                 CharSequence text = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
                 confirmRestoreBackup(text == null ? "" : text.toString());
             } else {
-                Toast.makeText(this, "אין גיבוי בלוח", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, UiText.t(this, "אין גיבוי בלוח"), Toast.LENGTH_SHORT).show();
             }
         });
         pasteRow.addView(paste);
@@ -2423,19 +2445,19 @@ public class MainActivity extends Activity {
     private void saveBackupToDocuments() {
         try {
             String fileName = ReminderBackup.saveToPublicDocuments(this);
-            Toast.makeText(this, "נשמר ב-Documents וב-Download: " + fileName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, (AppLanguage.isEnglish(this) ? "Saved in Documents and Download: " : "נשמר ב-Documents וב-Download: ") + fileName, Toast.LENGTH_LONG).show();
         } catch (Exception exception) {
             AppLog.e(this, "backup save local failed", exception);
-            Toast.makeText(this, "לא הצלחתי לשמור בתיקייה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "לא הצלחתי לשמור בתיקייה"), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void sendBackupToPhone() {
-        Toast.makeText(this, "שולח לטלפון...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "שולח לטלפון..."), Toast.LENGTH_SHORT).show();
         PhoneBackupSender.send(this, new PhoneBackupSender.Callback() {
             @Override
             public void onSuccess(int count) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "נשלח לטלפון", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "נשלח לטלפון"), Toast.LENGTH_SHORT).show());
             }
 
             @Override
@@ -2446,12 +2468,12 @@ public class MainActivity extends Activity {
     }
 
     private void sendLogsToPhone() {
-        Toast.makeText(this, "שולח לוגים לטלפון...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "שולח לוגים לטלפון..."), Toast.LENGTH_SHORT).show();
         AppLog.d(this, "user requested send logs to phone");
         PhoneLogSender.send(this, new PhoneLogSender.Callback() {
             @Override
             public void onSuccess(int count) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "הלוגים נשלחו לטלפון", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "הלוגים נשלחו לטלפון"), Toast.LENGTH_SHORT).show());
             }
 
             @Override
@@ -2463,12 +2485,12 @@ public class MainActivity extends Activity {
 
     private void confirmClearLogs() {
         new AlertDialog.Builder(this)
-                .setMessage("אתה בטוח שאתה רוצה למחוק את הלוגים?")
-                .setPositiveButton("כן", (dialog, which) -> {
+                .setMessage(UiText.t(this, "אתה בטוח שאתה רוצה למחוק את הלוגים?"))
+                .setPositiveButton(UiText.t(this, "כן"), (dialog, which) -> {
                     AppLog.clear(this);
-                    Toast.makeText(this, "הלוגים נמחקו", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, UiText.t(this, "הלוגים נמחקו"), Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("לא", null)
+                .setNegativeButton(UiText.t(this, "לא"), null)
                 .show();
     }
 
@@ -2478,11 +2500,11 @@ public class MainActivity extends Activity {
             openPendingRestoreFromPhone();
             return;
         }
-        Toast.makeText(this, "פותח את אפליקציית הגיבוי בטלפון...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "פותח את אפליקציית הגיבוי בטלפון..."), Toast.LENGTH_SHORT).show();
         PhoneAppOpener.openRestore(this, new PhoneAppOpener.Callback() {
             @Override
             public void onSuccess() {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "פתחתי בטלפון. בחר גיבוי ושלח לשעון.", Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "פתחתי בטלפון. בחר גיבוי ושלח לשעון."), Toast.LENGTH_LONG).show());
             }
 
             @Override
@@ -2501,7 +2523,7 @@ public class MainActivity extends Activity {
             startActivityForResult(intent, REQUEST_CREATE_BACKUP_FILE);
         } catch (Exception exception) {
             AppLog.e(this, "backup create document failed", exception);
-            Toast.makeText(this, "בורר הקבצים לא זמין בשעון", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "בורר הקבצים לא זמין בשעון"), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -2513,14 +2535,14 @@ public class MainActivity extends Activity {
             startActivityForResult(intent, REQUEST_OPEN_BACKUP_FILE);
         } catch (Exception exception) {
             AppLog.e(this, "backup open document failed", exception);
-            Toast.makeText(this, "בורר הקבצים לא זמין בשעון", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "בורר הקבצים לא זמין בשעון"), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void showBackupFileList() {
         List<ReminderBackup.BackupEntry> files = ReminderBackup.listAllDocumentBackups(this);
         if (files.isEmpty()) {
-            Toast.makeText(this, "לא נמצאו קבצי גיבוי בתיקייה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "לא נמצאו קבצי גיבוי בתיקייה"), Toast.LENGTH_SHORT).show();
             return;
         }
         String[] names = new String[files.size()];
@@ -2528,49 +2550,51 @@ public class MainActivity extends Activity {
             names[i] = files.get(i).name;
         }
         new AlertDialog.Builder(this)
-                .setTitle("בחר גיבוי")
+                .setTitle(UiText.t(this, "בחר גיבוי"))
                 .setItems(names, (dialog, which) -> confirmRestoreBackupEntry(files.get(which)))
-                .setNegativeButton("ביטול", null)
+                .setNegativeButton(UiText.t(this, "ביטול"), null)
                 .show();
     }
 
     private void confirmRestoreBackup(String backupText) {
         if (backupText == null || backupText.trim().isEmpty()) {
-            Toast.makeText(this, "אין טקסט גיבוי לייבוא", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "אין טקסט גיבוי לייבוא"), Toast.LENGTH_SHORT).show();
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("לשחזר גיבוי?")
-                .setMessage("כל התזכורות הקיימות יוחלפו בתזכורות מהגיבוי.")
-                .setPositiveButton("שחזור", (dialog, which) -> restoreBackup(backupText))
-                .setNegativeButton("ביטול", null)
+                .setTitle(UiText.t(this, "לשחזר גיבוי?"))
+                .setMessage(UiText.t(this, "כל התזכורות הקיימות יוחלפו בתזכורות מהגיבוי."))
+                .setPositiveButton(UiText.t(this, "שחזור"), (dialog, which) -> restoreBackup(backupText))
+                .setNegativeButton(UiText.t(this, "ביטול"), null)
                 .show();
     }
 
     private void confirmRestoreBackupFile(File file) {
         new AlertDialog.Builder(this)
-                .setTitle("לשחזר גיבוי?")
-                .setMessage("הקובץ " + file.getName() + " יחליף את כל התזכורות הקיימות.")
-                .setPositiveButton("שחזור", (dialog, which) -> restoreBackupFile(file))
-                .setNegativeButton("ביטול", null)
+                .setTitle(UiText.t(this, "לשחזר גיבוי?"))
+                .setMessage(restoreFileConfirmation(file.getName()))
+                .setPositiveButton(UiText.t(this, "שחזור"), (dialog, which) -> restoreBackupFile(file))
+                .setNegativeButton(UiText.t(this, "ביטול"), null)
                 .show();
     }
 
     private void confirmRestoreBackupEntry(ReminderBackup.BackupEntry entry) {
         new AlertDialog.Builder(this)
-                .setTitle("לשחזר גיבוי?")
-                .setMessage("הקובץ " + entry.name + " יחליף את כל התזכורות הקיימות.")
-                .setPositiveButton("שחזור", (dialog, which) -> restoreBackupEntry(entry))
-                .setNegativeButton("ביטול", null)
+                .setTitle(UiText.t(this, "לשחזר גיבוי?"))
+                .setMessage(restoreFileConfirmation(entry.name))
+                .setPositiveButton(UiText.t(this, "שחזור"), (dialog, which) -> restoreBackupEntry(entry))
+                .setNegativeButton(UiText.t(this, "ביטול"), null)
                 .show();
     }
 
     private void confirmRestoreBackupUri(Uri uri) {
         new AlertDialog.Builder(this)
-                .setTitle("לשחזר גיבוי?")
-                .setMessage("הקובץ שבחרת יחליף את כל התזכורות הקיימות.")
-                .setPositiveButton("שחזור", (dialog, which) -> restoreBackupUri(uri))
-                .setNegativeButton("ביטול", null)
+                .setTitle(UiText.t(this, "לשחזר גיבוי?"))
+                .setMessage(AppLanguage.isEnglish(this)
+                        ? "The selected file will replace all existing reminders."
+                        : "הקובץ שבחרת יחליף את כל התזכורות הקיימות.")
+                .setPositiveButton(UiText.t(this, "שחזור"), (dialog, which) -> restoreBackupUri(uri))
+                .setNegativeButton(UiText.t(this, "ביטול"), null)
                 .show();
     }
 
@@ -2578,11 +2602,11 @@ public class MainActivity extends Activity {
         try {
             int count = ReminderBackup.importText(this, backupText);
             store = new ReminderStore(this);
-            Toast.makeText(this, "שוחזרו " + count + " תזכורות", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
             showList();
         } catch (Exception exception) {
             AppLog.e(this, "backup import failed", exception);
-            Toast.makeText(this, "הגיבוי לא תקין", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "הגיבוי לא תקין"), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -2590,11 +2614,11 @@ public class MainActivity extends Activity {
         try {
             int count = ReminderBackup.importFile(this, file);
             store = new ReminderStore(this);
-            Toast.makeText(this, "שוחזרו " + count + " תזכורות", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
             showList();
         } catch (Exception exception) {
             AppLog.e(this, "backup file import failed", exception);
-            Toast.makeText(this, "הקובץ לא תקין", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "הקובץ לא תקין"), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -2602,11 +2626,11 @@ public class MainActivity extends Activity {
         try {
             int count = ReminderBackup.importEntry(this, entry);
             store = new ReminderStore(this);
-            Toast.makeText(this, "שוחזרו " + count + " תזכורות", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
             showList();
         } catch (Exception exception) {
             AppLog.e(this, "backup entry import failed", exception);
-            Toast.makeText(this, "הקובץ לא תקין", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "הקובץ לא תקין"), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -2614,12 +2638,24 @@ public class MainActivity extends Activity {
         try {
             int count = ReminderBackup.importUri(this, uri);
             store = new ReminderStore(this);
-            Toast.makeText(this, "שוחזרו " + count + " תזכורות", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
             showList();
         } catch (Exception exception) {
             AppLog.e(this, "backup uri import failed", exception);
-            Toast.makeText(this, "הקובץ לא תקין", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "הקובץ לא תקין"), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private String restoreFileConfirmation(String fileName) {
+        return AppLanguage.isEnglish(this)
+                ? "The file " + fileName + " will replace all existing reminders."
+                : "הקובץ " + fileName + " יחליף את כל התזכורות הקיימות.";
+    }
+
+    private String restoredReminderCount(int count) {
+        return AppLanguage.isEnglish(this)
+                ? "Restored " + count + " reminders"
+                : "שוחזרו " + count + " תזכורות";
     }
 
     private void showBlessingReminder() {
@@ -2777,12 +2813,12 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                 && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestLocationPermissions();
-            Toast.makeText(this, "צריך לאשר מיקום ואז ללחוץ שוב", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "צריך לאשר מיקום ואז ללחוץ שוב"), Toast.LENGTH_SHORT).show();
             return;
         }
         LocationManager manager = (LocationManager) getSystemService(LOCATION_SERVICE);
         if (manager == null) {
-            Toast.makeText(this, "לא ניתן לקבל מיקום", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "לא ניתן לקבל מיקום"), Toast.LENGTH_SHORT).show();
             return;
         }
         Location last = bestLastKnownLocation(manager);
@@ -2811,9 +2847,9 @@ public class MainActivity extends Activity {
         boolean requested = requestSingleLocation(manager, LocationManager.GPS_PROVIDER, listener)
                 || requestSingleLocation(manager, LocationManager.NETWORK_PROVIDER, listener);
         if (!requested && last == null) {
-            Toast.makeText(this, "לא נמצא ספק מיקום פעיל", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "לא נמצא ספק מיקום פעיל"), Toast.LENGTH_SHORT).show();
         } else if (last == null) {
-            Toast.makeText(this, "מבקש מיקום חדש...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "מבקש מיקום חדש..."), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -2871,7 +2907,7 @@ public class MainActivity extends Activity {
         DafYomiScheduler.schedule(this);
         OmerScheduler.schedule(this);
         ComplicationRefresh.request(this);
-        Toast.makeText(this, "המיקום עודכן", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, UiText.t(this, "המיקום עודכן"), Toast.LENGTH_SHORT).show();
         resolveLocationName(location.getLatitude(), location.getLongitude(), locationValue, false);
     }
 
@@ -3041,7 +3077,7 @@ public class MainActivity extends Activity {
         ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
         NextReminderCalculator.NextReminder next = NextReminderCalculator.nextForReminder(this, reminder, snoozeStore, new ReminderEventStore(this));
         if (next == null) {
-            Toast.makeText(this, "אין תזכורת קרובה לדחייה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, UiText.t(this, "אין תזכורת קרובה לדחייה"), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -3131,7 +3167,9 @@ public class MainActivity extends Activity {
         long nextScheduledAt = ReminderScheduler.scheduleSnoozeAt(this, reminder.id, next.reminderName, baseAt + minutes * 60_000L, originalScheduledAt);
         new ReminderEventStore(this).markUpcomingSnoozed(reminder.id, next.reminderName, reminder.description, originalScheduledAt, minutes, nextScheduledAt);
         AppLog.d(this, "main snooze upcoming id=" + reminder.id + " minutes=" + minutes + " at=" + NextReminderCalculator.formatDateTime(nextScheduledAt));
-        Toast.makeText(this, "נדחה ל-" + NextReminderCalculator.formatTime(nextScheduledAt), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this,
+                (AppLanguage.isEnglish(this) ? "Snoozed until " : "נדחה ל-") + NextReminderCalculator.formatTime(nextScheduledAt),
+                Toast.LENGTH_SHORT).show();
         showList();
     }
 

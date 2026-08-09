@@ -114,7 +114,10 @@ public class ReminderAlertActivity extends Activity {
             card.addView(description);
         }
         if (alertGroup.count() > 1) {
-            TextView missedTitle = text("פוספס " + alertGroup.count() + " פעמים", 14, COLOR_ACCENT);
+            String missedCount = AppLanguage.isEnglish(this)
+                    ? "Missed " + alertGroup.count() + " times"
+                    : "פוספס " + alertGroup.count() + " פעמים";
+            TextView missedTitle = text(missedCount, 14, COLOR_ACCENT);
             missedTitle.setTypeface(Typeface.DEFAULT_BOLD);
             missedTitle.setPadding(0, 0, 0, dp(4));
             card.addView(missedTitle);

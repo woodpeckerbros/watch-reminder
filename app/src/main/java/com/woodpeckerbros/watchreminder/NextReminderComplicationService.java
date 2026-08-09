@@ -39,24 +39,26 @@ public class NextReminderComplicationService extends ComplicationDataSourceServi
 
     private ComplicationData createData(ComplicationType type, boolean preview) {
         NextReminderCalculator.NextReminder next = preview
-                ? new NextReminderCalculator.NextReminder("preview", "בדיקת תרופות", previewTime(), false)
+                ? new NextReminderCalculator.NextReminder("preview", UiText.t(this, "בדיקת תרופות"), previewTime(), false)
                 : NextReminderCalculator.next(this, false);
         if (next == null) {
             if (type.equals(ComplicationType.SHORT_TEXT)) {
-                return shortText("--:--", "אין תזכורות", "אין תזכורות קרובות");
+                return shortText("--:--", UiText.t(this, "אין תזכורות"), UiText.t(this, "אין תזכורות קרובות"));
             }
             if (type.equals(ComplicationType.LONG_TEXT)) {
-                return longText("אין תזכורות", "אין תזכורות קרובות");
+                return longText(UiText.t(this, "אין תזכורות"), UiText.t(this, "אין תזכורות קרובות"));
             }
             if (type.equals(ComplicationType.SMALL_IMAGE)) {
-                return smallImage("--:--", "אין תזכורות קרובות");
+                return smallImage("--:--", UiText.t(this, "אין תזכורות קרובות"));
             }
             return new NoDataComplicationData();
         }
 
         String time = NextReminderCalculator.formatTime(next.scheduledAt);
         String title = next.reminderName;
-        String description = "התראה קרובה " + title + " בשעה " + time;
+        String description = AppLanguage.isEnglish(this)
+                ? "Upcoming reminder " + title + " at " + time
+                : "התראה קרובה " + title + " בשעה " + time;
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return shortText(time, title, description);
         }

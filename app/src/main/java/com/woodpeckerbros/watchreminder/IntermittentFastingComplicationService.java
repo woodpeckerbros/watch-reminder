@@ -57,15 +57,15 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
         ReminderSettings settings = new ReminderSettings(this);
         if (!settings.intermittentFastingEnabled()) {
             int startMinutes = settings.fastingStartHour() * 60 + settings.fastingStartMinute();
-            return new FastingComplicationText("הצום נגמר ב:", formatClock(startMinutes));
+            return new FastingComplicationText(UiText.t(this, "הצום נגמר ב:"), formatClock(startMinutes));
         }
         long now = System.currentTimeMillis();
         IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
         if (window.eatingOpen(now)) {
-            return new FastingComplicationText("הצום מתחיל ב:", NextReminderCalculator.formatTime(window.endAt));
+            return new FastingComplicationText(UiText.t(this, "הצום מתחיל ב:"), NextReminderCalculator.formatTime(window.endAt));
         }
         long startsAt = window.finished ? window.nextStartAt : window.startAt;
-        return new FastingComplicationText("הצום נגמר ב:", NextReminderCalculator.formatTime(startsAt));
+        return new FastingComplicationText(UiText.t(this, "הצום נגמר ב:"), NextReminderCalculator.formatTime(startsAt));
     }
 
     private String formatClock(int minutesOfDay) {

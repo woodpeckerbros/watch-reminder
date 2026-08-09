@@ -21,14 +21,14 @@ public class PhoneBackupSender {
     public static void send(Context context, Callback callback) {
         String backup = ReminderBackup.exportText(context);
         if (backup.isEmpty()) {
-            callback.onError("לא הצלחתי ליצור גיבוי");
+            callback.onError(UiText.t(context, "לא הצלחתי ליצור גיבוי"));
             return;
         }
         byte[] data = backup.getBytes(StandardCharsets.UTF_8);
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {
-                        callback.onError("לא נמצא טלפון מחובר");
+                        callback.onError(UiText.t(context, "לא נמצא טלפון מחובר"));
                         return;
                     }
                     final int[] pending = {nodes.size()};
@@ -50,7 +50,7 @@ public class PhoneBackupSender {
                                         if (sent[0] > 0) {
                                             callback.onSuccess(sent[0]);
                                         } else {
-                                            callback.onError("השליחה לטלפון נכשלה");
+                                            callback.onError(UiText.t(context, "השליחה לטלפון נכשלה"));
                                         }
                                     }
                                 });
@@ -58,7 +58,7 @@ public class PhoneBackupSender {
                 })
                 .addOnFailureListener(error -> {
                     AppLog.e(context, "connected nodes failed", error);
-                    callback.onError("לא הצלחתי למצוא טלפון מחובר");
+                    callback.onError(UiText.t(context, "לא הצלחתי למצוא טלפון מחובר"));
                 });
     }
 }

@@ -67,10 +67,25 @@ public class OmerHelper {
         }
         long triggerAt = ReminderScheduler.ceilToMinute(tzeis + offsetMinutes * 60_000L);
         String key = jewishCalendar.getJewishYear() + ":" + omerDay;
-        return new Item(key, omerDay, triggerAt, label(omerDay));
+        return new Item(key, omerDay, triggerAt, label(context, omerDay));
     }
 
-    private static String label(int day) {
+    private static String label(Context context, int day) {
+        if (AppLanguage.isEnglish(context)) {
+            int weeks = day / 7;
+            int days = day % 7;
+            StringBuilder english = new StringBuilder("Today is ");
+            english.append(day).append(day == 1 ? " day of the Omer" : " days of the Omer");
+            if (weeks > 0) {
+                english.append(", which is ").append(weeks);
+                english.append(weeks == 1 ? " week" : " weeks");
+                if (days > 0) {
+                    english.append(" and ").append(days);
+                    english.append(days == 1 ? " day" : " days");
+                }
+            }
+            return english.toString();
+        }
         int weeks = day / 7;
         int days = day % 7;
         StringBuilder builder = new StringBuilder("היום ");

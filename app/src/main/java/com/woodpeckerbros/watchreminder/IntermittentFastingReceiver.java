@@ -37,20 +37,23 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
             if (!retry) {
                 store.startEatingAt(triggerAt);
             }
-            showNotification(context, eventType, triggerAt, "אפשר להתחיל לאכול", "חלון האכילה שלך נפתח עכשיו. הוא יימשך " + settings.fastingEatingHours() + " שעות.");
+            String message = AppLanguage.isEnglish(context)
+                    ? "Your eating window is open now. It will last " + settings.fastingEatingHours() + " hours."
+                    : "חלון האכילה שלך נפתח עכשיו. הוא יימשך " + settings.fastingEatingHours() + " שעות.";
+            showNotification(context, eventType, triggerAt, UiText.t(context, "אפשר להתחיל לאכול"), message);
         } else if (IntermittentFastingScheduler.EVENT_END_WARNING.equals(eventType)) {
             if (!retry && !window.eatingOpen(System.currentTimeMillis())) {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, eventType, triggerAt, "עוד חצי שעה לסיום", "חלון האכילה ייסגר בעוד חצי שעה.");
+            showNotification(context, eventType, triggerAt, UiText.t(context, "עוד חצי שעה לסיום"), UiText.t(context, "חלון האכילה ייסגר בעוד חצי שעה."));
         } else if (IntermittentFastingScheduler.EVENT_END.equals(eventType)) {
             window = store.window(System.currentTimeMillis());
             if (!retry && window.finished) {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, eventType, triggerAt, "חלון האכילה נסגר", "נגמר חלון זמן האכילה להיום.");
+            showNotification(context, eventType, triggerAt, UiText.t(context, "חלון האכילה נסגר"), UiText.t(context, "נגמר חלון זמן האכילה להיום."));
         } else {
             AppLog.w(context, "fasting receiver skipped unknown type=" + eventType);
             IntermittentFastingScheduler.schedule(context);
@@ -110,7 +113,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
         }
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "צום לסירוגין",
+                UiText.t(context, "צום לסירוגין"),
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.enableVibration(false);

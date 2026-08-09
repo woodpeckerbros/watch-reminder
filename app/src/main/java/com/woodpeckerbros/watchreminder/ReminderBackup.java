@@ -98,7 +98,7 @@ public class ReminderBackup {
     public static void share(Context context) {
         String text = exportText(context);
         if (text.isEmpty()) {
-            Toast.makeText(context, "לא הצלחתי ליצור גיבוי", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, UiText.t(context, "לא הצלחתי ליצור גיבוי"), Toast.LENGTH_SHORT).show();
             return;
         }
         Intent intent = new Intent(Intent.ACTION_SEND)
@@ -109,7 +109,7 @@ public class ReminderBackup {
             context.startActivity(Intent.createChooser(intent, "ייצוא גיבוי"));
         } catch (Exception exception) {
             AppLog.e(context, "backup share failed", exception);
-            Toast.makeText(context, "אין אפליקציה זמינה לשליחה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, UiText.t(context, "אין אפליקציה זמינה לשליחה"), Toast.LENGTH_SHORT).show();
         }
     }
 

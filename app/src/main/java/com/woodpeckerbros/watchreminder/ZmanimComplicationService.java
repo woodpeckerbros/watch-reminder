@@ -30,20 +30,20 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
     }
 
     private ComplicationData createData(ComplicationType type) {
-        String description = "פתיחת זמני ההלכה של היום";
+        String description = UiText.t(this, "פתיחת זמני ההלכה של היום");
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder("זמנים").build(),
+                    new PlainComplicationText.Builder(UiText.t(this, "זמנים")).build(),
                     new PlainComplicationText.Builder(description).build()
             )
-                    .setTitle(new PlainComplicationText.Builder("היום").build())
+                    .setTitle(new PlainComplicationText.Builder(UiText.t(this, "היום")).build())
                     .setMonochromaticImage(image())
                     .setTapAction(openZmanimIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder("זמני היום").build(),
+                    new PlainComplicationText.Builder(UiText.t(this, "זמני היום")).build(),
                     new PlainComplicationText.Builder(description).build()
             )
                     .setMonochromaticImage(image())

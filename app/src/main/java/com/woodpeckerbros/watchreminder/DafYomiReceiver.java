@@ -50,9 +50,9 @@ public class DafYomiReceiver extends BroadcastReceiver {
         );
         Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("דף היומי")
-                .setContentText("בדיקת לימוד דף היומי")
-                .setStyle(new Notification.BigTextStyle().bigText("בדיקת לימוד דף היומי"))
+                .setContentTitle(UiText.t(context, "דף היומי"))
+                .setContentText(UiText.t(context, "בדיקת לימוד דף היומי"))
+                .setStyle(new Notification.BigTextStyle().bigText(UiText.t(context, "בדיקת לימוד דף היומי")))
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setPriority(Notification.PRIORITY_MAX)
@@ -83,7 +83,7 @@ public class DafYomiReceiver extends BroadcastReceiver {
         }
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "דף היומי",
+                UiText.t(context, "דף היומי"),
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.enableVibration(false);

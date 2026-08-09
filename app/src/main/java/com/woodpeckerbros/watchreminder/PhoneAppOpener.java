@@ -20,7 +20,7 @@ public class PhoneAppOpener {
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {
-                        callback.onError("לא נמצא טלפון מחובר");
+                        callback.onError(UiText.t(context, "לא נמצא טלפון מחובר"));
                         return;
                     }
                     final int[] pending = {nodes.size()};
@@ -42,7 +42,7 @@ public class PhoneAppOpener {
                                         if (opened[0]) {
                                             callback.onSuccess();
                                         } else {
-                                            callback.onError("לא הצלחתי לפתוח את האפליקציה בטלפון");
+                                            callback.onError(UiText.t(context, "לא הצלחתי לפתוח את האפליקציה בטלפון"));
                                         }
                                     }
                                 });
@@ -50,7 +50,7 @@ public class PhoneAppOpener {
                 })
                 .addOnFailureListener(error -> {
                     AppLog.e(context, "connected nodes failed for open phone", error);
-                    callback.onError("לא הצלחתי למצוא טלפון מחובר");
+                    callback.onError(UiText.t(context, "לא הצלחתי למצוא טלפון מחובר"));
                 });
     }
 }

@@ -30,20 +30,20 @@ public class BlessingReminderComplicationService extends ComplicationDataSourceS
     }
 
     private ComplicationData createData(ComplicationType type) {
-        String description = "פתיחת תזכורת לברכה";
+        String description = UiText.t(this, "פתיחת תזכורת לברכה");
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
-                    new PlainComplicationText.Builder("ברכה").build(),
+                    new PlainComplicationText.Builder(UiText.t(this, "ברכה")).build(),
                     new PlainComplicationText.Builder(description).build()
             )
-                    .setTitle(new PlainComplicationText.Builder("תזכורת").build())
+                    .setTitle(new PlainComplicationText.Builder(UiText.t(this, "תזכורת")).build())
                     .setMonochromaticImage(image())
                     .setTapAction(openBlessingIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
-                    new PlainComplicationText.Builder("תזכורת לברכה").build(),
+                    new PlainComplicationText.Builder(UiText.t(this, "תזכורת לברכה")).build(),
                     new PlainComplicationText.Builder(description).build()
             )
                     .setMonochromaticImage(image())

@@ -23,7 +23,7 @@ public class PhoneLogSender {
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {
-                        callback.onError("לא נמצא טלפון מחובר");
+                        callback.onError(UiText.t(context, "לא נמצא טלפון מחובר"));
                         return;
                     }
                     final int[] pending = {nodes.size()};
@@ -45,7 +45,7 @@ public class PhoneLogSender {
                                         if (sent[0] > 0) {
                                             callback.onSuccess(sent[0]);
                                         } else {
-                                            callback.onError("שליחת הלוגים לטלפון נכשלה");
+                                            callback.onError(UiText.t(context, "שליחת הלוגים לטלפון נכשלה"));
                                         }
                                     }
                                 });
@@ -53,7 +53,7 @@ public class PhoneLogSender {
                 })
                 .addOnFailureListener(error -> {
                     AppLog.e(context, "connected nodes failed for logs", error);
-                    callback.onError("לא הצלחתי למצוא טלפון מחובר");
+                    callback.onError(UiText.t(context, "לא הצלחתי למצוא טלפון מחובר"));
                 });
     }
 }

@@ -50,10 +50,10 @@ public class OmerReceiver extends BroadcastReceiver {
                 alertIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
-        String text = item == null ? "תזכורת לספירת העומר" : item.label;
+        String text = item == null ? UiText.t(context, "תזכורת לספירת העומר") : item.label;
         Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("ספירת העומר")
+                .setContentTitle(UiText.t(context, "ספירת העומר"))
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setCategory(Notification.CATEGORY_ALARM)
@@ -86,7 +86,7 @@ public class OmerReceiver extends BroadcastReceiver {
         }
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "ספירת העומר",
+                UiText.t(context, "ספירת העומר"),
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.enableVibration(false);

@@ -66,7 +66,7 @@ public class ReminderForegroundService extends Service {
         Notification notification = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("בודק תזכורות ברקע")
+                .setContentText(UiText.t(this, "בודק תזכורות ברקע"))
                 .setOngoing(true)
                 .setShowWhen(false)
                 .build();

@@ -60,7 +60,7 @@ public class DeferredWearStateService extends Service {
         Notification notification = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("ממתין לענידת השעון")
+                .setContentText(UiText.t(this, "ממתין לענידת השעון"))
                 .setOngoing(true)
                 .setShowWhen(false)
                 .build();
