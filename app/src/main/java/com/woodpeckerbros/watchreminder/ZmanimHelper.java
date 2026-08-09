@@ -32,12 +32,12 @@ public class ZmanimHelper {
             KEY_SHMA_GRA,
             KEY_TFILA_GRA,
             KEY_CHATZOS,
-            KEY_CHATZOS_NIGHT,
             KEY_MINCHA_GEDOLA,
             KEY_MINCHA_KETANA,
             KEY_PLAG,
             KEY_SUNSET,
-            KEY_TZAIS
+            KEY_TZAIS,
+            KEY_CHATZOS_NIGHT
     };
 
     public static final String[] LABELS = {
@@ -47,12 +47,12 @@ public class ZmanimHelper {
             "סוף זמן שמע גר״א",
             "סוף זמן ברכות ק״ש",
             "חצות יום",
-            "חצות לילה",
             "מנחה גדולה",
             "מנחה קטנה",
             "פלג המנחה",
             "שקיעה",
-            "צאת הכוכבים"
+            "צאת הכוכבים",
+            "חצות לילה"
     };
 
     private ZmanimHelper() {
