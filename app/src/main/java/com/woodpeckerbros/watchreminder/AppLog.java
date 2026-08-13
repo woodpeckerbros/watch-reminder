@@ -70,6 +70,7 @@ public class AppLog {
         builder.append('\n').append("Alert queue:\n").append(pref(context, "reminder_alert_queue"));
         builder.append('\n').append("Wear state:\n").append(pref(context, "wear_state"));
         builder.append('\n').append("Settings:\n").append(pref(context, "reminder_settings"));
+        builder.append('\n').append("Zmanim settings:\n").append(pref(context, "zmanim_settings"));
         builder.append('\n').append("Daf yomi state:\n").append(pref(context, "daf_yomi_state"));
         builder.append('\n').append("Omer state:\n").append(pref(context, "omer_state"));
         builder.append('\n').append("Quiet time rules:\n").append(pref(context, "quiet_time_rules"));

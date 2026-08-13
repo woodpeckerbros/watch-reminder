@@ -66,6 +66,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
@@ -97,9 +99,16 @@ public class MainActivity extends Activity {
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
     private static final long MISSED_ALERT_LOOKBACK_MS = 24 * 60 * 60_000L;
     private static final long GEOCODER_TIMEOUT_MS = 8_000L;
+    private static final long LOCATION_RESCHEDULE_DEBOUNCE_MS = 750L;
+    private static final ExecutorService LOCATION_RESCHEDULER = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "zmanim-location-rescheduler");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private ReminderStore store;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingLocationReschedule;
     private Reminder editingReminder;
     private int selectedHour = 9;
     private int selectedMinute = 0;
@@ -2891,24 +2900,49 @@ public class MainActivity extends Activity {
     }
 
     private void saveZmanimLocation(Location location, TextView locationValue) {
-        String coordinates = ZmanimSettings.coordinatesName(location.getLatitude(), location.getLongitude());
-        new ZmanimSettings(this).update(
+        double latitude = ZmanimSettings.sanitizeLatitude(location.getLatitude());
+        double longitude = ZmanimSettings.sanitizeLongitude(location.getLongitude());
+        double elevation = ZmanimSettings.sanitizeElevation(location.hasAltitude() ? location.getAltitude() : 0);
+        ZmanimSettings settings = new ZmanimSettings(this);
+        boolean changed = Math.abs(settings.latitude() - latitude) > 0.000001
+                || Math.abs(settings.longitude() - longitude) > 0.000001
+                || Math.abs(settings.elevation() - elevation) > 0.1
+                || !TimeZone.getDefault().getID().equals(settings.timeZoneId());
+        String coordinates = ZmanimSettings.coordinatesName(latitude, longitude);
+        settings.update(
                 coordinates,
-                location.getLatitude(),
-                location.getLongitude(),
-                location.hasAltitude() ? location.getAltitude() : 0,
+                latitude,
+                longitude,
+                elevation,
                 TimeZone.getDefault().getID()
         );
         locationValue.setText(coordinates + "\n" + UiText.t(this, "מזהה שם עיר..."));
-        store.rescheduleAll();
-        JewishDayScheduler.schedule(this);
-        TekufaScheduler.schedule(this);
-        MoonBlessingScheduler.schedule(this);
-        DafYomiScheduler.schedule(this);
-        OmerScheduler.schedule(this);
-        ComplicationRefresh.request(this);
+        AppLog.d(this, "zmanim location received lat=" + latitude + " lon=" + longitude
+                + " elevation=" + elevation + " changed=" + changed);
+        if (changed) {
+            scheduleAfterLocationChange();
+        }
         Toast.makeText(this, UiText.t(this, "המיקום עודכן"), Toast.LENGTH_SHORT).show();
-        resolveLocationName(location.getLatitude(), location.getLongitude(), locationValue, false);
+        resolveLocationName(latitude, longitude, locationValue, false);
+    }
+
+    private void scheduleAfterLocationChange() {
+        if (pendingLocationReschedule != null) {
+            mainHandler.removeCallbacks(pendingLocationReschedule);
+        }
+        Context appContext = getApplicationContext();
+        pendingLocationReschedule = () -> LOCATION_RESCHEDULER.execute(() -> {
+            AppLog.d(appContext, "zmanim location reschedule begin");
+            new ReminderStore(appContext).rescheduleAll();
+            JewishDayScheduler.schedule(appContext);
+            TekufaScheduler.schedule(appContext);
+            MoonBlessingScheduler.schedule(appContext);
+            DafYomiScheduler.schedule(appContext);
+            OmerScheduler.schedule(appContext);
+            ComplicationRefresh.request(appContext);
+            AppLog.d(appContext, "zmanim location reschedule end");
+        });
+        mainHandler.postDelayed(pendingLocationReschedule, LOCATION_RESCHEDULE_DEBOUNCE_MS);
     }
 
     private void resolveStoredZmanimLocationName(TextView locationValue, boolean notifyUser) {

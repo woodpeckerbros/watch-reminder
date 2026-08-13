@@ -128,7 +128,8 @@ public class ZmanimHelper {
             Date result = ohrHachaimZman(calendar, key);
             putCache(cacheKey, result);
             return result;
-        } catch (Exception ignored) {
+        } catch (Exception exception) {
+            AppLog.e(context, "zmanim calculation failed key=" + key + " date=" + dateMillis, exception);
             return null;
         }
     }

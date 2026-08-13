@@ -13,6 +13,9 @@ public class QuietTimeHelper {
     }
 
     public static long adjust(Context context, long scheduledAt) {
+        if (scheduledAt == Long.MAX_VALUE) {
+            return Long.MAX_VALUE;
+        }
         if (context == null || !new ReminderSettings(context).quietMinchaMaariv()) {
             return scheduledAt;
         }

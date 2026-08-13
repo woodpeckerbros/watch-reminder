@@ -53,7 +53,7 @@ public class NextReminderCalculator {
         }
         long snoozeAt = pendingSnoozeAt(reminder.id, snoozeStore);
         long regularAt = nextRegularAt(context, reminder, eventStore, applyQuietTime);
-        if (snoozeAt <= regularAt) {
+        if (isRealSnoozeCandidate(snoozeAt, regularAt)) {
             return new NextReminder(reminder.id, reminder.name, snoozeAt, true);
         }
         if (regularAt == Long.MAX_VALUE) {
@@ -61,6 +61,10 @@ public class NextReminderCalculator {
         }
         String name = reminder.isAnnualEvent() ? annualName(context, reminder, eventStore, applyQuietTime) : reminder.name;
         return new NextReminder(reminder.id, name, regularAt, false);
+    }
+
+    static boolean isRealSnoozeCandidate(long snoozeAt, long regularAt) {
+        return snoozeAt != Long.MAX_VALUE && snoozeAt <= regularAt;
     }
 
     private static String annualName(Context context, Reminder reminder, ReminderEventStore eventStore, boolean applyQuietTime) {

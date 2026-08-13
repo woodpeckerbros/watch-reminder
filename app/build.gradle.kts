@@ -21,6 +21,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.2.1")
     implementation("androidx.health:health-services-client:1.1.0-rc01")
     implementation("com.google.guava:guava:33.4.0-android")
