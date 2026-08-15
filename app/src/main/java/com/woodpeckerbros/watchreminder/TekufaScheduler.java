@@ -104,7 +104,7 @@ public class TekufaScheduler {
             return;
         }
         try {
-            alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(triggerAt, pendingIntent), pendingIntent);
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
         } catch (SecurityException exception) {
             AppLog.e(context, "tekufa exact alarm failed", exception);
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);

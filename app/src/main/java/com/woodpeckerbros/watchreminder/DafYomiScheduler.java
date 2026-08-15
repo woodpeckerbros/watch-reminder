@@ -155,7 +155,7 @@ public class DafYomiScheduler {
 
     private static void setBest(Context context, AlarmManager alarmManager, long triggerAt, PendingIntent pendingIntent) {
         try {
-            alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(triggerAt, pendingIntent), pendingIntent);
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
         } catch (SecurityException exception) {
             AppLog.e(context, "daf yomi exact alarm failed", exception);
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);

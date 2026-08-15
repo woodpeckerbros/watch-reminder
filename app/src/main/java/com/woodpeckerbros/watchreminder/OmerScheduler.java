@@ -98,7 +98,7 @@ public class OmerScheduler {
     private static void setBest(Context context, long triggerAt, PendingIntent pendingIntent) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         try {
-            alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(triggerAt, pendingIntent), pendingIntent);
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
         } catch (SecurityException exception) {
             AppLog.e(context, "omer exact alarm failed", exception);
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);

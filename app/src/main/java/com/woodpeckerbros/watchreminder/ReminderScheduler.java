@@ -162,8 +162,8 @@ public class ReminderScheduler {
             if (next != null && next.scheduledAt > now) {
                 long triggerAt = ceilToMinute(next.scheduledAt + WATCHDOG_SAFETY_OFFSET_MS);
                 if (triggerAt > now) {
-                    AppLog.d(context, "scheduleWatchdog at=" + NextReminderCalculator.formatDateTime(triggerAt) + " alarmClock=true");
-                    setBestAvailableAlarm(context, alarmManager, triggerAt, watchdogIntent(context), true);
+                    AppLog.d(context, "scheduleWatchdog at=" + NextReminderCalculator.formatDateTime(triggerAt) + " alarmClock=false");
+                    setBestAvailableAlarm(context, alarmManager, triggerAt, watchdogIntent(context), false);
                     return;
                 }
             }
@@ -262,7 +262,7 @@ public class ReminderScheduler {
         }
         PendingIntent pendingIntent = regularIntent(context, reminder, trigger.day, trigger.scheduledAt, trigger.originalAt);
         AppLog.d(context, "setRegular id=" + reminder.id + " name=" + reminder.name + " day=" + trigger.day + " at=" + NextReminderCalculator.formatDateTime(trigger.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(trigger.originalAt));
-        setBestAvailableAlarm(context, alarmManager, trigger.scheduledAt, pendingIntent, true);
+        setBestAvailableAlarm(context, alarmManager, trigger.scheduledAt, pendingIntent, reminder.critical);
     }
 
     private static void setAlarm(Context context, Reminder reminder, int day, boolean skipToday) {
@@ -274,7 +274,7 @@ public class ReminderScheduler {
         }
         PendingIntent pendingIntent = alertIntent(context, reminder, day, trigger.scheduledAt, trigger.originalAt);
         AppLog.d(context, "setAlarm id=" + reminder.id + " name=" + reminder.name + " day=" + day + " at=" + NextReminderCalculator.formatDateTime(trigger.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(trigger.originalAt));
-        setBestAvailableAlarm(context, alarmManager, trigger.scheduledAt, pendingIntent, true);
+        setBestAvailableAlarm(context, alarmManager, trigger.scheduledAt, pendingIntent, reminder.critical);
     }
 
     private static void setOneTimeAlarm(Context context, Reminder reminder) {
@@ -287,7 +287,7 @@ public class ReminderScheduler {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent pendingIntent = oneTimeIntent(context, reminder, triggerAt, originalAt);
         AppLog.d(context, "setOneTime id=" + reminder.id + " name=" + reminder.name + " at=" + NextReminderCalculator.formatDateTime(triggerAt) + " original=" + NextReminderCalculator.formatDateTime(originalAt));
-        setBestAvailableAlarm(context, alarmManager, triggerAt, pendingIntent, true);
+        setBestAvailableAlarm(context, alarmManager, triggerAt, pendingIntent, reminder.critical);
     }
 
     private static void setPeriodicAlarm(Context context, Reminder reminder) {
@@ -299,7 +299,7 @@ public class ReminderScheduler {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent pendingIntent = periodicIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
         AppLog.d(context, "setPeriodic id=" + reminder.id + " name=" + reminder.name + " at=" + NextReminderCalculator.formatDateTime(occurrence.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(occurrence.originalAt));
-        setBestAvailableAlarm(context, alarmManager, occurrence.scheduledAt, pendingIntent, true);
+        setBestAvailableAlarm(context, alarmManager, occurrence.scheduledAt, pendingIntent, reminder.critical);
     }
 
     private static void setAnnualAlarm(Context context, Reminder reminder) {
@@ -311,7 +311,7 @@ public class ReminderScheduler {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent pendingIntent = annualIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
         AppLog.d(context, "setAnnual id=" + reminder.id + " name=" + reminder.name + " at=" + NextReminderCalculator.formatDateTime(occurrence.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(occurrence.originalAt));
-        setBestAvailableAlarm(context, alarmManager, occurrence.scheduledAt, pendingIntent, true);
+        setBestAvailableAlarm(context, alarmManager, occurrence.scheduledAt, pendingIntent, reminder.critical);
     }
 
     private static void alarmManagerCancelPeriodic(Context context, Reminder reminder) {
