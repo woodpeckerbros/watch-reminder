@@ -21,40 +21,75 @@ public class ReminderScheduler {
     private static final long WATCHDOG_SAFETY_OFFSET_MS = 2 * 60_000L;
 
     public static void schedule(Context context, Reminder reminder) {
-        cancel(context, reminder);
-        if (!reminder.enabled) {
-            AppLog.d(context, "schedule skipped disabled id=" + reminder.id + " name=" + reminder.name);
-            return;
-        }
-        AppLog.d(context, "schedule id=" + reminder.id + " name=" + reminder.name + " oneTime=" + reminder.isOneTime() + " days=" + reminder.days);
-        if (reminder.isOneTime()) {
-            setOneTimeAlarm(context, reminder);
-            return;
-        }
-        if (reminder.isPeriodic()) {
-            setPeriodicAlarm(context, reminder);
-            return;
-        }
-        if (reminder.isAnnualEvent()) {
-            setAnnualAlarm(context, reminder);
-            return;
-        }
-        setNextRegularAlarm(context, reminder);
+        scheduleNearest(context);
     }
 
     public static void scheduleNext(Context context, Reminder reminder, int day) {
-        if (!reminder.enabled || reminder.isOneTime()) {
+        scheduleNearest(context);
+    }
+
+    public static synchronized void scheduleNearest(Context context) {
+        java.util.List<Reminder> reminders = new ReminderStore(context).getAll();
+        for (Reminder reminder : reminders) {
+            cancel(context, reminder);
+        }
+        ScheduledCandidate nearest = null;
+        ReminderEventStore eventStore = new ReminderEventStore(context);
+        for (Reminder reminder : reminders) {
+            ScheduledCandidate candidate = candidateFor(context, reminder, eventStore);
+            if (candidate != null && (nearest == null || candidate.triggerAt < nearest.triggerAt)) {
+                nearest = candidate;
+            }
+        }
+        if (nearest == null) {
+            AppLog.d(context, "scheduleNearest no enabled future reminder");
             return;
         }
-        if (reminder.isPeriodic()) {
-            setPeriodicAlarm(context, reminder);
-            return;
+        AppLog.d(context, "scheduleNearest id=" + nearest.reminder.id
+                + " name=" + nearest.reminder.name
+                + " at=" + NextReminderCalculator.formatDateTime(nearest.triggerAt));
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        setBestAvailableAlarm(context, alarmManager, nearest.triggerAt, nearest.pendingIntent, true);
+    }
+
+    private static ScheduledCandidate candidateFor(Context context, Reminder reminder, ReminderEventStore eventStore) {
+        if (reminder == null || !reminder.enabled) {
+            return null;
         }
-        if (reminder.isAnnualEvent()) {
-            setAnnualAlarm(context, reminder);
-            return;
+        long triggerAt;
+        PendingIntent pendingIntent;
+        if (reminder.isOneTime()) {
+            long originalAt = floorToMinute(reminder.useZmanim
+                    ? ZmanimHelper.timeFor(context, reminder, reminder.oneTimeAt)
+                    : reminder.oneTimeAt);
+            triggerAt = floorToMinute(QuietTimeHelper.adjust(context, originalAt, reminder));
+            if (triggerAt <= System.currentTimeMillis() || triggerAt == Long.MAX_VALUE || originalAt == Long.MAX_VALUE) {
+                return null;
+            }
+            pendingIntent = oneTimeIntent(context, reminder, triggerAt, originalAt);
+        } else if (reminder.isPeriodic()) {
+            PeriodicReminderHelper.Occurrence occurrence = PeriodicReminderHelper.next(context, reminder, eventStore, true);
+            if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
+                return null;
+            }
+            triggerAt = occurrence.scheduledAt;
+            pendingIntent = periodicIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
+        } else if (reminder.isAnnualEvent()) {
+            AnnualReminderHelper.Occurrence occurrence = AnnualReminderHelper.next(context, reminder, eventStore, true);
+            if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
+                return null;
+            }
+            triggerAt = occurrence.scheduledAt;
+            pendingIntent = annualIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
+        } else {
+            RegularTrigger trigger = nextRegularTrigger(context, reminder);
+            if (trigger == null || trigger.scheduledAt == Long.MAX_VALUE) {
+                return null;
+            }
+            triggerAt = trigger.scheduledAt;
+            pendingIntent = regularIntent(context, reminder, trigger.day, trigger.scheduledAt, trigger.originalAt);
         }
-        setNextRegularAlarm(context, reminder);
+        return new ScheduledCandidate(reminder, triggerAt, pendingIntent);
     }
 
     public static long scheduleSnooze(Context context, String reminderId, String reminderName, int minutes) {
@@ -253,67 +288,6 @@ public class ReminderScheduler {
         ComplicationRefresh.request(context);
     }
 
-    private static void setNextRegularAlarm(Context context, Reminder reminder) {
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        RegularTrigger trigger = nextRegularTrigger(context, reminder);
-        if (trigger == null || trigger.scheduledAt == Long.MAX_VALUE) {
-            AppLog.w(context, "setRegular skipped MAX id=" + reminder.id);
-            return;
-        }
-        PendingIntent pendingIntent = regularIntent(context, reminder, trigger.day, trigger.scheduledAt, trigger.originalAt);
-        AppLog.d(context, "setRegular id=" + reminder.id + " name=" + reminder.name + " day=" + trigger.day + " at=" + NextReminderCalculator.formatDateTime(trigger.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(trigger.originalAt));
-        setBestAvailableAlarm(context, alarmManager, trigger.scheduledAt, pendingIntent, reminder.critical);
-    }
-
-    private static void setAlarm(Context context, Reminder reminder, int day, boolean skipToday) {
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        TriggerTimes trigger = nextTriggerTimes(context, reminder, day, skipToday);
-        if (trigger.scheduledAt == Long.MAX_VALUE) {
-            AppLog.w(context, "setAlarm skipped MAX id=" + reminder.id + " day=" + day);
-            return;
-        }
-        PendingIntent pendingIntent = alertIntent(context, reminder, day, trigger.scheduledAt, trigger.originalAt);
-        AppLog.d(context, "setAlarm id=" + reminder.id + " name=" + reminder.name + " day=" + day + " at=" + NextReminderCalculator.formatDateTime(trigger.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(trigger.originalAt));
-        setBestAvailableAlarm(context, alarmManager, trigger.scheduledAt, pendingIntent, reminder.critical);
-    }
-
-    private static void setOneTimeAlarm(Context context, Reminder reminder) {
-        long originalAt = floorToMinute(reminder.useZmanim ? ZmanimHelper.timeFor(context, reminder, reminder.oneTimeAt) : reminder.oneTimeAt);
-        long triggerAt = floorToMinute(QuietTimeHelper.adjust(context, originalAt, reminder));
-        if (triggerAt <= System.currentTimeMillis() || triggerAt == Long.MAX_VALUE || originalAt == Long.MAX_VALUE) {
-            AppLog.w(context, "setOneTime skipped past/MAX id=" + reminder.id + " at=" + triggerAt + " original=" + originalAt);
-            return;
-        }
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        PendingIntent pendingIntent = oneTimeIntent(context, reminder, triggerAt, originalAt);
-        AppLog.d(context, "setOneTime id=" + reminder.id + " name=" + reminder.name + " at=" + NextReminderCalculator.formatDateTime(triggerAt) + " original=" + NextReminderCalculator.formatDateTime(originalAt));
-        setBestAvailableAlarm(context, alarmManager, triggerAt, pendingIntent, reminder.critical);
-    }
-
-    private static void setPeriodicAlarm(Context context, Reminder reminder) {
-        PeriodicReminderHelper.Occurrence occurrence = PeriodicReminderHelper.next(context, reminder, new ReminderEventStore(context), true);
-        if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
-            AppLog.w(context, "setPeriodic skipped MAX id=" + reminder.id);
-            return;
-        }
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        PendingIntent pendingIntent = periodicIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
-        AppLog.d(context, "setPeriodic id=" + reminder.id + " name=" + reminder.name + " at=" + NextReminderCalculator.formatDateTime(occurrence.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(occurrence.originalAt));
-        setBestAvailableAlarm(context, alarmManager, occurrence.scheduledAt, pendingIntent, reminder.critical);
-    }
-
-    private static void setAnnualAlarm(Context context, Reminder reminder) {
-        AnnualReminderHelper.Occurrence occurrence = AnnualReminderHelper.next(context, reminder, new ReminderEventStore(context), true);
-        if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
-            AppLog.w(context, "setAnnual skipped MAX id=" + reminder.id);
-            return;
-        }
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        PendingIntent pendingIntent = annualIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
-        AppLog.d(context, "setAnnual id=" + reminder.id + " name=" + reminder.name + " at=" + NextReminderCalculator.formatDateTime(occurrence.scheduledAt) + " original=" + NextReminderCalculator.formatDateTime(occurrence.originalAt));
-        setBestAvailableAlarm(context, alarmManager, occurrence.scheduledAt, pendingIntent, reminder.critical);
-    }
-
     private static void alarmManagerCancelPeriodic(Context context, Reminder reminder) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         alarmManager.cancel(periodicIntent(context, reminder));
@@ -398,6 +372,18 @@ public class ReminderScheduler {
 
     private static boolean canScheduleExactAlarms(AlarmManager alarmManager) {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms();
+    }
+
+    private static class ScheduledCandidate {
+        final Reminder reminder;
+        final long triggerAt;
+        final PendingIntent pendingIntent;
+
+        ScheduledCandidate(Reminder reminder, long triggerAt, PendingIntent pendingIntent) {
+            this.reminder = reminder;
+            this.triggerAt = triggerAt;
+            this.pendingIntent = pendingIntent;
+        }
     }
 
     private static long nextTriggerAt(Context context, Reminder reminder, int day, boolean skipToday) {

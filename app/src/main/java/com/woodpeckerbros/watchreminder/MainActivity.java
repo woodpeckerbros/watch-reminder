@@ -4951,7 +4951,7 @@ public class MainActivity extends Activity {
     private void undoEarlyDone(ReminderEventStore eventStore, ReminderEventStore.Event event) {
         Reminder reminder = store.find(event.reminderId);
         if (reminder != null && reminder.enabled) {
-            ReminderScheduler.schedule(this, reminder);
+            ReminderScheduler.scheduleNearest(this);
         }
         new ReminderOccurrenceStateStore(this).deleteOccurrence(event.reminderId, event.scheduledAt);
         eventStore.delete(event.occurrenceId);

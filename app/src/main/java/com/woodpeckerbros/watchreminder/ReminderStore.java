@@ -66,11 +66,9 @@ public class ReminderStore {
         reminders.sort(reminderComparator());
         save(reminders);
         if (!reminder.enabled) {
-            ReminderScheduler.cancel(context, reminder);
             new ReminderSnoozeStore(context).delete(reminder.id);
-        } else {
-            ReminderScheduler.schedule(context, reminder);
         }
+        ReminderScheduler.scheduleNearest(context);
         if (new ReminderSettings(context).serviceEnabled()) {
             ReminderForegroundService.start(context);
         } else {
@@ -90,6 +88,7 @@ public class ReminderStore {
             }
         }
         save(reminders);
+        ReminderScheduler.scheduleNearest(context);
         if (new ReminderSettings(context).serviceEnabled()) {
             ReminderForegroundService.start(context);
         } else {
@@ -113,9 +112,7 @@ public class ReminderStore {
     }
 
     public void rescheduleAll() {
-        for (Reminder reminder : getAll()) {
-            ReminderScheduler.schedule(context, reminder);
-        }
+        ReminderScheduler.scheduleNearest(context);
     }
 
     private void save(List<Reminder> reminders) {

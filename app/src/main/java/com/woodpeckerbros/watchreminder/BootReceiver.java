@@ -8,6 +8,7 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         AppLog.d(context, "BootReceiver action=" + (intent == null ? "" : intent.getAction()));
+        AlarmScheduleMigration.clearLegacyAlarmsOnce(context);
         new ReminderSettings(context).applyPowerSaveDefaultOnce();
         long now = System.currentTimeMillis();
         ReminderDueChecker.dispatchDue(context, now - ReminderDueChecker.CATCH_UP_LOOKBACK_MS, now);
