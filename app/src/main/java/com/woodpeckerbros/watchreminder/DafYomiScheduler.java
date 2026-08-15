@@ -130,7 +130,7 @@ public class DafYomiScheduler {
         Calendar tomorrowCal = (Calendar) calendar.clone();
         tomorrowCal.add(Calendar.DAY_OF_YEAR, 1);
         JewishCalendar tomorrow = jewishCalendar(context, tomorrowCal);
-        long candleLikeStart = ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_SUNSET, time) - 18 * 60_000L;
+        long candleLikeStart = ZmanimHelper.shabbatTimeForKey(context, ZmanimHelper.KEY_CANDLE_LIGHTING, time);
         if (tomorrow.isAssurBemelacha() && candleLikeStart > 0 && time >= candleLikeStart) {
             long tzeisTomorrow = ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_TZAIS, tomorrowCal.getTimeInMillis());
             return tzeisTomorrow == Long.MAX_VALUE ? time : tzeisTomorrow;

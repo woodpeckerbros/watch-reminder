@@ -24,6 +24,9 @@ public class ZmanimHelper {
     public static final String KEY_PLAG = "PLAG";
     public static final String KEY_SUNSET = "SUNSET";
     public static final String KEY_TZAIS = "TZAIS";
+    public static final String KEY_CANDLE_LIGHTING = "CANDLE_LIGHTING";
+    public static final String KEY_SHABBAT_END = "SHABBAT_END";
+    public static final String KEY_RABBEINU_TAM = "RABBEINU_TAM";
 
     public static final String[] KEYS = {
             KEY_ALOS,
@@ -67,6 +70,8 @@ public class ZmanimHelper {
     private static final long MINCHA_GEDOLA_OHR_HACHAIM_OFFSET = 42 * SECOND_MILLIS;
     private static final long MINCHA_KETANA_OHR_HACHAIM_OFFSET = 75 * SECOND_MILLIS;
     private static final long PLAG_OHR_HACHAIM_OFFSET = 75 * SECOND_MILLIS;
+    private static final long CANDLE_LIGHTING_OFFSET = -20 * MINUTE_MILLIS;
+    private static final long SHABBAT_END_OFFSET = 30 * MINUTE_MILLIS;
 
     private static final int MAX_ZMAN_CACHE = 96;
     private static final Map<String, Long> ZMAN_CACHE = new LinkedHashMap<String, Long>(MAX_ZMAN_CACHE, 0.75f, true) {
@@ -100,6 +105,11 @@ public class ZmanimHelper {
     public static long timeForKey(Context context, String key, long dateMillis) {
         Date zman = rawZman(context, key, dateMillis);
         return zman == null ? Long.MAX_VALUE : ReminderScheduler.floorToMinute(zman.getTime());
+    }
+
+    public static long shabbatTimeForKey(Context context, String key, long dateMillis) {
+        Date zman = rawZman(context, key, dateMillis);
+        return zman == null ? Long.MAX_VALUE : zman.getTime();
     }
 
     private static Date rawZman(Context context, String key, long dateMillis) {
@@ -152,7 +162,7 @@ public class ZmanimHelper {
                 + "|" + settings.timeZoneId();
     }
 
-    private static Date ohrHachaimZman(ComplexZmanimCalendar calendar, String key) {
+    static Date ohrHachaimZman(ComplexZmanimCalendar calendar, String key) {
         Date sunrise = calendar.getSunrise();
         Date sunset = calendar.getSunset();
         if (sunrise == null || sunset == null) {
@@ -181,7 +191,7 @@ public class ZmanimHelper {
             return calendar.getSolarMidnight();
         }
         if (KEY_MINCHA_GEDOLA.equals(key)) {
-            return offset(calendar.getMinchaGedola(), MINCHA_GEDOLA_OHR_HACHAIM_OFFSET);
+            return offset(calendar.getMinchaGedolaGreaterThan30(), MINCHA_GEDOLA_OHR_HACHAIM_OFFSET);
         }
         if (KEY_MINCHA_KETANA.equals(key)) {
             return offset(calendar.getMinchaKetana(), MINCHA_KETANA_OHR_HACHAIM_OFFSET);
@@ -195,8 +205,18 @@ public class ZmanimHelper {
             return ceilToMinute(sunset);
         }
         if (KEY_TZAIS.equals(key)) {
-            long shaahZmanis = (sunset.getTime() - sunrise.getTime()) / 12L;
-            return roundToMinute(new Date(sunset.getTime() + shaahZmanis / 4L));
+            long dayLength = sunset.getTime() - sunrise.getTime();
+            return ceilToMinute(new Date(sunset.getTime() + Math.round(dayLength * 13.5 / 720.0)));
+        }
+        if (KEY_CANDLE_LIGHTING.equals(key)) {
+            return ceilToMinute(offset(sunset, CANDLE_LIGHTING_OFFSET));
+        }
+        if (KEY_SHABBAT_END.equals(key)) {
+            return new Date(ceilToMinute(sunset).getTime() + SHABBAT_END_OFFSET);
+        }
+        if (KEY_RABBEINU_TAM.equals(key)) {
+            long dayLength = sunset.getTime() - sunrise.getTime();
+            return ceilToMinute(new Date(sunset.getTime() + dayLength / 10L));
         }
         return calendar.getChatzos();
     }

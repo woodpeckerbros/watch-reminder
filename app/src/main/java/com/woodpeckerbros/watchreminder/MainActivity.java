@@ -1980,6 +1980,12 @@ public class MainActivity extends Activity {
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
         }
+        if (zmanimCalendar(dayMillis).get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
+            long shabbatDay = zmanimDayOffset(dayMillis, 1);
+            timesCard.addView(zmanimTimeRow(UiText.t(this, "כניסת שבת"), ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_CANDLE_LIGHTING, dayMillis)));
+            timesCard.addView(zmanimTimeRow(UiText.t(this, "יציאת שבת"), ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_SHABBAT_END, shabbatDay)));
+            timesCard.addView(zmanimTimeRow(UiText.t(this, "יציאת שבת ר״ת"), ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, shabbatDay)));
+        }
         timesCard.addView(moonBlessingRow(dayMillis));
         content.addView(timesCard, cardParams());
 
