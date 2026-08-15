@@ -220,9 +220,10 @@ public class UiText {
         put("יום כיפור קטן", "Yom Kippur Katan");
         put("פרשת השבוע", "Weekly Parsha");
         put("שבת מיוחדת", "Special Shabbat");
-        put("כניסת שבת", "Candle Lighting");
-        put("יציאת שבת", "Shabbat Ends");
-        put("יציאת שבת ר״ת", "Rabbeinu Tam");
+        put("זמני שבת", "Shabbat Times");
+        put("הדלקת נרות", "Candle Lighting");
+        put("צאת שבת", "Shabbat Ends");
+        put("צאת שבת ר״ת", "Rabbeinu Tam");
         put("עלות השחר", "Dawn");
         put("זריחה", "Sunrise");
         put("סוף זמן שמע מג״א", "Latest Shema (MGA)");

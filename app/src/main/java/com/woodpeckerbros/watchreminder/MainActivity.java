@@ -1980,14 +1980,9 @@ public class MainActivity extends Activity {
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
         }
-        if (zmanimCalendar(dayMillis).get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
-            long shabbatDay = zmanimDayOffset(dayMillis, 1);
-            timesCard.addView(zmanimTimeRow(UiText.t(this, "כניסת שבת"), ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_CANDLE_LIGHTING, dayMillis)));
-            timesCard.addView(zmanimTimeRow(UiText.t(this, "יציאת שבת"), ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_SHABBAT_END, shabbatDay)));
-            timesCard.addView(zmanimTimeRow(UiText.t(this, "יציאת שבת ר״ת"), ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, shabbatDay)));
-        }
         timesCard.addView(moonBlessingRow(dayMillis));
         content.addView(timesCard, cardParams());
+        addShabbatTimesCard(content, dayMillis);
 
         gregorianPickerTitle[0] = addZmanimGregorianPicker(content, dayMillis, showDatePickers);
         addZmanimHebrewPicker(content, dayMillis, showDatePickers);
@@ -5155,6 +5150,30 @@ public class MainActivity extends Activity {
         row.addView(value, valueParams);
         row.addView(name, nameParams);
         return row;
+    }
+
+    private void addShabbatTimesCard(LinearLayout content, long dayMillis) {
+        Calendar selectedDay = zmanimCalendar(dayMillis);
+        int dayOfWeek = selectedDay.get(Calendar.DAY_OF_WEEK);
+        if (dayOfWeek != Calendar.FRIDAY && dayOfWeek != Calendar.SATURDAY) {
+            return;
+        }
+        long friday = dayOfWeek == Calendar.FRIDAY ? dayMillis : zmanimDayOffset(dayMillis, -1);
+        long shabbat = dayOfWeek == Calendar.SATURDAY ? dayMillis : zmanimDayOffset(dayMillis, 1);
+
+        LinearLayout shabbatCard = card();
+        TextView heading = text(UiText.t(this, "זמני שבת"), 16, COLOR_ACCENT);
+        heading.setTypeface(Typeface.DEFAULT_BOLD);
+        heading.setGravity(Gravity.CENTER);
+        heading.setPadding(0, 0, 0, dp(5));
+        shabbatCard.addView(heading);
+        shabbatCard.addView(zmanimTimeRow(UiText.t(this, "הדלקת נרות"),
+                ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_CANDLE_LIGHTING, friday)));
+        shabbatCard.addView(zmanimTimeRow(UiText.t(this, "צאת שבת"),
+                ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_SHABBAT_END, shabbat)));
+        shabbatCard.addView(zmanimTimeRow(UiText.t(this, "צאת שבת ר״ת"),
+                ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, shabbat)));
+        content.addView(shabbatCard, cardParams());
     }
 
     private View moonBlessingRow(long dayMillis) {
