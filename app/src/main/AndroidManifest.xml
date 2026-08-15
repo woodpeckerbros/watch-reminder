@@ -204,6 +204,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".DeferredWearRetryReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".DafYomiReceiver"
             android:exported="false" />
 

@@ -17,7 +17,7 @@ public class ReminderSettings {
     public static final int DEFAULT_CHECK_INTERVAL_SECONDS = 3 * 60;
     public static final int DEFAULT_AUTO_SNOOZE_DELAY_SECONDS = 30;
     public static final int DEFAULT_AUTO_SNOOZE_MINUTES = 5;
-    public static final int DEFAULT_VIBRATION_DURATION_MS = 1800;
+    public static final int DEFAULT_VIBRATION_DURATION_MS = 3000;
     public static final int DEFAULT_BLESSING_REMINDER_MINUTES = 65;
     public static final int DEFAULT_SHEMA_ON_TIME_OFFSET_MINUTES = 10;
     public static final int DEFAULT_ALERT_VOLUME_PERCENT = 80;

@@ -28,6 +28,14 @@ public class AutoSnoozeReceiver extends BroadcastReceiver {
         AppLog.w(context, "AutoSnoozeReceiver snooze occurrence=" + occurrenceId + " minutes=" + snoozeMinutes);
         ReminderAlertQueueStore queueStore = new ReminderAlertQueueStore(context);
         ReminderAlertQueueStore.QueuedAlert activeAlert = queueStore.getActiveAlert(occurrenceId);
+        if (WearStateGate.shouldDeferKnown(context) && queueStore.moveActiveToDeferred(occurrenceId)) {
+            AppLog.w(context, "AutoSnoozeReceiver deferred without retry alarm occurrence=" + occurrenceId);
+            cancelNotification(context, occurrenceId);
+            WearStateGate.defer(context, reminderId, reminderName, originalScheduledAt);
+            ComplicationRefresh.request(context);
+            ReminderAlertActivity.closeAutoSnoozed(occurrenceId);
+            return;
+        }
         if (activeAlert != null) {
             originalScheduledAt = activeAlert.latestOriginalScheduledAt();
         }

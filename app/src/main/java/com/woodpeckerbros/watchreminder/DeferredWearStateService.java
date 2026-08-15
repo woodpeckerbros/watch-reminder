@@ -14,14 +14,22 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 public class DeferredWearStateService extends Service {
     private static final String CHANNEL_ID = "deferred_wear_state";
     private static final int NOTIFICATION_ID = 2002;
+    private static final long MAX_MONITORING_MS = 5 * 60_000L;
 
     private SensorManager sensorManager;
     private Sensor offBodySensor;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable timeout = () -> {
+        AppLog.d(this, "DeferredWearStateService bounded monitoring timeout");
+        stopSelf();
+    };
 
     private final SensorEventListener listener = new SensorEventListener() {
         @Override
@@ -30,6 +38,7 @@ public class DeferredWearStateService extends Service {
             new WearStateStore(DeferredWearStateService.this).setOffBody(!onBody);
             AppLog.d(DeferredWearStateService.this, "DeferredWearStateService onBody=" + onBody);
             if (onBody) {
+                DeferredWearRetryReceiver.cancel(DeferredWearStateService.this);
                 DeferredReminderDispatcher.run(DeferredWearStateService.this);
                 stopSelf();
             }
@@ -70,18 +79,26 @@ public class DeferredWearStateService extends Service {
             startForeground(NOTIFICATION_ID, notification);
         }
         registerOffBodySensor();
+        handler.removeCallbacks(timeout);
+        handler.postDelayed(timeout, MAX_MONITORING_MS);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         registerOffBodySensor();
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override
     public void onDestroy() {
         if (sensorManager != null) {
             sensorManager.unregisterListener(listener);
+        }
+        handler.removeCallbacks(timeout);
+        if (new ReminderAlertQueueStore(this).hasDeferredAlerts()) {
+            DeferredWearRetryReceiver.schedule(this);
+        } else {
+            DeferredWearRetryReceiver.cancel(this);
         }
         super.onDestroy();
     }

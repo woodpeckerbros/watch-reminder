@@ -54,6 +54,20 @@ public class ReminderAlertQueueStore {
         enqueue(alert);
     }
 
+    public boolean moveActiveToDeferred(String occurrenceId) {
+        QueuedAlert activeAlert = getActiveAlert(occurrenceId);
+        if (activeAlert == null) {
+            return false;
+        }
+        enqueue(activeAlert);
+        complete(occurrenceId);
+        return true;
+    }
+
+    public boolean hasDeferredAlerts() {
+        return !getQueue().isEmpty();
+    }
+
     public void complete(String occurrenceId) {
         String active = prefs.getString(KEY_ACTIVE, null);
         if (occurrenceId == null || occurrenceId.equals(active)) {
