@@ -249,6 +249,25 @@ public class ReminderEventStore {
         return new ReminderOccurrenceStateStore(context).hasDoneOnDay(reminderId, scheduledAt);
     }
 
+    public boolean hasPendingOrDoneOnDay(String reminderId, long scheduledAt) {
+        Calendar target = Calendar.getInstance();
+        target.setTimeInMillis(scheduledAt);
+        for (Event event : loadAll()) {
+            if (!event.reminderId.equals(reminderId)) {
+                continue;
+            }
+            Calendar eventDay = Calendar.getInstance();
+            eventDay.setTimeInMillis(event.scheduledAt);
+            if (eventDay.get(Calendar.YEAR) == target.get(Calendar.YEAR)
+                    && eventDay.get(Calendar.DAY_OF_YEAR) == target.get(Calendar.DAY_OF_YEAR)
+                    && (STATUS_DONE.equals(event.status) || STATUS_FIRED.equals(event.status)
+                    || STATUS_SNOOZED.equals(event.status) || STATUS_AUTO_SNOOZED.equals(event.status))) {
+                return true;
+            }
+        }
+        return new ReminderOccurrenceStateStore(context).hasDoneOnDay(reminderId, scheduledAt);
+    }
+
     public List<Event> getAll() {
         if (collapsedCache == null) {
             collapsedCache = collapseSnoozeChains(loadAll());

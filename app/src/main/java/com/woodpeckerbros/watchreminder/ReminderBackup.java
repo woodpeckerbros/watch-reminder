@@ -285,6 +285,9 @@ public class ReminderBackup {
             );
         }
         new ReminderStore(context).replaceAll(reminders);
+        if (locationJson != null) {
+            ZmanimRescheduler.schedule(context);
+        }
         ReminderScheduler.scheduleWatchdog(context);
         if (new ReminderSettings(context).serviceEnabled()) {
             ReminderForegroundService.start(context);

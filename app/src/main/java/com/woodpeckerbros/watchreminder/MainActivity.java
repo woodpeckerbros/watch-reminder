@@ -2932,15 +2932,7 @@ public class MainActivity extends Activity {
         }
         Context appContext = getApplicationContext();
         pendingLocationReschedule = () -> LOCATION_RESCHEDULER.execute(() -> {
-            AppLog.d(appContext, "zmanim location reschedule begin");
-            new ReminderStore(appContext).rescheduleAll();
-            JewishDayScheduler.schedule(appContext);
-            TekufaScheduler.schedule(appContext);
-            MoonBlessingScheduler.schedule(appContext);
-            DafYomiScheduler.schedule(appContext);
-            OmerScheduler.schedule(appContext);
-            ComplicationRefresh.request(appContext);
-            AppLog.d(appContext, "zmanim location reschedule end");
+            ZmanimRescheduler.rescheduleNow(appContext);
         });
         mainHandler.postDelayed(pendingLocationReschedule, LOCATION_RESCHEDULE_DEBOUNCE_MS);
     }

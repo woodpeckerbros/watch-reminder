@@ -29,6 +29,65 @@ public class ReminderDueChecker {
         }
     }
 
+    /**
+     * Dispatches today's zmanim-based occurrences which became overdue because the
+     * location (or another zmanim input) changed. This intentionally ignores the
+     * normal last-check cursor: the newly calculated time may precede that cursor.
+     */
+    public static void dispatchAfterZmanimChange(Context context) {
+        synchronized (DISPATCH_LOCK) {
+            long now = System.currentTimeMillis();
+            Calendar start = Calendar.getInstance();
+            start.setTimeInMillis(now);
+            start.set(Calendar.HOUR_OF_DAY, 0);
+            start.set(Calendar.MINUTE, 0);
+            start.set(Calendar.SECOND, 0);
+            start.set(Calendar.MILLISECOND, 0);
+            long from = start.getTimeInMillis() - 1;
+            ReminderEventStore eventStore = new ReminderEventStore(context);
+            ArrayList<DueDispatch> due = new ArrayList<>();
+
+            for (Reminder reminder : new ReminderStore(context).getAll()) {
+                if (!reminder.enabled || !reminder.useZmanim
+                        || eventStore.hasPendingOrDoneOnDay(reminder.id, now)) {
+                    continue;
+                }
+                DueOccurrence occurrence = null;
+                int day = -1;
+                if (reminder.isOneTime()) {
+                    long originalAt = ReminderScheduler.floorToMinute(ZmanimHelper.timeFor(context, reminder, reminder.oneTimeAt));
+                    long scheduledAt = ReminderScheduler.floorToMinute(QuietTimeHelper.adjust(context, originalAt, reminder));
+                    if (scheduledAt > from && scheduledAt <= now) {
+                        occurrence = new DueOccurrence(scheduledAt, originalAt);
+                    }
+                } else if (reminder.isPeriodic()) {
+                    occurrence = periodicOccurrenceBetween(context, from, now, reminder);
+                } else if (reminder.isAnnualEvent()) {
+                    occurrence = annualOccurrenceBetween(context, from, now, reminder);
+                } else {
+                    day = start.get(Calendar.DAY_OF_WEEK);
+                    if (reminder.days.contains(day)) {
+                        occurrence = occurrenceBetween(context, from, now, reminder, day);
+                    }
+                }
+                if (occurrence == null || eventStore.hasReminderOccurrence(reminder.id, occurrence.scheduledAt)) {
+                    continue;
+                }
+                String name = reminder.isAnnualEvent()
+                        ? AnnualReminderHelper.displayName(reminder, occurrence.originalAt)
+                        : reminder.name;
+                AppLog.w(context, "zmanim change firing overdue id=" + reminder.id
+                        + " at=" + NextReminderCalculator.formatDateTime(occurrence.scheduledAt));
+                due.add(new DueDispatch(reminder.id, name, occurrence.scheduledAt, occurrence.originalAt, day, false));
+            }
+            due.sort(Comparator.comparingLong(item -> item.scheduledAt));
+            for (DueDispatch item : due) {
+                ReminderReceiver.fire(context, item.reminderId, item.reminderName,
+                        item.scheduledAt, item.originalAt, item.day, false);
+            }
+        }
+    }
+
     private static void dispatchDueLocked(Context context, long from, long to) {
         AppLog.d(context, "dispatchDue from=" + NextReminderCalculator.formatDateTime(from) + " to=" + NextReminderCalculator.formatDateTime(to));
         SharedPreferences prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

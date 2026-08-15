@@ -109,6 +109,7 @@ public class ReminderPatchApplier {
                     location.optDouble("elevation", ZmanimSettings.DEFAULT_ELEVATION),
                     location.optString("timeZone", ZmanimSettings.DEFAULT_TIME_ZONE)
             );
+            ZmanimRescheduler.schedule(context);
         }
         if (settings.serviceEnabled()) {
             ReminderForegroundService.start(context);
