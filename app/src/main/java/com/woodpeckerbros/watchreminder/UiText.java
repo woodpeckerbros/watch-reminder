@@ -62,8 +62,21 @@ public class UiText {
         res("יום אחרי", R.string.ui_next_day);
 
         put("הוספה", "Add");
+        put("+ תזכורת", "+ Reminder");
         put("היסטוריה", "History");
         put("תזכורות", "Reminders");
+        put("כל התזכורות", "All Reminders");
+        put("לחיצה לעריכה · לחיצה ארוכה לפעולות", "Tap to edit · long press for actions");
+        put("חזרה לבית", "Back Home");
+        put("מה חשוב עכשיו", "What matters now");
+        put("התזכורת הבאה", "Next Reminder");
+        put("אחר כך", "Coming Up");
+        put("גישה מהירה", "Quick Access");
+        put("אין תזכורות קרובות", "No Upcoming Reminders");
+        put("אפשר להוסיף תזכורת חדשה בלחיצה אחת", "Add a new reminder in one tap");
+        put("בוקר טוב", "Good morning");
+        put("צהריים טובים", "Good afternoon");
+        put("ערב טוב", "Good evening");
         put("לחיצה ארוכה על תזכורת פותחת פעולות אפשריות", "Long press a reminder to open actions");
         put("אין תזכורות", "No reminders");
         put("טוען תזכורות...", "Loading reminders...");

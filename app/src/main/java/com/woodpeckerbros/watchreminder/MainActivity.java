@@ -43,6 +43,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.ProgressBar;
@@ -86,14 +87,17 @@ public class MainActivity extends Activity {
     private static final int REQUEST_OPEN_BACKUP_FILE = 31;
     private static final int REQUEST_PICK_RINGTONE = 32;
     private static final int COLOR_BG = 0xFF000000;
-    private static final int COLOR_SURFACE = 0xFF12171A;
-    private static final int COLOR_SURFACE_2 = 0xFF1A2024;
-    private static final int COLOR_TEXT = 0xFFF4F7F5;
-    private static final int COLOR_MUTED = 0xFFAEB8B2;
-    private static final int COLOR_ACCENT = 0xFF52D273;
-    private static final int COLOR_ACCENT_DARK = 0xFF136F45;
+    private static final int COLOR_SURFACE = 0xFF111918;
+    private static final int COLOR_SURFACE_2 = 0xFF1A2422;
+    private static final int COLOR_TEXT = 0xFFF4EEE2;
+    private static final int COLOR_MUTED = 0xFFAAB5AE;
+    private static final int COLOR_ACCENT = 0xFFD8B56A;
+    private static final int COLOR_ACCENT_DARK = 0xFF24533E;
     private static final int COLOR_WARNING = 0xFFFFC857;
     private static final int COLOR_DANGER = 0xFFE15B64;
+    private static final int COLOR_LUXURY_GOLD = 0xFFD8B56A;
+    private static final int COLOR_EMERALD = 0xFF234A39;
+    private static final int COLOR_EMERALD_DEEP = 0xFF142A22;
     private static final String STARTUP_PREFS_NAME = "startup_reliability";
     private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
@@ -510,12 +514,230 @@ public class MainActivity extends Activity {
     }
 
     private void showList() {
+        if (pendingFocusReminderId != null || pendingFocusNextReminder) {
+            showAllReminders();
+            return;
+        }
         currentScreen = "list";
+        editingReminder = null;
+        boolean jewishMode = new ReminderSettings(this).jewishMode();
+        LinearLayout content = baseContent();
+        addTitle(content, homeGreeting(), "מה חשוב עכשיו");
+        content.addView(illustration(R.drawable.home_horizon, 108), illustrationParams());
+
+        LinearLayout primaryActions = actionRow();
+        Button addButton = pillButton("+ תזכורת", COLOR_EMERALD);
+        addButton.setOnClickListener(v -> showEditor(null));
+        Button historyButton = pillButton("היסטוריה", COLOR_SURFACE_2);
+        historyButton.setOnClickListener(v -> showHistory());
+        primaryActions.addView(addButton);
+        primaryActions.addView(historyButton);
+        content.addView(primaryActions);
+
+        if (!ReminderScheduler.canScheduleExactAlarms(this)) {
+            TextView warning = infoPill("לחץ כאן כדי לאשר Alarms & reminders לתזכורות מדויקות", COLOR_WARNING);
+            warning.setOnClickListener(v -> requestExactAlarmAccessIfNeeded(true));
+            content.addView(warning);
+        }
+        if (!canUseFullScreenIntent()) {
+            TextView warning = infoPill("צריך לאשר התראות במסך מלא כדי שהתזכורת תיפתח על המסך", COLOR_WARNING);
+            warning.setOnClickListener(v -> requestFullScreenIntentAccessIfNeeded(true));
+            content.addView(warning);
+        }
+
+        boolean fastStartupList = shouldUseFastStartupList();
+        if (fastStartupList) {
+            content.addView(infoPill("טוען תזכורות...", COLOR_MUTED));
+            setScrollableContent(content);
+            rememberReminderListFingerprint();
+            if (startupListPass == 1) {
+                activeScrollView.postDelayed(() -> {
+                    if ("list".equals(currentScreen) && !startupMaintenanceDone) {
+                        showList();
+                    }
+                }, 220L);
+            }
+            return;
+        }
+
+        List<HomeReminderItem> upcoming = upcomingReminderItems();
+        if (upcoming.isEmpty()) {
+            LinearLayout emptyCard = card();
+            TextView emptyTitle = text("אין תזכורות קרובות", 16, COLOR_TEXT);
+            emptyTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            TextView emptySubtitle = text("אפשר להוסיף תזכורת חדשה בלחיצה אחת", 11, COLOR_MUTED);
+            emptySubtitle.setPadding(0, dp(4), 0, 0);
+            emptyCard.addView(emptyTitle);
+            emptyCard.addView(emptySubtitle);
+            content.addView(emptyCard, cardParams());
+        } else {
+            content.addView(homeNextReminderCard(upcoming.get(0)), homeHeroParams());
+            if (upcoming.size() > 1) {
+                TextView following = text("אחר כך", 12, COLOR_LUXURY_GOLD);
+                following.setTypeface(Typeface.DEFAULT_BOLD);
+                following.setPadding(0, dp(7), 0, dp(2));
+                content.addView(following);
+                int limit = Math.min(3, upcoming.size());
+                for (int i = 1; i < limit; i++) {
+                    content.addView(homeCompactReminderCard(upcoming.get(i)), compactCardParams());
+                }
+            }
+        }
+
+        Button allReminders = pillButton("כל התזכורות", COLOR_SURFACE_2);
+        allReminders.setTextColor(COLOR_TEXT);
+        allReminders.setOnClickListener(v -> showAllReminders());
+        content.addView(allReminders, matchParams());
+
+        TextView shortcutsTitle = text("גישה מהירה", 12, COLOR_LUXURY_GOLD);
+        shortcutsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        shortcutsTitle.setPadding(0, dp(12), 0, dp(2));
+        content.addView(shortcutsTitle);
+        if (jewishMode) {
+            LinearLayout jewishActions = actionRow();
+            Button zmanimButton = pillButton("זמני היום", COLOR_EMERALD_DEEP);
+            zmanimButton.setOnClickListener(v -> openZmanimDayFromMain());
+            Button blessingButton = pillButton("תזכורת לברכה", COLOR_EMERALD_DEEP);
+            blessingButton.setOnClickListener(v -> showBlessingReminder());
+            jewishActions.addView(zmanimButton);
+            jewishActions.addView(blessingButton);
+            content.addView(jewishActions);
+        }
+        if (new ReminderSettings(this).intermittentFastingEnabled()) {
+            Button fastingButton = pillButton("צום לסירוגין", COLOR_SURFACE_2);
+            fastingButton.setOnClickListener(v -> showFastingSettings());
+            content.addView(fastingButton, matchParams());
+        }
+        Button settingsButton = pillButton("הגדרות", COLOR_SURFACE_2);
+        settingsButton.setTextColor(COLOR_MUTED);
+        settingsButton.setOnClickListener(v -> showSettings());
+        content.addView(settingsButton, matchParams());
+        setScrollableContent(content);
+        rememberReminderListFingerprint();
+    }
+
+    private String homeGreeting() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (AppLanguage.isEnglish(this)) {
+            if (hour < 12) return "Good morning";
+            if (hour < 18) return "Good afternoon";
+            return "Good evening";
+        }
+        if (hour < 12) return "בוקר טוב";
+        if (hour < 18) return "צהריים טובים";
+        return "ערב טוב";
+    }
+
+    private List<HomeReminderItem> upcomingReminderItems() {
+        List<HomeReminderItem> items = new java.util.ArrayList<>();
+        ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
+        ReminderEventStore eventStore = new ReminderEventStore(this);
+        for (Reminder reminder : store.getAll()) {
+            NextReminderCalculator.NextReminder next = NextReminderCalculator.nextForReminder(
+                    this, reminder, snoozeStore, eventStore, true);
+            if (next != null) {
+                items.add(new HomeReminderItem(reminder, next));
+            }
+        }
+        items.sort((left, right) -> Long.compare(left.next.scheduledAt, right.next.scheduledAt));
+        return items;
+    }
+
+    private LinearLayout homeNextReminderCard(HomeReminderItem item) {
+        LinearLayout card = card(false);
+        card.setPadding(dp(16), dp(13), dp(16), dp(13));
+        card.setBackground(rounded(COLOR_EMERALD_DEEP, dp(14), 0x99D8B56A));
+        card.setOnClickListener(v -> showEditor(item.reminder));
+        card.setOnLongClickListener(v -> {
+            showReminderActions(item.reminder);
+            return true;
+        });
+        TextView label = text("התזכורת הבאה", 11, COLOR_LUXURY_GOLD);
+        label.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView time = text(NextReminderCalculator.formatTime(item.next.scheduledAt), 34, COLOR_TEXT);
+        time.setTypeface(Typeface.DEFAULT_BOLD);
+        time.setPadding(0, dp(2), 0, 0);
+        TextView name = text(item.next.reminderName, 18, COLOR_TEXT);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView date = text(homeDateLabel(item.next.scheduledAt), 11, COLOR_MUTED);
+        date.setPadding(0, dp(3), 0, dp(4));
+        card.addView(label);
+        card.addView(time);
+        card.addView(name);
+        card.addView(date);
+        LinearLayout actions = actionRow();
+        Button done = smallWideButton("בוצע", COLOR_EMERALD);
+        done.setOnClickListener(v -> completeUpcoming(item.reminder));
+        Button snooze = smallWideButton("דחה", COLOR_SURFACE_2);
+        snooze.setOnClickListener(v -> showSnoozeUpcomingOptions(item.reminder));
+        actions.addView(done);
+        actions.addView(snooze);
+        card.addView(actions);
+        return card;
+    }
+
+    private LinearLayout homeCompactReminderCard(HomeReminderItem item) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(12), dp(9), dp(12), dp(9));
+        card.setBackground(rounded(COLOR_SURFACE, dp(12), 0x333F594C));
+        card.setOnClickListener(v -> showEditor(item.reminder));
+        card.setOnLongClickListener(v -> {
+            showReminderActions(item.reminder);
+            return true;
+        });
+        TextView time = text(NextReminderCalculator.formatTime(item.next.scheduledAt), 18, COLOR_LUXURY_GOLD);
+        time.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout textColumn = new LinearLayout(this);
+        textColumn.setOrientation(LinearLayout.VERTICAL);
+        textColumn.setGravity(Gravity.CENTER);
+        TextView name = text(item.next.reminderName, 14, COLOR_TEXT);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView date = text(homeDateLabel(item.next.scheduledAt), 10, COLOR_MUTED);
+        textColumn.addView(name);
+        textColumn.addView(date);
+        card.addView(time, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.34f));
+        card.addView(textColumn, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.66f));
+        return card;
+    }
+
+    private String homeDateLabel(long time) {
+        Calendar now = Calendar.getInstance();
+        Calendar target = Calendar.getInstance();
+        target.setTimeInMillis(time);
+        boolean today = now.get(Calendar.YEAR) == target.get(Calendar.YEAR)
+                && now.get(Calendar.DAY_OF_YEAR) == target.get(Calendar.DAY_OF_YEAR);
+        if (today) {
+            return UiText.t(this, "היום");
+        }
+        now.add(Calendar.DAY_OF_YEAR, 1);
+        boolean tomorrow = now.get(Calendar.YEAR) == target.get(Calendar.YEAR)
+                && now.get(Calendar.DAY_OF_YEAR) == target.get(Calendar.DAY_OF_YEAR);
+        return tomorrow ? UiText.t(this, "מחר") : NextReminderCalculator.formatDateTime(time);
+    }
+
+    private static class HomeReminderItem {
+        final Reminder reminder;
+        final NextReminderCalculator.NextReminder next;
+
+        HomeReminderItem(Reminder reminder, NextReminderCalculator.NextReminder next) {
+            this.reminder = reminder;
+            this.next = next;
+        }
+    }
+
+    private void showAllReminders() {
+        currentScreen = "all_reminders";
         editingReminder = null;
         boolean jewishMode = new ReminderSettings(this).jewishMode();
         boolean fastStartupList = shouldUseFastStartupList();
         LinearLayout content = baseContent();
-        addTitle(content, "תזכורות", "לחיצה ארוכה על תזכורת פותחת פעולות אפשריות");
+        addTitle(content, "כל התזכורות", "לחיצה לעריכה · לחיצה ארוכה לפעולות");
+
+        Button backHome = pillButton("חזרה לבית", COLOR_SURFACE_2);
+        backHome.setOnClickListener(v -> showList());
+        content.addView(backHome, matchParams());
 
         LinearLayout topActions = actionRow();
         Button addButton = pillButton("הוספה", COLOR_ACCENT_DARK);
@@ -559,8 +781,8 @@ public class MainActivity extends Activity {
             setScrollableContent(content);
             rememberReminderListFingerprint();
             activeScrollView.postDelayed(() -> {
-                if ("list".equals(currentScreen) && !startupMaintenanceDone && startupListPass == 1) {
-                    showList();
+                if ("all_reminders".equals(currentScreen) && !startupMaintenanceDone && startupListPass == 1) {
+                    showAllReminders();
                 }
             }, 220L);
             return;
@@ -1946,6 +2168,7 @@ public class MainActivity extends Activity {
         ZmanimSettings settings = new ZmanimSettings(this);
         LinearLayout content = baseContent();
         addTitle(content, "זמני היום", displayLocationName(settings.name()) + "\n" + ZmanimSettings.coordinatesName(settings.latitude(), settings.longitude()));
+        content.addView(illustration(R.drawable.zmanim_horizon, 118), illustrationParams());
 
         LinearLayout timesCard = card();
         final TextView[] gregorianPickerTitle = new TextView[1];
@@ -4328,6 +4551,10 @@ public class MainActivity extends Activity {
             showList();
             return true;
         }
+        if ("all_reminders".equals(currentScreen)) {
+            showList();
+            return true;
+        }
         if ("list".equals(currentScreen)) {
             finish();
             return true;
@@ -4488,6 +4715,9 @@ public class MainActivity extends Activity {
         int scrollY = activeScrollView == null ? 0 : activeScrollView.getScrollY();
         if ("list".equals(currentScreen)) {
             showList(scrollY);
+        } else if ("all_reminders".equals(currentScreen)) {
+            showAllReminders();
+            restoreScrollY(scrollY);
         } else if ("history".equals(currentScreen)) {
             showHistory(scrollY);
         } else if ("fasting_settings".equals(currentScreen)) {
@@ -4550,7 +4780,7 @@ public class MainActivity extends Activity {
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
-        button.setBackground(rounded(color, dp(8), 0));
+        button.setBackground(rounded(color, dp(12), 0));
         button.setAllCaps(false);
         button.setMinHeight(dp(38));
         button.setGravity(Gravity.CENTER);
@@ -4817,7 +5047,7 @@ public class MainActivity extends Activity {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
         card.setPadding(dp(12), dp(10), dp(12), dp(10));
-        card.setBackground(rounded(highlighted ? 0xFF182019 : COLOR_SURFACE, dp(8), highlighted ? 0xAA52D273 : 0x223A4540));
+        card.setBackground(rounded(highlighted ? COLOR_EMERALD_DEEP : COLOR_SURFACE, dp(12), highlighted ? 0x99D8B56A : 0x333F594C));
         return card;
     }
 
@@ -4827,6 +5057,43 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
         params.setMargins(dp(4), dp(5), dp(4), dp(5));
+        return params;
+    }
+
+    private LinearLayout.LayoutParams compactCardParams() {
+        LinearLayout.LayoutParams params = cardParams();
+        params.setMargins(dp(6), dp(3), dp(6), dp(3));
+        return params;
+    }
+
+    private LinearLayout.LayoutParams homeHeroParams() {
+        LinearLayout.LayoutParams params = cardParams();
+        params.setMargins(dp(3), dp(7), dp(3), dp(5));
+        return params;
+    }
+
+    private ImageView illustration(int drawableRes, int heightDp) {
+        ImageView image = new ImageView(this);
+        image.setImageResource(drawableRes);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setAdjustViewBounds(false);
+        image.setContentDescription(null);
+        image.setAlpha(0.9f);
+        image.setBackground(rounded(COLOR_SURFACE, dp(14), 0x443F594C));
+        image.setClipToOutline(true);
+        image.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(heightDp)
+        ));
+        return image;
+    }
+
+    private LinearLayout.LayoutParams illustrationParams() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(108)
+        );
+        params.setMargins(dp(3), 0, dp(3), dp(7));
         return params;
     }
 
@@ -5162,6 +5429,13 @@ public class MainActivity extends Activity {
         long shabbat = dayOfWeek == Calendar.SATURDAY ? dayMillis : zmanimDayOffset(dayMillis, 1);
 
         LinearLayout shabbatCard = card();
+        ImageView shabbatIllustration = illustration(R.drawable.shabbat_horizon, 96);
+        LinearLayout.LayoutParams shabbatIllustrationParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(96)
+        );
+        shabbatIllustrationParams.setMargins(0, 0, 0, dp(7));
+        shabbatCard.addView(shabbatIllustration, shabbatIllustrationParams);
         TextView heading = text(UiText.t(this, "זמני שבת"), 16, COLOR_ACCENT);
         heading.setTypeface(Typeface.DEFAULT_BOLD);
         heading.setGravity(Gravity.CENTER);
