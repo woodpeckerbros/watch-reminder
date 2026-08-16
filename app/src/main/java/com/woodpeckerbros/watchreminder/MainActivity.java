@@ -173,6 +173,8 @@ public class MainActivity extends Activity {
     private boolean startupMaintenanceRunning;
     private boolean startupMaintenanceDone;
     private int startupListPass;
+    private int homeUpcomingLoadGeneration;
+    private LinearLayout homeUpcomingContainer;
     private static final String[] BLESSING_NAMES = {
             "אשר יצר",
             "קריאת שמע בזמנה",
@@ -554,44 +556,13 @@ public class MainActivity extends Activity {
             content.addView(warning);
         }
 
-        boolean fastStartupList = shouldUseFastStartupList();
-        if (fastStartupList) {
-            content.addView(infoPill("טוען תזכורות...", COLOR_MUTED));
-            setScrollableContent(content, homeBackgroundResource);
-            rememberReminderListFingerprint();
-            if (startupListPass == 1) {
-                activeScrollView.postDelayed(() -> {
-                    if ("list".equals(currentScreen) && !startupMaintenanceDone) {
-                        showList();
-                    }
-                }, 220L);
-            }
-            return;
-        }
-
-        List<HomeReminderItem> upcoming = upcomingReminderItems();
-        if (upcoming.isEmpty()) {
-            LinearLayout emptyCard = card();
-            TextView emptyTitle = text("אין תזכורות קרובות", 16, COLOR_TEXT);
-            AppFont.bold(emptyTitle);
-            TextView emptySubtitle = text("אפשר להוסיף תזכורת חדשה בלחיצה אחת", 11, COLOR_MUTED);
-            emptySubtitle.setPadding(0, dp(4), 0, 0);
-            emptyCard.addView(emptyTitle);
-            emptyCard.addView(emptySubtitle);
-            content.addView(emptyCard, cardParams());
-        } else {
-            content.addView(homeNextReminderCard(upcoming.get(0)), homeHeroParams());
-            if (upcoming.size() > 1) {
-                TextView following = text("אחר כך", 12, COLOR_LUXURY_GOLD);
-                AppFont.bold(following);
-                following.setPadding(0, dp(7), 0, dp(2));
-                content.addView(following);
-                int limit = Math.min(3, upcoming.size());
-                for (int i = 1; i < limit; i++) {
-                    content.addView(homeCompactReminderCard(upcoming.get(i)), compactCardParams());
-                }
-            }
-        }
+        LinearLayout upcomingContainer = new LinearLayout(this);
+        upcomingContainer.setOrientation(LinearLayout.VERTICAL);
+        upcomingContainer.setGravity(Gravity.CENTER_HORIZONTAL);
+        upcomingContainer.addView(infoPill("טוען תזכורות...", COLOR_MUTED));
+        content.addView(upcomingContainer, matchParams());
+        homeUpcomingContainer = upcomingContainer;
+        int loadGeneration = ++homeUpcomingLoadGeneration;
 
         Button allReminders = pillButton("כל התזכורות", COLOR_SURFACE_2);
         allReminders.setTextColor(COLOR_TEXT);
@@ -623,6 +594,7 @@ public class MainActivity extends Activity {
         content.addView(settingsButton, matchParams());
         setScrollableContent(content, homeBackgroundResource);
         rememberReminderListFingerprint();
+        loadHomeUpcomingAsync(upcomingContainer, loadGeneration);
     }
 
     private String homeGreeting() {
@@ -654,19 +626,63 @@ public class MainActivity extends Activity {
         return R.drawable.home_horizon_night;
     }
 
-    private List<HomeReminderItem> upcomingReminderItems() {
+    private List<HomeReminderItem> nearestHomeReminderItems() {
         List<HomeReminderItem> items = new java.util.ArrayList<>();
         ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
         ReminderEventStore eventStore = new ReminderEventStore(this);
-        for (Reminder reminder : store.getAll()) {
+        for (Reminder reminder : new ReminderStore(this).getAll()) {
             NextReminderCalculator.NextReminder next = NextReminderCalculator.nextForReminder(
                     this, reminder, snoozeStore, eventStore, true);
             if (next != null) {
                 items.add(new HomeReminderItem(reminder, next));
+                items.sort((left, right) -> Long.compare(left.next.scheduledAt, right.next.scheduledAt));
+                if (items.size() > 3) {
+                    items.remove(items.size() - 1);
+                }
             }
         }
-        items.sort((left, right) -> Long.compare(left.next.scheduledAt, right.next.scheduledAt));
         return items;
+    }
+
+    private void loadHomeUpcomingAsync(LinearLayout container, int generation) {
+        new Thread(() -> {
+            List<HomeReminderItem> upcoming = nearestHomeReminderItems();
+            mainHandler.post(() -> {
+                if (!"list".equals(currentScreen)
+                        || generation != homeUpcomingLoadGeneration
+                        || container != homeUpcomingContainer
+                        || isFinishing()) {
+                    return;
+                }
+                renderHomeUpcoming(container, upcoming);
+            });
+        }, "home-upcoming").start();
+    }
+
+    private void renderHomeUpcoming(LinearLayout container, List<HomeReminderItem> upcoming) {
+        container.removeAllViews();
+        if (upcoming.isEmpty()) {
+            LinearLayout emptyCard = card();
+            TextView emptyTitle = text("אין תזכורות קרובות", 16, COLOR_TEXT);
+            AppFont.bold(emptyTitle);
+            TextView emptySubtitle = text("אפשר להוסיף תזכורת חדשה בלחיצה אחת", 11, COLOR_MUTED);
+            emptySubtitle.setPadding(0, dp(4), 0, 0);
+            emptyCard.addView(emptyTitle);
+            emptyCard.addView(emptySubtitle);
+            container.addView(emptyCard, cardParams());
+            return;
+        }
+        container.addView(homeNextReminderCard(upcoming.get(0)), homeHeroParams());
+        if (upcoming.size() <= 1) {
+            return;
+        }
+        TextView following = text("אחר כך", 12, COLOR_LUXURY_GOLD);
+        AppFont.bold(following);
+        following.setPadding(0, dp(7), 0, dp(2));
+        container.addView(following);
+        for (int i = 1; i < upcoming.size(); i++) {
+            container.addView(homeCompactReminderCard(upcoming.get(i)), compactCardParams());
+        }
     }
 
     private LinearLayout homeNextReminderCard(HomeReminderItem item) {
