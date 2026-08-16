@@ -39,6 +39,18 @@ public class ComplicationRefresh {
                     context,
                     new ComponentName(context, IntermittentFastingComplicationService.class)
             ).requestUpdateAll();
+            ComplicationDataSourceUpdateRequester.create(
+                    context,
+                    new ComponentName(context, ZmanimComplicationService.class)
+            ).requestUpdateAll();
+            ComplicationDataSourceUpdateRequester.create(
+                    context,
+                    new ComponentName(context, HebrewDateComplicationService.class)
+            ).requestUpdateAll();
+            ComplicationDataSourceUpdateRequester.create(
+                    context,
+                    new ComponentName(context, BlessingReminderComplicationService.class)
+            ).requestUpdateAll();
         } catch (Exception ignored) {
         }
     }

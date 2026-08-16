@@ -277,6 +277,7 @@ public class MainActivity extends Activity {
             TekufaScheduler.schedule(MainActivity.this);
             IntermittentFastingScheduler.schedule(MainActivity.this);
             ReminderScheduler.scheduleWatchdog(MainActivity.this);
+            ComplicationRefresh.request(MainActivity.this);
             if (settings.serviceEnabled()) {
                 ReminderForegroundService.start(MainActivity.this);
             } else {
@@ -2208,6 +2209,7 @@ public class MainActivity extends Activity {
         LinearLayout content = baseContent();
         addTitle(content, "זמני היום", displayLocationName(settings.name()) + "\n" + ZmanimSettings.coordinatesName(settings.latitude(), settings.longitude()));
         int zmanimBackgroundResource = zmanimBackgroundResource(dayMillis);
+        addShabbatTimesCard(content, dayMillis);
 
         LinearLayout timesCard = card();
         final TextView[] gregorianPickerTitle = new TextView[1];
@@ -2244,7 +2246,6 @@ public class MainActivity extends Activity {
         }
         timesCard.addView(moonBlessingRow(dayMillis));
         content.addView(timesCard, cardParams());
-        addShabbatTimesCard(content, dayMillis);
 
         gregorianPickerTitle[0] = addZmanimGregorianPicker(content, dayMillis, showDatePickers);
         addZmanimHebrewPicker(content, dayMillis, showDatePickers);
