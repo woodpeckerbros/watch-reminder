@@ -2191,7 +2191,7 @@ public class MainActivity extends Activity {
         ZmanimSettings settings = new ZmanimSettings(this);
         LinearLayout content = baseContent();
         addTitle(content, "זמני היום", displayLocationName(settings.name()) + "\n" + ZmanimSettings.coordinatesName(settings.latitude(), settings.longitude()));
-        content.addView(illustration(R.drawable.zmanim_horizon, 118), illustrationParams());
+        int zmanimBackgroundResource = zmanimBackgroundResource(dayMillis);
 
         LinearLayout timesCard = card();
         final TextView[] gregorianPickerTitle = new TextView[1];
@@ -2244,7 +2244,7 @@ public class MainActivity extends Activity {
         });
         backRow.addView(back);
         content.addView(backRow);
-        setScrollableContent(content);
+        setScrollableContent(content, zmanimBackgroundResource);
         if (scrollTarget == 1) {
             scrollToViewTop(dateTitle, dp(8));
         } else if (scrollTarget == 2) {
@@ -5474,13 +5474,6 @@ public class MainActivity extends Activity {
         long shabbat = dayOfWeek == Calendar.SATURDAY ? dayMillis : zmanimDayOffset(dayMillis, 1);
 
         LinearLayout shabbatCard = card();
-        ImageView shabbatIllustration = illustration(R.drawable.shabbat_horizon, 96);
-        LinearLayout.LayoutParams shabbatIllustrationParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(96)
-        );
-        shabbatIllustrationParams.setMargins(0, 0, 0, dp(7));
-        shabbatCard.addView(shabbatIllustration, shabbatIllustrationParams);
         TextView heading = text(UiText.t(this, "זמני שבת"), 16, COLOR_ACCENT);
         heading.setTypeface(Typeface.DEFAULT_BOLD);
         heading.setGravity(Gravity.CENTER);
@@ -5493,6 +5486,14 @@ public class MainActivity extends Activity {
         shabbatCard.addView(zmanimTimeRow(UiText.t(this, "צאת שבת ר״ת"),
                 ZmanimHelper.shabbatTimeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, shabbat)));
         content.addView(shabbatCard, cardParams());
+    }
+
+    private int zmanimBackgroundResource(long dayMillis) {
+        int dayOfWeek = zmanimCalendar(dayMillis).get(Calendar.DAY_OF_WEEK);
+        if (dayOfWeek == Calendar.FRIDAY || dayOfWeek == Calendar.SATURDAY) {
+            return R.drawable.shabbat_horizon;
+        }
+        return R.drawable.zmanim_horizon;
     }
 
     private View moonBlessingRow(long dayMillis) {
