@@ -57,7 +57,7 @@ public class DafYomiScheduler {
         }
         AppLog.d(context, "daf yomi catch-up open alert trigger=" + NextReminderCalculator.formatDateTime(todayTriggerAt));
         Intent alert = new Intent(context, DafYomiAlertActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(alert);
         DafYomiReceiver.cancelNotification(context);
         schedule(context);

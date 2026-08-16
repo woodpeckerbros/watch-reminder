@@ -403,7 +403,7 @@ public class ReminderAlertActivity extends Activity {
         actionClosed = true;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         new ReminderAlertQueueStore(this).complete(activeOccurrenceId);
-        finishAndRemoveTask();
+        finish();
         ReminderReceiver.dispatchNextQueued(this);
     }
 

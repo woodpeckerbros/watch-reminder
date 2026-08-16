@@ -43,7 +43,7 @@ public class OmerReceiver extends BroadcastReceiver {
         AppLog.d(context, "omer showNotification day=" + (item == null ? "none" : item.day));
         Intent alertIntent = new Intent(context, OmerAlertActivity.class)
                 .putExtra(OmerScheduler.EXTRA_TRIGGER_AT, triggerAt)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 NOTIFICATION_ID,

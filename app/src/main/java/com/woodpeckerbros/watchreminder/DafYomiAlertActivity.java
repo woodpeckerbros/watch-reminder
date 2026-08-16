@@ -160,7 +160,7 @@ public class DafYomiAlertActivity extends Activity {
         }
         handler.postDelayed(() -> {
             android.content.Intent next = new android.content.Intent(this, DafYomiAlertActivity.class)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(next);
         }, 250L);
     }

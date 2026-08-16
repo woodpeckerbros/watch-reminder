@@ -228,7 +228,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .putExtra(ReminderScheduler.EXTRA_ORIGINAL_SCHEDULED_AT, originalScheduledAt)
                 .putExtra(ReminderScheduler.EXTRA_DAY, day)
                 .putExtra(ReminderScheduler.EXTRA_IS_SNOOZE, isSnooze)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 occurrenceId.hashCode(),

@@ -41,7 +41,7 @@ public class DafYomiReceiver extends BroadcastReceiver {
         createChannel(context);
         AppLog.d(context, "daf yomi showNotification");
         Intent alertIntent = new Intent(context, DafYomiAlertActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 NOTIFICATION_ID,

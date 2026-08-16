@@ -74,7 +74,7 @@ public class OmerScheduler {
     static void openAlert(Context context, long triggerAt) {
         Intent alert = new Intent(context, OmerAlertActivity.class)
                 .putExtra(EXTRA_TRIGGER_AT, triggerAt)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(alert);
     }
 

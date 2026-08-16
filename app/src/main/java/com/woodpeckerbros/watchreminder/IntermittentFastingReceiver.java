@@ -78,7 +78,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
                 .putExtra(IntermittentFastingScheduler.EXTRA_TRIGGER_AT, triggerAt)
                 .putExtra("fasting_alert_title", title)
                 .putExtra("fasting_alert_message", message)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 (eventType + ":" + triggerAt).hashCode(),

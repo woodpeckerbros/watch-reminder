@@ -133,7 +133,7 @@ public class IntermittentFastingAlertActivity extends Activity {
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
         AppLog.d(this, "fasting alert acknowledged type=" + eventType + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
-        finishAndRemoveTask();
+        finish();
     }
 
     private void scheduleAutoClose() {
@@ -143,7 +143,7 @@ public class IntermittentFastingAlertActivity extends Activity {
                 return;
             }
             AppLog.w(this, "fasting alert auto close type=" + eventType + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
-            finishAndRemoveTask();
+            finish();
         };
         handler.postDelayed(autoCloseRunnable, settings.autoSnoozeDelayMs());
     }
