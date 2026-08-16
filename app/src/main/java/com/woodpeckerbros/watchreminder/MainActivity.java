@@ -527,7 +527,7 @@ public class MainActivity extends Activity {
         editingReminder = null;
         boolean jewishMode = new ReminderSettings(this).jewishMode();
         LinearLayout content = baseContent();
-        addTitle(content, homeGreeting(), "מה חשוב עכשיו");
+        addTitle(content, homeGreeting(), null);
         lastHomeIllustrationPeriod = homeIllustrationPeriod();
         int homeBackgroundResource = homeIllustrationResource(lastHomeIllustrationPeriod);
 
