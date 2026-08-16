@@ -4350,14 +4350,6 @@ public class MainActivity extends Activity {
     }
 
     private void addTopClock(FrameLayout content) {
-        View band = new View(this);
-        band.setBackgroundColor(COLOR_BG);
-        FrameLayout.LayoutParams bandParams = new FrameLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(27)
-        );
-        bandParams.gravity = Gravity.TOP;
-        content.addView(band, bandParams);
         TopArcClockView clock = new TopArcClockView(this);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
