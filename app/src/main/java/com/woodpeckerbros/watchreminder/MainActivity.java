@@ -529,7 +529,7 @@ public class MainActivity extends Activity {
         LinearLayout content = baseContent();
         addTitle(content, homeGreeting(), "מה חשוב עכשיו");
         lastHomeIllustrationPeriod = homeIllustrationPeriod();
-        content.addView(illustration(homeIllustrationResource(lastHomeIllustrationPeriod), 108), illustrationParams());
+        int homeBackgroundResource = homeIllustrationResource(lastHomeIllustrationPeriod);
 
         LinearLayout primaryActions = actionRow();
         Button addButton = pillButton("+ תזכורת", COLOR_EMERALD);
@@ -554,7 +554,7 @@ public class MainActivity extends Activity {
         boolean fastStartupList = shouldUseFastStartupList();
         if (fastStartupList) {
             content.addView(infoPill("טוען תזכורות...", COLOR_MUTED));
-            setScrollableContent(content);
+            setScrollableContent(content, homeBackgroundResource);
             rememberReminderListFingerprint();
             if (startupListPass == 1) {
                 activeScrollView.postDelayed(() -> {
@@ -618,21 +618,21 @@ public class MainActivity extends Activity {
         settingsButton.setTextColor(COLOR_MUTED);
         settingsButton.setOnClickListener(v -> showSettings());
         content.addView(settingsButton, matchParams());
-        setScrollableContent(content);
+        setScrollableContent(content, homeBackgroundResource);
         rememberReminderListFingerprint();
     }
 
     private String homeGreeting() {
-        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int period = homeIllustrationPeriod();
         if (AppLanguage.isEnglish(this)) {
-            if (hour < 12) return "Good morning";
-            if (hour < 18) return "Good afternoon";
-            if (hour < 21) return "Good evening";
+            if (period == 0) return "Good morning";
+            if (period == 1) return "Good afternoon";
+            if (period == 2) return "Good evening";
             return "Good night";
         }
-        if (hour < 12) return "בוקר טוב";
-        if (hour < 18) return "צהריים טובים";
-        if (hour < 21) return "ערב טוב";
+        if (period == 0) return "בוקר טוב";
+        if (period == 1) return "צהריים טובים";
+        if (period == 2) return "ערב טוב";
         return "לילה טוב";
     }
 
@@ -4444,15 +4444,37 @@ public class MainActivity extends Activity {
     }
 
     private void setScrollableContent(LinearLayout content) {
+        setScrollableContent(content, 0);
+    }
+
+    private void setScrollableContent(LinearLayout content, int backgroundDrawableRes) {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
+
+        if (backgroundDrawableRes != 0) {
+            ImageView background = new ImageView(this);
+            background.setImageResource(backgroundDrawableRes);
+            background.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            background.setContentDescription(null);
+            root.addView(background, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+            View readabilityScrim = new View(this);
+            readabilityScrim.setBackgroundColor(0x66000000);
+            root.addView(readabilityScrim, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+            content.setBackgroundColor(Color.TRANSPARENT);
+        }
 
         ScrollView scrollView = new ScrollView(this);
         activeScrollView = scrollView;
         scrollView.setFillViewport(true);
         scrollView.setFocusable(true);
         scrollView.setFocusableInTouchMode(true);
-        scrollView.setBackgroundColor(COLOR_BG);
+        scrollView.setBackgroundColor(backgroundDrawableRes == 0 ? COLOR_BG : Color.TRANSPARENT);
         scrollView.setOnTouchListener((view, event) -> {
             if (handleHorizontalBackSwipe(event)) {
                 return true;
