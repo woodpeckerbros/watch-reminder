@@ -5538,8 +5538,8 @@ public class MainActivity extends Activity {
         AppFont.bold(value);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        row.addView(value, valueParams);
         row.addView(name, nameParams);
+        row.addView(value, valueParams);
         return row;
     }
 
@@ -5608,8 +5608,8 @@ public class MainActivity extends Activity {
         AppFont.bold(value);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        row.addView(value, valueParams);
         row.addView(name, nameParams);
+        row.addView(value, valueParams);
         return row;
     }
 
