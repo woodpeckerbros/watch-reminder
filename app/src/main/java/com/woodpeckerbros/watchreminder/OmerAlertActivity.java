@@ -12,12 +12,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class OmerAlertActivity extends Activity {
-    private static final int COLOR_BG = 0xFF000000;
-    private static final int COLOR_SURFACE = 0xFF12171A;
-    private static final int COLOR_TEXT = 0xFFF4F7F5;
-    private static final int COLOR_MUTED = 0xFFAEB8B2;
-    private static final int COLOR_ACCENT = 0xFF52D273;
-    private static final int COLOR_ACCENT_DARK = 0xFF136F45;
+    private static final int COLOR_BG = 0xFF061522;
+    private static final int COLOR_SURFACE = 0xFF142A3A;
+    private static final int COLOR_TEXT = 0xFFF4EBDD;
+    private static final int COLOR_MUTED = 0xFFB8B7AE;
+    private static final int COLOR_ACCENT = 0xFFC77B58;
+    private static final int COLOR_ACCENT_DARK = 0xFF66745D;
 
     private OmerHelper.Item item;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -173,7 +173,7 @@ public class OmerAlertActivity extends Activity {
         button.setTextColor(android.graphics.Color.WHITE);
         button.setTextSize(value.length() > 9 ? 11 : 13);
         button.setAllCaps(false);
-        button.setBackground(new android.graphics.drawable.ColorDrawable(color));
+        button.setBackground(rounded(color));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
         params.setMargins(dp(10), dp(5), dp(10), dp(5));
         button.setLayoutParams(params);
@@ -188,6 +188,14 @@ public class OmerAlertActivity extends Activity {
         view.setGravity(Gravity.CENTER);
         view.setTextDirection(AppLanguage.isRtl(this) ? TextView.TEXT_DIRECTION_RTL : TextView.TEXT_DIRECTION_LTR);
         return view;
+    }
+
+    private android.graphics.drawable.GradientDrawable rounded(int color) {
+        android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(dp(18));
+        if (color == COLOR_SURFACE) drawable.setStroke(dp(1), COLOR_ACCENT);
+        return drawable;
     }
 
     private int dp(int value) {

@@ -28,13 +28,13 @@ import java.util.Calendar;
 import java.util.List;
 
 public class ReminderAlertActivity extends Activity {
-    private static final int COLOR_BG = 0xFF000000;
-    private static final int COLOR_SURFACE = 0xFF12171A;
-    private static final int COLOR_SURFACE_2 = 0xFF1A2024;
-    private static final int COLOR_TEXT = 0xFFF4F7F5;
-    private static final int COLOR_MUTED = 0xFFAEB8B2;
-    private static final int COLOR_ACCENT = 0xFF52D273;
-    private static final int COLOR_ACCENT_DARK = 0xFF136F45;
+    private static final int COLOR_BG = 0xFF061522;
+    private static final int COLOR_SURFACE = 0xFF0B2133;
+    private static final int COLOR_SURFACE_2 = 0xFF142A3A;
+    private static final int COLOR_TEXT = 0xFFF4EBDD;
+    private static final int COLOR_MUTED = 0xFFB8B7AE;
+    private static final int COLOR_ACCENT = 0xFFC77B58;
+    private static final int COLOR_ACCENT_DARK = 0xFF66745D;
     private static WeakReference<ReminderAlertActivity> activeActivity;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ScrollView activeScrollView;
@@ -97,17 +97,24 @@ public class ReminderAlertActivity extends Activity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(14), dp(14), dp(14), dp(14));
-        card.setBackground(rounded(COLOR_SURFACE, dp(8), 0x223A4540));
+        card.setPadding(dp(14), dp(12), dp(14), dp(16));
+        card.setBackground(rounded(COLOR_SURFACE, dp(20), 0x33747D63));
 
-        TextView title = text("תזכורת", 18, COLOR_ACCENT);
+        TextView icon = text("◒", 34, COLOR_TEXT);
+        icon.setGravity(Gravity.CENTER);
+        icon.setBackground(rounded(COLOR_ACCENT, dp(40), 0));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(64), dp(64));
+        iconParams.setMargins(0, dp(2), 0, dp(8));
+        icon.setLayoutParams(iconParams);
+        TextView title = text("זמן לתזכורת", 18, COLOR_TEXT);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        TextView name = text(alertReminderName, 23, COLOR_TEXT);
+        TextView name = text(alertReminderName, 25, COLOR_TEXT);
         name.setTypeface(Typeface.DEFAULT_BOLD);
-        name.setPadding(0, dp(8), 0, dp(10));
+        name.setPadding(0, dp(7), 0, dp(7));
         TextView description = text(reminderDescription, 14, COLOR_MUTED);
         description.setPadding(dp(6), 0, dp(6), dp(8));
 
+        card.addView(icon);
         card.addView(title);
         card.addView(name);
         if (!reminderDescription.isEmpty()) {
@@ -131,6 +138,10 @@ public class ReminderAlertActivity extends Activity {
         card.addView(originalTime);
 
         Button done = actionButton("בוצע", COLOR_ACCENT_DARK);
+        LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(dp(190), dp(46));
+        doneParams.setMargins(dp(3), dp(7), dp(3), dp(4));
+        done.setLayoutParams(doneParams);
+        done.setTextSize(16);
         done.setOnClickListener(v -> {
             stopVibration();
             AppLog.d(this, "alert done occurrence=" + occurrenceId);
@@ -155,8 +166,8 @@ public class ReminderAlertActivity extends Activity {
         });
         card.addView(done);
 
-        TextView snoozeTitle = text("תזכר אותי בעוד:", 13, COLOR_MUTED);
-        snoozeTitle.setPadding(0, dp(10), 0, dp(3));
+        TextView snoozeTitle = text("אפשר לדחות", 13, COLOR_MUTED);
+        snoozeTitle.setPadding(0, dp(12), 0, dp(4));
         card.addView(snoozeTitle);
 
         LinearLayout firstRow = actionRow();
@@ -436,7 +447,7 @@ public class ReminderAlertActivity extends Activity {
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
         button.setAllCaps(false);
-        button.setBackground(rounded(color, dp(8), 0));
+        button.setBackground(rounded(color, dp(18), color == COLOR_SURFACE_2 ? COLOR_ACCENT : 0));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(76), dp(36));
         params.setMargins(dp(3), dp(2), dp(3), dp(2));
         button.setLayoutParams(params);

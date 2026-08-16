@@ -86,18 +86,21 @@ public class MainActivity extends Activity {
     private static final int REQUEST_CREATE_BACKUP_FILE = 30;
     private static final int REQUEST_OPEN_BACKUP_FILE = 31;
     private static final int REQUEST_PICK_RINGTONE = 32;
-    private static final int COLOR_BG = 0xFF000000;
-    private static final int COLOR_SURFACE = 0xFF111918;
-    private static final int COLOR_SURFACE_2 = 0xFF1A2422;
-    private static final int COLOR_TEXT = 0xFFF4EEE2;
-    private static final int COLOR_MUTED = 0xFFAAB5AE;
-    private static final int COLOR_ACCENT = 0xFFD8B56A;
-    private static final int COLOR_ACCENT_DARK = 0xFF24533E;
+    private static final int COLOR_BG = 0xFF0B2133;
+    private static final int COLOR_SURFACE = 0xFF142A3A;
+    private static final int COLOR_SURFACE_2 = 0xFF1A3042;
+    private static final int COLOR_TEXT = 0xFFF4EBDD;
+    private static final int COLOR_MUTED = 0xFFB8B7AE;
+    private static final int COLOR_ACCENT = 0xFFC77B58;
+    private static final int COLOR_ACCENT_DARK = 0xFF747D63;
     private static final int COLOR_WARNING = 0xFFFFC857;
     private static final int COLOR_DANGER = 0xFFE15B64;
-    private static final int COLOR_LUXURY_GOLD = 0xFFD8B56A;
-    private static final int COLOR_EMERALD = 0xFF234A39;
-    private static final int COLOR_EMERALD_DEEP = 0xFF142A22;
+    private static final int COLOR_LUXURY_GOLD = 0xFFE2C89C;
+    private static final int COLOR_EMERALD = 0xFF747D63;
+    private static final int COLOR_EMERALD_DEEP = 0xFF344A43;
+    private static final int COLOR_CARD = 0xFFF3EDE4;
+    private static final int COLOR_CARD_TEXT = 0xFF142A3A;
+    private static final int COLOR_CARD_MUTED = 0xFF747D63;
     private static final String STARTUP_PREFS_NAME = "startup_reliability";
     private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
@@ -4461,7 +4464,7 @@ public class MainActivity extends Activity {
                     FrameLayout.LayoutParams.MATCH_PARENT
             ));
             View readabilityScrim = new View(this);
-            readabilityScrim.setBackgroundColor(0x66000000);
+            readabilityScrim.setBackgroundColor(0x33061522);
             root.addView(readabilityScrim, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
@@ -4825,7 +4828,7 @@ public class MainActivity extends Activity {
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
-        button.setBackground(rounded(color, dp(12), 0));
+        button.setBackground(rounded(color, dp(18), color == COLOR_SURFACE_2 ? 0x66E2C89C : 0));
         button.setAllCaps(false);
         button.setMinHeight(dp(38));
         button.setGravity(Gravity.CENTER);
@@ -5088,12 +5091,49 @@ public class MainActivity extends Activity {
     }
 
     private LinearLayout card(boolean highlighted) {
-        LinearLayout card = new LinearLayout(this);
+        LinearLayout card = new LinearLayout(this) {
+            @Override
+            public void addView(View child) {
+                styleCardContent(child);
+                super.addView(child);
+            }
+
+            @Override
+            public void addView(View child, ViewGroup.LayoutParams params) {
+                styleCardContent(child);
+                super.addView(child, params);
+            }
+        };
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(12), dp(10), dp(12), dp(10));
-        card.setBackground(rounded(highlighted ? COLOR_EMERALD_DEEP : COLOR_SURFACE, dp(12), highlighted ? 0x99D8B56A : 0x333F594C));
+        card.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card.setBackground(rounded(COLOR_CARD, dp(18), highlighted ? 0xFFC77B58 : 0x33747D63));
         return card;
+    }
+
+    private void styleCardContent(View child) {
+        if (child instanceof Button || child instanceof EditText) {
+            return;
+        }
+        if (child instanceof Switch) {
+            ((Switch) child).setTextColor(COLOR_CARD_TEXT);
+        } else if (child instanceof TextView) {
+            TextView textView = (TextView) child;
+            int currentColor = textView.getCurrentTextColor();
+            if (currentColor == COLOR_TEXT) {
+                textView.setTextColor(COLOR_CARD_TEXT);
+            } else if (currentColor == COLOR_MUTED) {
+                textView.setTextColor(COLOR_CARD_MUTED);
+            } else if (currentColor == COLOR_ACCENT || currentColor == COLOR_LUXURY_GOLD) {
+                textView.setTextColor(COLOR_ACCENT);
+            }
+        }
+        if (child instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) child;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                styleCardContent(group.getChildAt(i));
+            }
+        }
     }
 
     private LinearLayout.LayoutParams cardParams() {
