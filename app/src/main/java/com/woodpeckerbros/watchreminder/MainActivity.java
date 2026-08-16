@@ -672,7 +672,6 @@ public class MainActivity extends Activity {
     private LinearLayout homeNextReminderCard(HomeReminderItem item) {
         LinearLayout card = card(false);
         card.setPadding(dp(16), dp(13), dp(16), dp(13));
-        card.setBackground(rounded(COLOR_EMERALD_DEEP, dp(14), 0x99D8B56A));
         card.setOnClickListener(v -> showEditor(item.reminder));
         card.setOnLongClickListener(v -> {
             showReminderActions(item.reminder);
@@ -1105,8 +1104,7 @@ public class MainActivity extends Activity {
                 ReminderSettings.LANGUAGE_ENGLISH
         };
         Spinner languageSpinner = new Spinner(this);
-        ArrayAdapter<String> languageAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(languageLabels));
-        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> languageAdapter = spinnerAdapter(translated(languageLabels));
         languageSpinner.setAdapter(languageAdapter);
         languageSpinner.setSelection(indexOf(languageValues, settings.language()));
         final boolean[] languageSelectionReady = {false};
@@ -1503,8 +1501,7 @@ public class MainActivity extends Activity {
                 ReminderSettings.VIBRATION_LONG
         };
         Spinner vibrationSpinner = new Spinner(this);
-        ArrayAdapter<String> vibrationAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(vibrationLabels));
-        vibrationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> vibrationAdapter = spinnerAdapter(translated(vibrationLabels));
         vibrationSpinner.setAdapter(vibrationAdapter);
         vibrationSpinner.setSelection(indexOf(vibrationValues, settings.vibrationStyle()));
         vibrationCard.addView(vibrationSpinner, matchParams());
@@ -2414,8 +2411,7 @@ public class MainActivity extends Activity {
         views.zmanimSection.setOrientation(LinearLayout.VERTICAL);
         views.zmanimSection.setGravity(Gravity.CENTER);
         views.zmanim = new Spinner(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(ZmanimHelper.LABELS));
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> adapter = spinnerAdapter(translated(ZmanimHelper.LABELS));
         views.zmanim.setAdapter(adapter);
         views.zmanim.setSelection(ZmanimHelper.indexOf(zmanimKey));
         views.zmanimSection.addView(views.zmanim, matchParams());
@@ -3598,8 +3594,7 @@ public class MainActivity extends Activity {
         zmanimCard.addView(zmanimSwitch);
 
         Spinner zmanimSpinner = new Spinner(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(ZmanimHelper.LABELS));
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> adapter = spinnerAdapter(translated(ZmanimHelper.LABELS));
         zmanimSpinner.setAdapter(adapter);
         zmanimSpinner.setSelection(ZmanimHelper.indexOf(selectedZmanimKey));
         zmanimSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -3851,8 +3846,7 @@ public class MainActivity extends Activity {
         Spinner unitSpinner = new Spinner(this);
         String[] unitLabels = {"שעות", "ימים", "שבועות", "חודשים", "שנים"};
         String[] unitValues = {Reminder.PERIOD_UNIT_HOURS, Reminder.PERIOD_UNIT_DAYS, Reminder.PERIOD_UNIT_WEEKS, Reminder.PERIOD_UNIT_MONTHS, Reminder.PERIOD_UNIT_YEARS};
-        ArrayAdapter<String> unitAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, translated(unitLabels));
-        unitAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> unitAdapter = spinnerAdapter(translated(unitLabels));
         unitSpinner.setAdapter(unitAdapter);
         unitSpinner.setSelection(unitIndex(selectedPeriodicUnit));
         unitSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -4447,7 +4441,8 @@ public class MainActivity extends Activity {
     }
 
     private void setScrollableContent(LinearLayout content) {
-        setScrollableContent(content, 0);
+        int period = homeIllustrationPeriod();
+        setScrollableContent(content, homeIllustrationResource(period));
     }
 
     private void setScrollableContent(LinearLayout content, int backgroundDrawableRes) {
@@ -4848,6 +4843,32 @@ public class MainActivity extends Activity {
 
     private String[] translated(String[] values) {
         return UiText.translate(this, values);
+    }
+
+    private ArrayAdapter<String> spinnerAdapter(String[] values) {
+        return new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, values) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                return styleSpinnerText(super.getView(position, convertView, parent), false);
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                return styleSpinnerText(super.getDropDownView(position, convertView, parent), true);
+            }
+        };
+    }
+
+    private View styleSpinnerText(View view, boolean dropDown) {
+        if (view instanceof TextView) {
+            TextView textView = (TextView) view;
+            textView.setTextColor(dropDown ? COLOR_TEXT : COLOR_CARD_TEXT);
+            textView.setTextSize(14);
+            textView.setGravity(Gravity.CENTER);
+            textView.setPadding(dp(10), dp(8), dp(10), dp(8));
+            textView.setBackgroundColor(dropDown ? COLOR_SURFACE : Color.TRANSPARENT);
+        }
+        return view;
     }
 
     private Button smallButton(String value, int color) {
