@@ -98,9 +98,9 @@ public class MainActivity extends Activity {
     private static final int COLOR_LUXURY_GOLD = 0xFFE2C89C;
     private static final int COLOR_EMERALD = 0xFF747D63;
     private static final int COLOR_EMERALD_DEEP = 0xFF344A43;
-    private static final int COLOR_CARD = 0xFFF3EDE4;
-    private static final int COLOR_CARD_TEXT = 0xFF142A3A;
-    private static final int COLOR_CARD_MUTED = 0xFF747D63;
+    private static final int COLOR_CARD = 0xED263936;
+    private static final int COLOR_CARD_TEXT = 0xFFF4EBDD;
+    private static final int COLOR_CARD_MUTED = 0xFFC5C8BA;
     private static final String STARTUP_PREFS_NAME = "startup_reliability";
     private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
