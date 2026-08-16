@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
     private static final int COLOR_LUXURY_GOLD = 0xFFE2C89C;
     private static final int COLOR_EMERALD = 0xFF747D63;
     private static final int COLOR_EMERALD_DEEP = 0xFF344A43;
-    private static final int COLOR_CARD = 0xED263936;
+    private static final int COLOR_CARD = 0xC9263936;
     private static final int COLOR_CARD_TEXT = 0xFFF4EBDD;
     private static final int COLOR_CARD_MUTED = 0xFFC5C8BA;
     private static final String STARTUP_PREFS_NAME = "startup_reliability";
@@ -573,7 +573,7 @@ public class MainActivity extends Activity {
         if (upcoming.isEmpty()) {
             LinearLayout emptyCard = card();
             TextView emptyTitle = text("אין תזכורות קרובות", 16, COLOR_TEXT);
-            emptyTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            AppFont.bold(emptyTitle);
             TextView emptySubtitle = text("אפשר להוסיף תזכורת חדשה בלחיצה אחת", 11, COLOR_MUTED);
             emptySubtitle.setPadding(0, dp(4), 0, 0);
             emptyCard.addView(emptyTitle);
@@ -583,7 +583,7 @@ public class MainActivity extends Activity {
             content.addView(homeNextReminderCard(upcoming.get(0)), homeHeroParams());
             if (upcoming.size() > 1) {
                 TextView following = text("אחר כך", 12, COLOR_LUXURY_GOLD);
-                following.setTypeface(Typeface.DEFAULT_BOLD);
+                AppFont.bold(following);
                 following.setPadding(0, dp(7), 0, dp(2));
                 content.addView(following);
                 int limit = Math.min(3, upcoming.size());
@@ -599,7 +599,7 @@ public class MainActivity extends Activity {
         content.addView(allReminders, matchParams());
 
         TextView shortcutsTitle = text("גישה מהירה", 12, COLOR_LUXURY_GOLD);
-        shortcutsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(shortcutsTitle);
         shortcutsTitle.setPadding(0, dp(12), 0, dp(2));
         content.addView(shortcutsTitle);
         if (jewishMode) {
@@ -678,12 +678,12 @@ public class MainActivity extends Activity {
             return true;
         });
         TextView label = text("התזכורת הבאה", 11, COLOR_LUXURY_GOLD);
-        label.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(label);
         TextView time = text(NextReminderCalculator.formatTime(item.next.scheduledAt), 34, COLOR_TEXT);
-        time.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(time);
         time.setPadding(0, dp(2), 0, 0);
         TextView name = text(item.next.reminderName, 18, COLOR_TEXT);
-        name.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(name);
         TextView date = text(homeDateLabel(item.next.scheduledAt), 11, COLOR_MUTED);
         date.setPadding(0, dp(3), 0, dp(4));
         card.addView(label);
@@ -713,12 +713,12 @@ public class MainActivity extends Activity {
             return true;
         });
         TextView time = text(NextReminderCalculator.formatTime(item.next.scheduledAt), 18, COLOR_LUXURY_GOLD);
-        time.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(time);
         LinearLayout textColumn = new LinearLayout(this);
         textColumn.setOrientation(LinearLayout.VERTICAL);
         textColumn.setGravity(Gravity.CENTER);
         TextView name = text(item.next.reminderName, 14, COLOR_TEXT);
-        name.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(name);
         TextView date = text(homeDateLabel(item.next.scheduledAt), 10, COLOR_MUTED);
         textColumn.addView(name);
         textColumn.addView(date);
@@ -858,9 +858,9 @@ public class MainActivity extends Activity {
             });
 
             TextView time = text(reminder.useZmanim ? ZmanimHelper.label(reminder.zmanimKey) : formatTime(reminder.hour, reminder.minute), 24, reminder.enabled ? COLOR_ACCENT : COLOR_MUTED);
-            time.setTypeface(Typeface.DEFAULT_BOLD);
+            AppFont.bold(time);
             TextView name = text(reminder.name, 16, COLOR_TEXT);
-            name.setTypeface(Typeface.DEFAULT_BOLD);
+            AppFont.bold(name);
             TextView description = text(reminder.description, 12, COLOR_MUTED);
             description.setPadding(dp(8), dp(2), dp(8), 0);
             TextView details = text(fastStartupList ? reminderDetailsFast(reminder) : reminderDetails(reminder, nextByReminder.get(reminder.id)), 12, COLOR_MUTED);
@@ -869,7 +869,7 @@ public class MainActivity extends Activity {
             nextTime.setPadding(0, dp(3), 0, 0);
             if (next) {
                 TextView nextLabel = text("ההתראה הקרובה", 11, COLOR_WARNING);
-                nextLabel.setTypeface(Typeface.DEFAULT_BOLD);
+                AppFont.bold(nextLabel);
                 nextLabel.setPadding(0, 0, 0, dp(3));
                 card.addView(nextLabel);
             }
@@ -1021,7 +1021,7 @@ public class MainActivity extends Activity {
             });
 
             TextView name = text(event.reminderName, 15, COLOR_TEXT);
-            name.setTypeface(Typeface.DEFAULT_BOLD);
+            AppFont.bold(name);
             String eventDescription = historyDescription(event);
             TextView description = text(eventDescription, 12, COLOR_MUTED);
             description.setPadding(dp(8), dp(2), dp(8), 0);
@@ -1092,7 +1092,7 @@ public class MainActivity extends Activity {
 
         LinearLayout languageCard = card();
         TextView languageTitle = text("שפה", 15, COLOR_TEXT);
-        languageTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(languageTitle);
         languageCard.addView(languageTitle);
         TextView languageHint = text("שפת הממשק", 11, COLOR_MUTED);
         languageHint.setPadding(0, dp(3), 0, dp(5));
@@ -1195,7 +1195,7 @@ public class MainActivity extends Activity {
 
         LinearLayout backupCard = card();
         TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
-        backupTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(backupTitle);
         backupCard.addView(backupTitle);
         TextView backupHint = text("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", 11, COLOR_MUTED);
         backupHint.setPadding(0, dp(3), 0, dp(6));
@@ -1212,7 +1212,7 @@ public class MainActivity extends Activity {
 
         LinearLayout logsCard = card();
         TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
-        logsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(logsTitle);
         logsCard.addView(logsTitle);
         TextView logsHint = text("לבדיקת תזכורות שלא קופצות בזמן", 11, COLOR_MUTED);
         logsHint.setPadding(0, dp(3), 0, dp(6));
@@ -1296,7 +1296,7 @@ public class MainActivity extends Activity {
 
         LinearLayout blessingCard = card();
         TextView blessingTitle = text("תזכורת לברכה", 15, COLOR_TEXT);
-        blessingTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(blessingTitle);
         blessingCard.addView(blessingTitle);
         TextView blessingHint = text("כמה דקות אחרי החיוב להזכיר לברך", 11, COLOR_MUTED);
         blessingHint.setPadding(0, dp(3), 0, dp(5));
@@ -1304,7 +1304,7 @@ public class MainActivity extends Activity {
         NumberPicker blessingMinutesPicker = numberPicker(1, 71, settings.blessingReminderMinutes());
         blessingCard.addView(pickerColumn("דקות", blessingMinutesPicker));
         TextView shemaTitle = text("קריאת שמע של ערבית בזמנה", 13, COLOR_TEXT);
-        shemaTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(shemaTitle);
         shemaTitle.setPadding(0, dp(10), 0, dp(2));
         blessingCard.addView(shemaTitle);
         TextView shemaHint = text("כמה דקות אחרי צאת הכוכבים לתזכר. אם הזמן כבר עבר, התזכורת תוגדר לפי ההגדרה הכללית למעלה.", 10, COLOR_MUTED);
@@ -1394,7 +1394,7 @@ public class MainActivity extends Activity {
 
         LinearLayout locationCard = card();
         TextView locationTitle = text("מיקום זמני הלכה", 15, COLOR_TEXT);
-        locationTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(locationTitle);
         locationCard.addView(locationTitle);
         TextView locationValue = text(zmanimLocationLine(), 12, COLOR_MUTED);
         locationValue.setPadding(dp(8), dp(4), dp(8), dp(6));
@@ -1469,7 +1469,7 @@ public class MainActivity extends Activity {
 
         LinearLayout vibrationCard = card();
         TextView vibrationTitle = text("התראה", 15, COLOR_TEXT);
-        vibrationTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(vibrationTitle);
         vibrationCard.addView(vibrationTitle);
 
         Switch soundSwitch = new Switch(this);
@@ -1598,7 +1598,7 @@ public class MainActivity extends Activity {
 
         LinearLayout autoCard = card();
         TextView autoTitle = text("דחייה אוטומטית", 15, COLOR_TEXT);
-        autoTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(autoTitle);
         autoCard.addView(autoTitle);
         TextView autoHint = text("אם אין תגובה, המסך נסגר והתזכורת נדחית", 11, COLOR_MUTED);
         autoHint.setPadding(0, dp(3), 0, dp(5));
@@ -1643,7 +1643,7 @@ public class MainActivity extends Activity {
         if (settings.intermittentFastingEnabled()) {
             LinearLayout stateCard = card();
             TextView stateTitle = text("מצב נוכחי", 15, COLOR_TEXT);
-            stateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            AppFont.bold(stateTitle);
             stateCard.addView(stateTitle);
             stateCard.addView(text(fastingStateLine(), 12, COLOR_MUTED));
             stateCard.addView(fastingActionRow());
@@ -1663,7 +1663,7 @@ public class MainActivity extends Activity {
 
         LinearLayout hoursCard = card();
         TextView hoursTitle = text("שעות צום וחלון אכילה", 15, COLOR_TEXT);
-        hoursTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(hoursTitle);
         hoursCard.addView(hoursTitle);
         TextView hoursHint = text("חלון האכילה מחושב אוטומטית מתוך 24 שעות", 11, COLOR_MUTED);
         hoursHint.setPadding(0, dp(3), 0, dp(5));
@@ -1679,7 +1679,7 @@ public class MainActivity extends Activity {
 
         LinearLayout startCard = card();
         TextView startTitle = text("התחלת אכילה ראשונית", 15, COLOR_TEXT);
-        startTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(startTitle);
         startCard.addView(startTitle);
         TextView startHint = text("לדוגמה 12:00 עם 19 שעות צום יוצר חלון 12:00-17:00", 11, COLOR_MUTED);
         startHint.setPadding(0, dp(3), 0, dp(5));
@@ -1795,7 +1795,7 @@ public class MainActivity extends Activity {
         NumberPicker minutePicker = numberPicker(0, 59, now.get(Calendar.MINUTE));
         LinearLayout content = section();
         TextView title = text(startEating ? "התחלתי לאכול בשעה" : "סיימתי לאכול בשעה", 13, COLOR_TEXT);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(title);
         title.setPadding(0, dp(8), 0, dp(4));
         content.addView(title);
         content.addView(timePickerRow(hourPicker, minutePicker));
@@ -1987,7 +1987,7 @@ public class MainActivity extends Activity {
                 });
                 ruleCard.setOnClickListener(v -> showQuietRuleEditor(rule));
                 TextView title = text(rule.name, 15, rule.enabled ? COLOR_TEXT : COLOR_MUTED);
-                title.setTypeface(Typeface.DEFAULT_BOLD);
+                AppFont.bold(title);
                 TextView details = text(quietRuleDetails(rule), 11, COLOR_MUTED);
                 details.setPadding(dp(8), dp(3), dp(8), 0);
                 ruleCard.addView(title);
@@ -2032,7 +2032,7 @@ public class MainActivity extends Activity {
 
         LinearLayout correctionCard = card();
         TextView correctionTitle = text("תיקון סימון", 15, COLOR_TEXT);
-        correctionTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(correctionTitle);
         correctionCard.addView(correctionTitle);
         TextView correctionHint = text("אם סימנת בטעות שלמדת, אפשר להחזיר דף לרשימת ההשלמות", 11, COLOR_MUTED);
         correctionHint.setPadding(0, dp(3), 0, dp(5));
@@ -2058,7 +2058,7 @@ public class MainActivity extends Activity {
 
         LinearLayout missedCard = card();
         TextView missedTitle = text("דפים להשלמה", 15, COLOR_TEXT);
-        missedTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(missedTitle);
         missedCard.addView(missedTitle);
         List<DafYomiHelper.Item> missed = dafStore.missedItems(this);
         if (missed.isEmpty()) {
@@ -2218,7 +2218,7 @@ public class MainActivity extends Activity {
         timesCard.addView(navRow);
 
         TextView dateTitle = text(zmanimDateLine(dayMillis), 13, COLOR_TEXT);
-        dateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(dateTitle);
         dateTitle.setPadding(0, dp(2), 0, dp(8));
         timesCard.addView(dateTitle);
         addZmanimParshaRows(timesCard, dayMillis);
@@ -2331,6 +2331,7 @@ public class MainActivity extends Activity {
         addTitle(content, isNew ? "זמן שקט חדש" : "עריכת זמן שקט", "אפשר לבחור שעה רגילה או זמן הלכה");
 
         EditText name = new EditText(this);
+        AppFont.apply(name);
         name.setSingleLine(true);
         name.setText(initial.name);
         name.setHint(UiText.t(this, "שם"));
@@ -2394,7 +2395,7 @@ public class MainActivity extends Activity {
         QuietBoundaryViews views = new QuietBoundaryViews();
         views.card = card();
         TextView heading = text(title, 15, COLOR_TEXT);
-        heading.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(heading);
         views.card.addView(heading);
 
         views.useZmanim = new Switch(this);
@@ -3360,7 +3361,7 @@ public class MainActivity extends Activity {
         dialogContent.setBackground(rounded(COLOR_SURFACE, dp(8), 0x334D5A52));
 
         TextView title = text("דחיית התזכורת", 15, COLOR_TEXT);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(title);
         TextView subtitle = text("המופע הקרוב יידחה מהזמן שלו", 11, COLOR_MUTED);
         subtitle.setPadding(0, dp(2), 0, dp(8));
         dialogContent.addView(title);
@@ -3498,6 +3499,7 @@ public class MainActivity extends Activity {
         addTitle(content, reminder == null ? "תזכורת חדשה" : "עריכת תזכורת", "שם, זמן, סוג ופעילות");
 
         nameInput = new EditText(this);
+        AppFont.apply(nameInput);
         nameInput.setSingleLine(true);
         nameInput.setText(reminder == null ? "" : reminder.name);
         nameInput.setHint(UiText.t(this, "שם"));
@@ -3514,6 +3516,7 @@ public class MainActivity extends Activity {
         content.addView(nameInput, nameParams);
 
         descriptionInput = new EditText(this);
+        AppFont.apply(descriptionInput);
         descriptionInput.setSingleLine(false);
         descriptionInput.setMinLines(2);
         descriptionInput.setMaxLines(4);
@@ -3923,6 +3926,7 @@ public class MainActivity extends Activity {
         card.addView(pickerColumn("שעות לפני", advancePicker));
 
         annualCounterInput = new EditText(this);
+        AppFont.apply(annualCounterInput);
         annualCounterInput.setSingleLine(true);
         annualCounterInput.setText(selectedAnnualCounter <= 0 ? "" : String.valueOf(selectedAnnualCounter));
         annualCounterInput.setHint(UiText.t(this, "מספר התחלתי"));
@@ -4788,7 +4792,7 @@ public class MainActivity extends Activity {
 
     private void addTitle(LinearLayout content, String title, String subtitle) {
         TextView titleView = text(title, 22, COLOR_TEXT);
-        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(titleView);
         titleView.setPadding(0, 0, 0, dp(2));
         content.addView(titleView);
         if (subtitle == null || subtitle.trim().isEmpty()) {
@@ -4802,6 +4806,7 @@ public class MainActivity extends Activity {
 
     private TextView text(String value, int sp, int color) {
         TextView view = new TextView(this);
+        AppFont.apply(view);
         view.setText(UiText.t(this, value));
         view.setTextSize(sp);
         view.setTextColor(color);
@@ -4812,6 +4817,7 @@ public class MainActivity extends Activity {
 
     private Button pillButton(String value, int color) {
         Button button = new Button(this);
+        AppFont.apply(button);
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
@@ -4827,6 +4833,7 @@ public class MainActivity extends Activity {
     }
 
     private void setSwitchText(Switch view, String value) {
+        AppFont.apply(view);
         view.setText(UiText.t(this, value));
         view.setTextColor(COLOR_TEXT);
         view.setTextSize(14);
@@ -4854,6 +4861,7 @@ public class MainActivity extends Activity {
     private View styleSpinnerText(View view, boolean dropDown) {
         if (view instanceof TextView) {
             TextView textView = (TextView) view;
+            AppFont.apply(textView);
             textView.setTextColor(dropDown ? COLOR_TEXT : COLOR_CARD_TEXT);
             textView.setTextSize(14);
             textView.setGravity(Gravity.CENTER);
@@ -4915,6 +4923,7 @@ public class MainActivity extends Activity {
 
     private Switch activeSwitch(Reminder reminder) {
         Switch activeSwitch = new Switch(this);
+        AppFont.apply(activeSwitch);
         activeSwitch.setText(UiText.t(this, reminder.enabled ? "פעיל" : "כבוי"));
         activeSwitch.setTextSize(12);
         activeSwitch.setTextColor(reminder.enabled ? COLOR_ACCENT : COLOR_MUTED);
@@ -5338,7 +5347,7 @@ public class MainActivity extends Activity {
         dialogContent.setBackground(rounded(COLOR_SURFACE, dp(8), 0x334D5A52));
 
         TextView titleView = text(title, 15, COLOR_TEXT);
-        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(titleView);
         titleView.setPadding(0, 0, 0, dp(8));
         dialogContent.addView(titleView);
 
@@ -5509,7 +5518,7 @@ public class MainActivity extends Activity {
         row.setPadding(0, dp(3), 0, dp(3));
         TextView name = text(label, 13, COLOR_MUTED);
         TextView value = text(time == Long.MAX_VALUE ? "לא זמין" : NextReminderCalculator.formatTime(time), 18, time == Long.MAX_VALUE ? COLOR_MUTED : COLOR_TEXT);
-        value.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(value);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         row.addView(value, valueParams);
@@ -5528,7 +5537,7 @@ public class MainActivity extends Activity {
 
         LinearLayout shabbatCard = card();
         TextView heading = text(UiText.t(this, "זמני שבת"), 16, COLOR_ACCENT);
-        heading.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(heading);
         heading.setGravity(Gravity.CENTER);
         heading.setPadding(0, 0, 0, dp(5));
         shabbatCard.addView(heading);
@@ -5579,7 +5588,7 @@ public class MainActivity extends Activity {
         row.setPadding(0, dp(3), 0, dp(3));
         TextView name = text(label, 13, COLOR_MUTED);
         TextView value = text(valueText, 15, COLOR_TEXT);
-        value.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(value);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         row.addView(value, valueParams);

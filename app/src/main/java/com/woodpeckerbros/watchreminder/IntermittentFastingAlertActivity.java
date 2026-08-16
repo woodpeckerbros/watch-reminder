@@ -72,7 +72,7 @@ public class IntermittentFastingAlertActivity extends Activity {
         textArea.setGravity(Gravity.CENTER);
 
         TextView title = text(titleText, 17, COLOR_ACCENT);
-        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        AppFont.bold(title);
         textArea.addView(title);
 
         TextView message = text(messageText, 14, COLOR_TEXT);
@@ -173,6 +173,7 @@ public class IntermittentFastingAlertActivity extends Activity {
 
     private Button button(String value, int color) {
         Button button = new Button(this);
+        AppFont.apply(button);
         button.setText(UiText.t(this, value));
         button.setTextColor(android.graphics.Color.WHITE);
         button.setTextSize(14);
@@ -186,6 +187,7 @@ public class IntermittentFastingAlertActivity extends Activity {
 
     private TextView text(String value, int sp, int color) {
         TextView view = new TextView(this);
+        AppFont.apply(view);
         view.setText(UiText.t(this, value));
         view.setTextSize(sp);
         view.setTextColor(color);

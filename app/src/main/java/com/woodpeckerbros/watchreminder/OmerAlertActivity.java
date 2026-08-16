@@ -58,7 +58,7 @@ public class OmerAlertActivity extends Activity {
         textArea.setGravity(Gravity.CENTER);
 
         TextView title = text("ספירת העומר", 19, COLOR_ACCENT);
-        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        AppFont.bold(title);
         textArea.addView(title);
 
         TextView count = text(item.label, 18, COLOR_TEXT);
@@ -169,6 +169,7 @@ public class OmerAlertActivity extends Activity {
 
     private Button button(String value, int color) {
         Button button = new Button(this);
+        AppFont.apply(button);
         button.setText(UiText.t(this, value));
         button.setTextColor(android.graphics.Color.WHITE);
         button.setTextSize(value.length() > 9 ? 11 : 13);
@@ -182,6 +183,7 @@ public class OmerAlertActivity extends Activity {
 
     private TextView text(String value, int sp, int color) {
         TextView view = new TextView(this);
+        AppFont.apply(view);
         view.setText(UiText.t(this, value));
         view.setTextSize(sp);
         view.setTextColor(color);

@@ -107,9 +107,9 @@ public class ReminderAlertActivity extends Activity {
         iconParams.setMargins(0, dp(2), 0, dp(8));
         icon.setLayoutParams(iconParams);
         TextView title = text("זמן לתזכורת", 18, COLOR_TEXT);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(title);
         TextView name = text(alertReminderName, 25, COLOR_TEXT);
-        name.setTypeface(Typeface.DEFAULT_BOLD);
+        AppFont.bold(name);
         name.setPadding(0, dp(7), 0, dp(7));
         TextView description = text(reminderDescription, 14, COLOR_MUTED);
         description.setPadding(dp(6), 0, dp(6), dp(8));
@@ -125,7 +125,7 @@ public class ReminderAlertActivity extends Activity {
                     ? "Missed " + alertGroup.count() + " times"
                     : "פוספס " + alertGroup.count() + " פעמים";
             TextView missedTitle = text(missedCount, 14, COLOR_ACCENT);
-            missedTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            AppFont.bold(missedTitle);
             missedTitle.setPadding(0, 0, 0, dp(4));
             card.addView(missedTitle);
             TextView missedDates = text(formatMissedDates(alertGroup.scheduledAts), 12, COLOR_MUTED);
@@ -443,6 +443,7 @@ public class ReminderAlertActivity extends Activity {
 
     private Button actionButton(String value, int color) {
         Button button = new Button(this);
+        AppFont.apply(button);
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
@@ -519,6 +520,7 @@ public class ReminderAlertActivity extends Activity {
 
     private TextView text(String value, int sp, int color) {
         TextView view = new TextView(this);
+        AppFont.apply(view);
         view.setText(UiText.t(this, value));
         view.setTextSize(sp);
         view.setTextColor(color);
