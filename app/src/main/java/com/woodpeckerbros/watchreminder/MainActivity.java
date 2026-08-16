@@ -164,6 +164,7 @@ public class MainActivity extends Activity {
     private boolean zmanimBackToSettings = true;
     private long lastForegroundDueCheckAt;
     private String lastReminderListFingerprint = "";
+    private int lastHomeIllustrationPeriod = -1;
     private long createdAt;
     private boolean startupMaintenancePending;
     private boolean startupMaintenanceRunning;
@@ -230,6 +231,10 @@ public class MainActivity extends Activity {
         if (!startupMaintenancePending && !startupMaintenanceRunning) {
             runForegroundDueCheckIfNeeded();
             refreshVisibleScreenIfRemindersChanged();
+            if ("list".equals(currentScreen)
+                    && lastHomeIllustrationPeriod != homeIllustrationPeriod()) {
+                showList(activeScrollView == null ? 0 : activeScrollView.getScrollY());
+            }
             requestMissingAccessIfNeeded();
         }
     }
@@ -523,7 +528,8 @@ public class MainActivity extends Activity {
         boolean jewishMode = new ReminderSettings(this).jewishMode();
         LinearLayout content = baseContent();
         addTitle(content, homeGreeting(), "מה חשוב עכשיו");
-        content.addView(illustration(R.drawable.home_horizon, 108), illustrationParams());
+        lastHomeIllustrationPeriod = homeIllustrationPeriod();
+        content.addView(illustration(homeIllustrationResource(lastHomeIllustrationPeriod), 108), illustrationParams());
 
         LinearLayout primaryActions = actionRow();
         Button addButton = pillButton("+ תזכורת", COLOR_EMERALD);
@@ -621,11 +627,28 @@ public class MainActivity extends Activity {
         if (AppLanguage.isEnglish(this)) {
             if (hour < 12) return "Good morning";
             if (hour < 18) return "Good afternoon";
-            return "Good evening";
+            if (hour < 21) return "Good evening";
+            return "Good night";
         }
         if (hour < 12) return "בוקר טוב";
         if (hour < 18) return "צהריים טובים";
-        return "ערב טוב";
+        if (hour < 21) return "ערב טוב";
+        return "לילה טוב";
+    }
+
+    private int homeIllustrationPeriod() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour >= 5 && hour < 11) return 0;
+        if (hour >= 11 && hour < 17) return 1;
+        if (hour >= 17 && hour < 21) return 2;
+        return 3;
+    }
+
+    private int homeIllustrationResource(int period) {
+        if (period == 0) return R.drawable.home_horizon_morning;
+        if (period == 1) return R.drawable.home_horizon_noon;
+        if (period == 2) return R.drawable.home_horizon_evening;
+        return R.drawable.home_horizon_night;
     }
 
     private List<HomeReminderItem> upcomingReminderItems() {
