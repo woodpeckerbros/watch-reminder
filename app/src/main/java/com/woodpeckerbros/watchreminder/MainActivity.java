@@ -60,7 +60,11 @@ import com.kosherjava.zmanim.hebrewcalendar.JewishDate;
 
 import java.util.Arrays;
 import java.util.Calendar;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -1226,6 +1230,11 @@ public class MainActivity extends Activity {
         backupCard.addView(backupActions);
         content.addView(backupCard, cardParams());
 
+        Button licenses = pillButton("ⓘ  אודות ורישיונות", COLOR_SURFACE_2);
+        licenses.setTextSize(12);
+        licenses.setOnClickListener(v -> showAboutAndLicenses());
+        content.addView(licenses, matchParams());
+
         LinearLayout actions = actionRow();
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
         back.setOnClickListener(v -> showList());
@@ -1233,6 +1242,102 @@ public class MainActivity extends Activity {
         content.addView(actions);
 
         setScrollableContent(content);
+    }
+
+    private void showAboutAndLicenses() {
+        currentScreen = "about_licenses";
+        LinearLayout content = baseContent();
+        addTitle(content, "אודות ורישיונות", "רכיבי צד שלישי ב-WristRemind");
+
+        LinearLayout intro = card(true);
+        TextView appName = text("WristRemind", 17, COLOR_CARD_TEXT);
+        AppFont.bold(appName);
+        appName.setGravity(Gravity.CENTER);
+        intro.addView(appName);
+        TextView explanation = text("האפליקציה משתמשת בתוכנות קוד פתוח וברכיבי צד שלישי. תודה ליוצרים ולתורמים שלהם.", 11, COLOR_CARD_MUTED);
+        explanation.setGravity(Gravity.CENTER);
+        explanation.setPadding(0, dp(5), 0, 0);
+        intro.addView(explanation);
+        content.addView(intro, cardParams());
+
+        addLicenseCard(content, "KosherJava Zmanim 2.5.0",
+                "Copyright © Eliyahu Hershfeld and contributors\nGNU Lesser General Public License 2.1",
+                "https://github.com/KosherJava/zmanim", "licenses/lgpl-2.1.txt");
+        addLicenseCard(content, "Frank Ruhl Libre",
+                "Copyright 2015 The Frank Ruhl Libre Project Authors\nSIL Open Font License 1.1",
+                "https://github.com/fontef/frankruhllibre", "licenses/frank_ruhl_libre_ofl.txt");
+        addLicenseCard(content, "AndroidX / Wear OS / Health Services",
+                "AndroidX libraries, Wear Watch Face complications and Health Services Client\nApache License 2.0",
+                "https://source.android.com/docs/setup/about/licenses", "licenses/apache-2.0.txt");
+        addLicenseCard(content, "Google Guava 33.4.0",
+                "Guava and its Google helper annotations\nApache License 2.0",
+                "https://github.com/google/guava", "licenses/apache-2.0.txt");
+        addLicenseCard(content, "Kotlin & kotlinx.coroutines",
+                "Kotlin standard library, coroutines and JetBrains annotations\nApache License 2.0",
+                "https://github.com/JetBrains/kotlin", "licenses/apache-2.0.txt");
+        addLicenseCard(content, "Additional open-source annotations",
+                "JSR-305, Checker Framework annotations and JSpecify\nBSD 3-Clause, MIT and Apache 2.0 licenses",
+                "https://github.com/jspecify/jspecify", "licenses/additional_notices.txt");
+        addLicenseCard(content, "Google Play services for Wear OS 18.0.0",
+                "Google Play services wearable APIs\nGoogle APIs Terms of Service",
+                "https://developers.google.com/terms", "licenses/google_play_services_notice.txt");
+
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showSettings());
+        content.addView(back, matchParams());
+        setScrollableContent(content);
+    }
+
+    private void addLicenseCard(LinearLayout content, String titleValue, String detailsValue,
+                                String sourceUrl, String assetPath) {
+        LinearLayout licenseCard = card();
+        TextView title = text(titleValue, 14, COLOR_CARD_TEXT);
+        AppFont.bold(title);
+        licenseCard.addView(title);
+        TextView details = text(detailsValue, 10, COLOR_CARD_MUTED);
+        details.setPadding(0, dp(4), 0, 0);
+        licenseCard.addView(details);
+        TextView source = text(sourceUrl, 8, COLOR_CARD_MUTED);
+        source.setTextDirection(View.TEXT_DIRECTION_LTR);
+        source.setGravity(Gravity.START);
+        source.setPadding(0, dp(5), 0, 0);
+        licenseCard.addView(source);
+        Button viewLicense = smallWideButton("הצג רישיון", COLOR_EMERALD_DEEP);
+        viewLicense.setOnClickListener(v -> showLicenseText(titleValue, assetPath));
+        licenseCard.addView(viewLicense);
+        content.addView(licenseCard, cardParams());
+    }
+
+    private void showLicenseText(String titleValue, String assetPath) {
+        currentScreen = "license_text";
+        LinearLayout content = baseContent();
+        addTitle(content, titleValue, "נוסח הרישיון וההודעות");
+        LinearLayout licenseCard = card();
+        TextView licenseText = text(readAssetText(assetPath), 9, COLOR_CARD_TEXT);
+        licenseText.setTextDirection(View.TEXT_DIRECTION_LTR);
+        licenseText.setGravity(Gravity.START);
+        licenseText.setTypeface(Typeface.MONOSPACE);
+        licenseCard.addView(licenseText);
+        content.addView(licenseCard, cardParams());
+        Button back = pillButton("חזרה לרישיונות", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showAboutAndLicenses());
+        content.addView(back, matchParams());
+        setScrollableContent(content);
+    }
+
+    private String readAssetText(String assetPath) {
+        StringBuilder value = new StringBuilder();
+        try (InputStream input = getAssets().open(assetPath);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                value.append(line).append('\n');
+            }
+        } catch (Exception exception) {
+            AppLog.e(this, "license asset could not be read: " + assetPath, exception);
+            return UiText.t(this, "לא ניתן לטעון את נוסח הרישיון");
+        }
+        return value.toString().trim();
     }
 
     private void showJewishSettings() {
@@ -4533,6 +4638,14 @@ public class MainActivity extends Activity {
     }
 
     private boolean navigateBack() {
+        if ("license_text".equals(currentScreen)) {
+            showAboutAndLicenses();
+            return true;
+        }
+        if ("about_licenses".equals(currentScreen)) {
+            showSettings();
+            return true;
+        }
         if ("settings".equals(currentScreen)
                 || "jewish_settings".equals(currentScreen)
                 || "alert_settings".equals(currentScreen)

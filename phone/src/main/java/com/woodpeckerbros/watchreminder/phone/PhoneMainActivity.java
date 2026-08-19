@@ -36,6 +36,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -432,10 +436,80 @@ public class PhoneMainActivity extends Activity {
         addBackupSection(content);
         addLogSection(content);
 
+        Button licenses = button("ⓘ  אודות ורישיונות", SOFT, TEXT);
+        licenses.setOnClickListener(v -> showAboutAndLicenses());
+        content.addView(licenses, wideParams());
+
         Button back = button("חזרה", SOFT, TEXT);
         back.setOnClickListener(v -> showMain());
         content.addView(back, wideParams());
         setScroll(content);
+    }
+
+    private void showAboutAndLicenses() {
+        screen = "about_licenses";
+        LinearLayout content = base();
+        addHeader(content, "אודות ורישיונות", "רכיבי צד שלישי ב-WristRemind");
+
+        LinearLayout intro = card();
+        TextView explanation = text("אפליקציית הטלפון משתמשת ברכיבי צד שלישי. תודה ליוצרים ולתורמים שלהם.", 15, MUTED);
+        explanation.setGravity(Gravity.CENTER);
+        intro.addView(explanation);
+        content.addView(intro, wideParams());
+
+        addPhoneLicenseCard(content, "KosherJava Zmanim 2.5.0",
+                "Eliyahu Hershfeld and contributors\nGNU Lesser General Public License 2.1",
+                "licenses/lgpl-2.1.txt");
+        addPhoneLicenseCard(content, "Google Play services for Wear OS 18.0.0",
+                "Google Play services wearable APIs\nGoogle APIs Terms of Service",
+                "licenses/google_play_services_notice.txt");
+
+        Button back = button("חזרה להגדרות", SOFT, TEXT);
+        back.setOnClickListener(v -> showSettings());
+        content.addView(back, wideParams());
+        setScroll(content);
+    }
+
+    private void addPhoneLicenseCard(LinearLayout content, String titleValue, String detailsValue, String assetPath) {
+        LinearLayout licenseCard = card();
+        TextView title = text(titleValue, 17, TEXT);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        licenseCard.addView(title);
+        TextView details = text(detailsValue, 13, MUTED);
+        licenseCard.addView(details);
+        Button view = button("הצגת נוסח הרישיון", SOFT, TEXT);
+        view.setOnClickListener(v -> showPhoneLicenseText(titleValue, assetPath));
+        licenseCard.addView(view);
+        content.addView(licenseCard, wideParams());
+    }
+
+    private void showPhoneLicenseText(String titleValue, String assetPath) {
+        screen = "license_text";
+        LinearLayout content = base();
+        addHeader(content, titleValue, "נוסח הרישיון וההודעות");
+        LinearLayout licenseCard = card();
+        TextView license = text(readAssetText(assetPath), 12, TEXT);
+        license.setTextDirection(View.TEXT_DIRECTION_LTR);
+        license.setGravity(Gravity.START);
+        license.setTypeface(Typeface.MONOSPACE);
+        licenseCard.addView(license);
+        content.addView(licenseCard, wideParams());
+        Button back = button("חזרה לרישיונות", SOFT, TEXT);
+        back.setOnClickListener(v -> showAboutAndLicenses());
+        content.addView(back, wideParams());
+        setScroll(content);
+    }
+
+    private String readAssetText(String assetPath) {
+        StringBuilder value = new StringBuilder();
+        try (InputStream input = getAssets().open(assetPath);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) value.append(line).append('\n');
+            return value.toString().trim();
+        } catch (Exception exception) {
+            return "לא ניתן לטעון את נוסח הרישיון";
+        }
     }
 
     private void addBackupSection(LinearLayout content) {

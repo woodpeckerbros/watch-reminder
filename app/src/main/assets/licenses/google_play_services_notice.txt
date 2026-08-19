@@ -1,0 +1,13 @@
+GOOGLE PLAY SERVICES FOR WEAR OS
+
+This application uses Google Play services wearable APIs, version 18.0.0, to communicate between the watch and companion phone application.
+
+Google Play services is provided by Google LLC and is subject to the Google APIs Terms of Service and other applicable Google terms.
+
+Google APIs Terms of Service:
+https://developers.google.com/terms
+
+Google Play services documentation:
+https://developers.google.com/android/guides/overview
+
+This notice does not claim that Google Play services is open-source software.

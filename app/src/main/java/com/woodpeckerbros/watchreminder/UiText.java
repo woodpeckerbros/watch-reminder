@@ -428,6 +428,14 @@ public class UiText {
         put("בדיקת רקע פעילה הופעלה. ניתן לשנות את מרווח הדקות בהגדרות המתקדמות.", "Background checking was enabled. You can change its interval in Advanced Settings.");
         put("אתה בטוח שאתה רוצה למחוק את הלוגים?", "Are you sure you want to clear the logs?");
         put("כל התזכורות הקיימות יוחלפו בתזכורות מהגיבוי.", "All existing reminders will be replaced with reminders from the backup.");
+        put("ⓘ  אודות ורישיונות", "ⓘ  About & Licenses");
+        put("אודות ורישיונות", "About & Licenses");
+        put("רכיבי צד שלישי ב-WristRemind", "Third-party software in WristRemind");
+        put("האפליקציה משתמשת בתוכנות קוד פתוח וברכיבי צד שלישי. תודה ליוצרים ולתורמים שלהם.", "This app uses open-source software and third-party components. We thank their authors and contributors.");
+        put("הצג רישיון", "View License");
+        put("נוסח הרישיון וההודעות", "License Text & Notices");
+        put("חזרה לרישיונות", "Back to Licenses");
+        put("לא ניתן לטעון את נוסח הרישיון", "The license text could not be loaded");
     }
 
     private UiText() {
