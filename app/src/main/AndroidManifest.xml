@@ -162,6 +162,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
+            android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
         <activity
@@ -169,6 +170,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
+            android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
         <activity
@@ -176,6 +178,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
+            android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
         <activity
@@ -183,6 +186,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
+            android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
         <activity
