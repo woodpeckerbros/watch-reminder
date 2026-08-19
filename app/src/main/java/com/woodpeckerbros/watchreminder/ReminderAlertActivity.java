@@ -98,7 +98,7 @@ public class ReminderAlertActivity extends Activity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(14), dp(12), dp(14), dp(16));
+        card.setPadding(dp(14), dp(9), dp(14), dp(12));
         card.setBackground(rounded(COLOR_SURFACE, dp(20), 0x33747D63));
 
         ImageView icon = new ImageView(this);
@@ -106,13 +106,13 @@ public class ReminderAlertActivity extends Activity {
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         icon.setPadding(dp(3), dp(3), dp(3), dp(3));
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(42), dp(42));
-        iconParams.setMargins(0, dp(2), 0, dp(8));
+        iconParams.setMargins(0, dp(1), 0, dp(2));
         icon.setLayoutParams(iconParams);
         TextView name = text(alertReminderName, 21, COLOR_TEXT);
         AppFont.bold(name);
-        name.setPadding(0, dp(7), 0, dp(7));
+        name.setPadding(0, dp(2), 0, dp(5));
         TextView description = text(reminderDescription, 14, COLOR_MUTED);
-        description.setPadding(dp(6), 0, dp(6), dp(8));
+        description.setPadding(dp(6), 0, dp(6), dp(5));
 
         card.addView(icon);
         card.addView(name);
@@ -133,12 +133,12 @@ public class ReminderAlertActivity extends Activity {
         }
         String originalTimeLabel = UiText.t(this, alertGroup.count() > 1 ? "שעה אחרונה" : "שעה מקורית");
         TextView originalTime = text(originalTimeLabel + ": " + NextReminderCalculator.formatTime(snoozeOriginalScheduledAt), 13, COLOR_MUTED);
-        originalTime.setPadding(0, 0, 0, dp(8));
+        originalTime.setPadding(0, 0, 0, dp(5));
         card.addView(originalTime);
 
         Button done = actionButton("בוצע", COLOR_ACCENT_DARK);
         LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(dp(190), dp(46));
-        doneParams.setMargins(dp(3), dp(7), dp(3), dp(4));
+        doneParams.setMargins(dp(3), dp(4), dp(3), dp(3));
         done.setLayoutParams(doneParams);
         done.setTextSize(16);
         done.setOnClickListener(v -> {
@@ -166,7 +166,7 @@ public class ReminderAlertActivity extends Activity {
         card.addView(done);
 
         TextView snoozeTitle = text("אפשר לדחות", 13, COLOR_MUTED);
-        snoozeTitle.setPadding(0, dp(12), 0, dp(4));
+        snoozeTitle.setPadding(0, dp(8), 0, dp(3));
         card.addView(snoozeTitle);
 
         LinearLayout firstRow = actionRow();
