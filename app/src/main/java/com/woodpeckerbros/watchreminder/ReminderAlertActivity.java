@@ -16,6 +16,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.ScrollView;
@@ -100,10 +101,12 @@ public class ReminderAlertActivity extends Activity {
         card.setPadding(dp(14), dp(12), dp(14), dp(16));
         card.setBackground(rounded(COLOR_SURFACE, dp(20), 0x33747D63));
 
-        TextView icon = text("◒", 34, COLOR_TEXT);
-        icon.setGravity(Gravity.CENTER);
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.ic_alert_ringing_bell);
+        icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        icon.setPadding(dp(9), dp(9), dp(9), dp(9));
         icon.setBackground(rounded(COLOR_ACCENT, dp(40), 0));
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(64), dp(64));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(50), dp(50));
         iconParams.setMargins(0, dp(2), 0, dp(8));
         icon.setLayoutParams(iconParams);
         TextView name = text(alertReminderName, 21, COLOR_TEXT);
