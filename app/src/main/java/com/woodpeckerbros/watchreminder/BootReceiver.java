@@ -24,6 +24,7 @@ public class BootReceiver extends BroadcastReceiver {
         TekufaScheduler.schedule(context);
         IntermittentFastingScheduler.schedule(context);
         ReminderScheduler.scheduleWatchdog(context);
+        ComplicationRefresh.requestAll(context);
         ReminderReceiver.dispatchNextQueued(context);
         if (new ReminderSettings(context).serviceEnabled()) {
             ReminderForegroundService.start(context);

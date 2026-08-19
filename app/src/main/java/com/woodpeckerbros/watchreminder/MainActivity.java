@@ -277,7 +277,7 @@ public class MainActivity extends Activity {
             TekufaScheduler.schedule(MainActivity.this);
             IntermittentFastingScheduler.schedule(MainActivity.this);
             ReminderScheduler.scheduleWatchdog(MainActivity.this);
-            ComplicationRefresh.request(MainActivity.this);
+            ComplicationRefresh.requestAll(MainActivity.this);
             if (settings.serviceEnabled()) {
                 ReminderForegroundService.start(MainActivity.this);
             } else {
@@ -291,7 +291,6 @@ public class MainActivity extends Activity {
                 ReminderReceiver.dispatchNextQueued(MainActivity.this);
                 DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
                 OmerScheduler.dispatchIfDueNow(MainActivity.this);
-                TekufaScheduler.schedule(MainActivity.this);
                 refreshVisibleScreen();
                 if (!showMissedReminderReliabilityPromptIfNeeded()) {
                     requestMissingAccessIfNeeded();

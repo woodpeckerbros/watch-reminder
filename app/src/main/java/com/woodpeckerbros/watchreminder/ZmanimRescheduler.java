@@ -27,7 +27,7 @@ public final class ZmanimRescheduler {
         DafYomiScheduler.schedule(context);
         OmerScheduler.schedule(context);
         ReminderScheduler.scheduleWatchdog(context);
-        ComplicationRefresh.request(context);
+        ComplicationRefresh.requestAll(context);
         AppLog.d(context, "zmanim reschedule end");
     }
 }
