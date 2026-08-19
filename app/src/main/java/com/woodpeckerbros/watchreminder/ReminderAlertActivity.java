@@ -137,6 +137,8 @@ public class ReminderAlertActivity extends Activity {
         card.addView(originalTime);
 
         Button done = actionButton("בוצע", COLOR_ACCENT_DARK);
+        done.setTextColor(COLOR_TEXT);
+        done.setBackground(rounded(COLOR_ACCENT_DARK, dp(23), 0xFF9CAA91));
         LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(dp(190), dp(46));
         doneParams.setMargins(dp(3), dp(4), dp(3), dp(3));
         done.setLayoutParams(doneParams);
