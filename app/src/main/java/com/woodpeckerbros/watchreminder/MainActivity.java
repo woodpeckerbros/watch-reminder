@@ -2631,7 +2631,7 @@ public class MainActivity extends Activity {
         copy.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("Watch Reminder backup", ReminderBackup.exportText(this)));
+                clipboard.setPrimaryClip(ClipData.newPlainText("WristRemind backup", ReminderBackup.exportText(this)));
                 Toast.makeText(this, UiText.t(this, "הגיבוי הועתק"), Toast.LENGTH_SHORT).show();
             }
         });

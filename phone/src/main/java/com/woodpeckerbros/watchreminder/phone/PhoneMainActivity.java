@@ -98,7 +98,7 @@ public class PhoneMainActivity extends Activity {
     private void showMain() {
         screen = "main";
         LinearLayout content = base();
-        addHeader(content, "Watch Reminder", "ניהול תזכורות שעון");
+        addHeader(content, "WristRemind", "ניהול תזכורות שעון");
 
         LinearLayout actions = row();
         Button sync = button("סנכרון מהשעון", ACCENT);

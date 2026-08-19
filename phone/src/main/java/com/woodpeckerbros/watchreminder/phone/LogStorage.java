@@ -116,7 +116,7 @@ class LogStorage {
             return;
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(new NotificationChannel(CHANNEL_ID, "Watch Reminder Logs", NotificationManager.IMPORTANCE_DEFAULT));
+            manager.createNotificationChannel(new NotificationChannel(CHANNEL_ID, "WristRemind Logs", NotificationManager.IMPORTANCE_DEFAULT));
         }
         Intent intent = new Intent(context, PhoneMainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -130,7 +130,7 @@ class LogStorage {
                 ? new Notification.Builder(context, CHANNEL_ID)
                 : new Notification.Builder(context);
         builder.setSmallIcon(com.woodpeckerbros.watchreminder.phone.R.drawable.ic_launcher)
-                .setContentTitle("Watch Reminder")
+                .setContentTitle("WristRemind")
                 .setContentText("לוג התקבל: " + fileName)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);

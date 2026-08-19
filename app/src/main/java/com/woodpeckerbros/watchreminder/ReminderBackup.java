@@ -103,7 +103,7 @@ public class ReminderBackup {
         }
         Intent intent = new Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
-                .putExtra(Intent.EXTRA_SUBJECT, "Watch Reminder backup")
+                .putExtra(Intent.EXTRA_SUBJECT, "WristRemind backup")
                 .putExtra(Intent.EXTRA_TEXT, text);
         try {
             context.startActivity(Intent.createChooser(intent, "ייצוא גיבוי"));

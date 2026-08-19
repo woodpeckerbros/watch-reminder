@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Watch Reminder</string>
+    <string name="app_name">WristRemind</string>
     <string name="complication_next_reminder">Next reminder</string>
     <string name="complication_blessing_reminder">Blessing reminder</string>
     <string name="complication_zmanim">Halachic times</string>
@@ -72,6 +72,6 @@
     <string name="ui_open_settings">Open Settings</string>
     <string name="ui_later">Later</string>
     <string name="ui_enable_alarms_reminders_title">Allow Alarms &amp; reminders</string>
-    <string name="ui_enable_alarms_reminders_message">To make reminders ring on time even when the watch is saving power or the screen is off, allow Alarms &amp; reminders for this app. On the screen that opens, find Watch Reminder or Alarms &amp; reminders, open Watch Reminder, and turn on Allow.</string>
+    <string name="ui_enable_alarms_reminders_message">To make reminders ring on time even when the watch is saving power or the screen is off, allow Alarms &amp; reminders for this app. On the screen that opens, find WristRemind or Alarms &amp; reminders, open WristRemind, and turn on Allow.</string>
     <string name="ui_enable_alarms_reminders_hint">On the screen that opens, enable Alarms &amp; reminders so reminders can run on time.</string>
 </resources>
