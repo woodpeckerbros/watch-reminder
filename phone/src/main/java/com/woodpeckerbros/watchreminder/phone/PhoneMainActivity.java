@@ -249,7 +249,7 @@ public class PhoneMainActivity extends Activity {
         state.addView(critical);
         content.addView(state, wideParams());
 
-        Spinner type = spinner(TYPE_LABELS);
+        Spinner type = reminderTypeSpinner();
         type.setSelection(typeIndex(reminder));
         content.addView(labeled("סוג תזכורת", type), wideParams());
 
@@ -908,6 +908,63 @@ public class PhoneMainActivity extends Activity {
         spinner.setBackground(round(SURFACE_2, dp(16), BORDER));
         spinner.setPadding(dp(10), dp(6), dp(10), dp(6));
         return spinner;
+    }
+
+    private Spinner reminderTypeSpinner() {
+        Spinner spinner = new Spinner(this) {
+            @Override
+            public boolean performClick() {
+                ArrayAdapter<String> choices = new ArrayAdapter<String>(PhoneMainActivity.this,
+                        android.R.layout.simple_list_item_1, TYPE_LABELS) {
+                    @Override
+                    public View getView(int position, View convertView, android.view.ViewGroup parent) {
+                        TextView view = (TextView) super.getView(position, convertView, parent);
+                        styleReminderTypeChoice(view, false);
+                        return view;
+                    }
+                };
+                new AlertDialog.Builder(PhoneMainActivity.this)
+                        .setTitle("בחר סוג תזכורת")
+                        .setAdapter(choices, (dialog, which) -> setSelection(which))
+                        .setNegativeButton("ביטול", null)
+                        .show();
+                return true;
+            }
+        };
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TYPE_LABELS) {
+            @Override
+            public View getView(int position, View convertView, android.view.ViewGroup parent) {
+                TextView view = (TextView) super.getView(position, convertView, parent);
+                view.setText(TYPE_LABELS[position] + "   ▼");
+                styleReminderTypeChoice(view, true);
+                return view;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, android.view.ViewGroup parent) {
+                TextView view = (TextView) super.getDropDownView(position, convertView, parent);
+                view.setText(TYPE_LABELS[position]);
+                styleReminderTypeChoice(view, false);
+                return view;
+            }
+        };
+        spinner.setAdapter(adapter);
+        spinner.setBackground(round(SURFACE_2, dp(18), COPPER));
+        spinner.setMinimumHeight(dp(56));
+        spinner.setPadding(dp(16), dp(6), dp(16), dp(6));
+        return spinner;
+    }
+
+    private void styleReminderTypeChoice(TextView view, boolean selected) {
+        view.setGravity(Gravity.CENTER);
+        view.setTextDirection(View.TEXT_DIRECTION_RTL);
+        view.setTextColor(TEXT);
+        view.setTextSize(selected ? 17 : 16);
+        view.setTypeface(Typeface.DEFAULT, selected ? Typeface.BOLD : Typeface.NORMAL);
+        view.setPadding(dp(18), dp(selected ? 12 : 16), dp(18), dp(selected ? 12 : 16));
+        if (!selected) {
+            view.setBackgroundColor(SURFACE_2);
+        }
     }
 
     private void applyCalendarDisplay(NumberPicker day, NumberPicker month, NumberPicker year, boolean hebrew) {
