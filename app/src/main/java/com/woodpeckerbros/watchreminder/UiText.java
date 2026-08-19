@@ -199,6 +199,7 @@ public class UiText {
         put("כמה דקות אחרי צאת הכוכבים להזכיר", "Minutes after nightfall to send the reminder");
         put("דקות אחרי צאת הכוכבים", "Minutes after nightfall");
         put("מחוץ לימי הספירה כרגע", "Outside the Omer period right now");
+        put("התזכורת הקרובה:", "Next reminder:");
         put("בחירת תאריך", "Choose Date");
         put("הצג", "Show");
         put("בחירה לפי תאריך לועזי", "Choose by Gregorian Date");
@@ -339,6 +340,11 @@ public class UiText {
         put("זמני שקט", "Quiet Times");
         put("בתקופות האלו רק תזכורות חיוניות יקפצו", "During these periods, only critical reminders will alert");
         put("אין עדיין זמני שקט", "No quiet times yet");
+        put("מנחה וערבית", "Mincha and Maariv");
+        put("זמן בפועל:", "Actual time:");
+        put("חל עכשיו:", "Active now:");
+        put("הקרוב:", "Next:");
+        put("סומן מראש", "Marked in advance");
         put("זמן שקט חדש", "New Quiet Time");
         put("עריכת זמן שקט", "Edit Quiet Time");
         put("אפשר לבחור שעה רגילה או זמן הלכה", "Choose a regular time or a halachic time");

@@ -1042,7 +1042,7 @@ public class MainActivity extends Activity {
             TextView description = text(eventDescription, 12, COLOR_MUTED);
             description.setPadding(dp(8), dp(2), dp(8), 0);
             TextView status = text(event.status, 14, eventStatusColor(event.status));
-            TextView time = text(event.displayTime() + (event.note.isEmpty() ? "" : " | " + event.note), 12, COLOR_MUTED);
+            TextView time = text(event.displayTime() + (event.note.isEmpty() ? "" : " | " + UiText.t(this, event.note)), 12, COLOR_MUTED);
             card.addView(name);
             if (!eventDescription.isEmpty()) {
                 card.addView(description);
@@ -1672,9 +1672,6 @@ public class MainActivity extends Activity {
         setSwitchText(enabledSwitch, "פעיל");
         enabledSwitch.setChecked(settings.intermittentFastingEnabled());
         enabledCard.addView(enabledSwitch);
-        TextView enabledHint = text(fastingSummary(settings), 11, COLOR_MUTED);
-        enabledHint.setPadding(0, dp(4), 0, 0);
-        enabledCard.addView(enabledHint);
         content.addView(enabledCard, cardParams());
 
         LinearLayout hoursCard = card();
@@ -1892,18 +1889,6 @@ public class MainActivity extends Activity {
         return sessionStartAt;
     }
 
-    private String fastingSummary(ReminderSettings settings) {
-        if (!settings.intermittentFastingEnabled()) {
-            return UiText.t(this, "כבוי");
-        }
-        if (AppLanguage.isEnglish(this)) {
-            return settings.fastingHours() + "/" + settings.fastingEatingHours()
-                    + " | Initial start " + formatTime(settings.fastingStartHour(), settings.fastingStartMinute());
-        }
-        return settings.fastingHours() + "/" + settings.fastingEatingHours()
-                + " | התחלה ראשונית " + formatTime(settings.fastingStartHour(), settings.fastingStartMinute());
-    }
-
     private String fastingStateLine() {
         ReminderSettings settings = new ReminderSettings(this);
         IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
@@ -2002,7 +1987,7 @@ public class MainActivity extends Activity {
                     return true;
                 });
                 ruleCard.setOnClickListener(v -> showQuietRuleEditor(rule));
-                TextView title = text(rule.name, 15, rule.enabled ? COLOR_TEXT : COLOR_MUTED);
+                TextView title = text(UiText.t(this, rule.name), 15, rule.enabled ? COLOR_TEXT : COLOR_MUTED);
                 AppFont.bold(title);
                 TextView details = text(quietRuleDetails(rule), 11, COLOR_MUTED);
                 details.setPadding(dp(8), dp(3), dp(8), 0);
@@ -2148,8 +2133,10 @@ public class MainActivity extends Activity {
 
         OmerHelper.Item next = OmerHelper.next(this, settings.omerOffsetMinutes());
         String nextLine = next == null
-                ? "מחוץ לימי הספירה כרגע"
-                : "התזכורת הקרובה: " + NextReminderCalculator.formatDateTime(next.triggerAt) + " | יום " + next.day;
+                ? UiText.t(this, "מחוץ לימי הספירה כרגע")
+                : UiText.t(this, "התזכורת הקרובה:") + " "
+                + NextReminderCalculator.formatDateTime(next.triggerAt) + " | "
+                + UiText.t(this, "יום") + " " + next.day;
         TextView nextText = text(nextLine, 12, COLOR_MUTED);
         nextText.setPadding(0, dp(8), 0, 0);
         card.addView(nextText);
@@ -2570,7 +2557,7 @@ public class MainActivity extends Activity {
 
     private String quietRuleDetails(QuietTimeRuleStore.Rule rule) {
         String details = quietBoundaryLabel(rule.startMode, rule.startHour, rule.startMinute, rule.startZmanimKey, rule.startOffsetMinutes)
-                + " עד "
+                + " " + UiText.t(this, "עד") + " "
                 + quietBoundaryLabel(rule.endMode, rule.endHour, rule.endMinute, rule.endZmanimKey, rule.endOffsetMinutes);
         if (QuietTimeRuleStore.Rule.MODE_ZMANIM.equals(rule.startMode)
                 || QuietTimeRuleStore.Rule.MODE_ZMANIM.equals(rule.endMode)) {
@@ -2581,7 +2568,7 @@ public class MainActivity extends Activity {
 
     private String quietBoundaryLabel(String mode, int hour, int minute, String zmanimKey, int offsetMinutes) {
         if (QuietTimeRuleStore.Rule.MODE_ZMANIM.equals(mode)) {
-            return formatZmanimOffset(offsetMinutes) + " " + ZmanimHelper.label(zmanimKey);
+            return formatZmanimOffset(offsetMinutes) + " " + UiText.t(this, ZmanimHelper.label(zmanimKey));
         }
         return formatTime(hour, minute);
     }
@@ -2608,9 +2595,11 @@ public class MainActivity extends Activity {
             }
         }
         if (best == null) {
-            return "זמן בפועל: לא זמין";
+            return UiText.t(this, "זמן בפועל:") + " " + UiText.t(this, "לא זמין");
         }
-        String prefix = best.start <= now && now <= best.end ? "חל עכשיו: " : "הקרוב: ";
+        String prefix = best.start <= now && now <= best.end
+                ? UiText.t(this, "חל עכשיו:") + " "
+                : UiText.t(this, "הקרוב:") + " ";
         return prefix + relativeDayLabel(best.start) + " " + NextReminderCalculator.formatTime(best.start)
                 + "-" + NextReminderCalculator.formatTime(best.end);
     }
@@ -3078,7 +3067,7 @@ public class MainActivity extends Activity {
     }
 
     private String displayLocationName(String name) {
-        return UiText.t(this, name);
+        return IsraeliCityResolver.localizedName(name, AppLanguage.isEnglish(this));
     }
 
     private void requestFreshZmanimLocation(TextView locationValue) {
@@ -3631,7 +3620,8 @@ public class MainActivity extends Activity {
         NumberPicker offsetPicker = offsetNumberPicker(selectedZmanimOffsetMinutes);
         zmanimCard.addView(pickerColumn("לפני / אחרי", offsetPicker));
 
-        TextView location = text(UiText.t(this, "מיקום") + ": " + new ZmanimSettings(this).name(), 11, COLOR_MUTED);
+        TextView location = text(UiText.t(this, "מיקום") + ": "
+                + displayLocationName(new ZmanimSettings(this).name()), 11, COLOR_MUTED);
         location.setPadding(0, dp(4), 0, 0);
         zmanimCard.addView(location);
         if (jewishMode) {
@@ -5024,8 +5014,9 @@ public class MainActivity extends Activity {
         picker.setWrapSelectorWheel(true);
         picker.setFormatter(number -> {
             int offset = number - 180;
-            if (offset == 0) return "בזמן";
-            return (offset > 0 ? "+" : "") + offset + " דק׳";
+            if (offset == 0) return AppLanguage.isEnglish(this) ? "On time" : "בזמן";
+            return (offset > 0 ? "+" : "") + offset
+                    + (AppLanguage.isEnglish(this) ? " min" : " דק׳");
         });
         picker.setOnValueChangedListener((view, oldValue, newValue) -> selectedZmanimOffsetMinutes = newValue - 180);
         picker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
@@ -5043,8 +5034,9 @@ public class MainActivity extends Activity {
         picker.setWrapSelectorWheel(true);
         picker.setFormatter(number -> {
             int offset = number - 180;
-            if (offset == 0) return "בזמן";
-            return (offset > 0 ? "+" : "") + offset + " דק׳";
+            if (offset == 0) return AppLanguage.isEnglish(this) ? "On time" : "בזמן";
+            return (offset > 0 ? "+" : "") + offset
+                    + (AppLanguage.isEnglish(this) ? " min" : " דק׳");
         });
         picker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(88), dp(86));
@@ -5451,13 +5443,13 @@ public class MainActivity extends Activity {
         long targetDay = zmanimStartOfDay(time);
         long today = zmanimStartOfDay(System.currentTimeMillis());
         if (targetDay == today) {
-            return "היום";
+            return UiText.t(this, "היום");
         }
         if (targetDay == zmanimDayOffset(today, 1)) {
-            return "מחר";
+            return UiText.t(this, "מחר");
         }
         if (targetDay == zmanimDayOffset(today, -1)) {
-            return "אתמול";
+            return UiText.t(this, "אתמול");
         }
         Calendar calendar = zmanimCalendar(time);
         return String.format(
