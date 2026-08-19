@@ -50,12 +50,15 @@ import java.util.UUID;
 public class PhoneMainActivity extends Activity {
     private static final int REQUEST_PICK_BACKUP = 201;
     private static final int REQUEST_PICK_LOG = 202;
-    private static final int BG = 0xFFF4F7F5;
-    private static final int SURFACE = 0xFFFFFFFF;
-    private static final int TEXT = 0xFF101615;
-    private static final int MUTED = 0xFF637069;
-    private static final int ACCENT = 0xFF136F45;
-    private static final int SOFT = 0xFFE7EFEA;
+    private static final int BG = 0xFF091C2B;
+    private static final int SURFACE = 0xF0142B3A;
+    private static final int SURFACE_2 = 0xFF1B3445;
+    private static final int TEXT = 0xFFF4EBDD;
+    private static final int MUTED = 0xFFBEC4BD;
+    private static final int ACCENT = 0xFF747D63;
+    private static final int COPPER = 0xFFC77B58;
+    private static final int SOFT = 0xFF20394A;
+    private static final int BORDER = 0xFF53695F;
     private static final String[] ZMANIM_KEYS = {"ALOS", "SUNRISE", "SHMA_GRA", "TFILA_GRA", "CHATZOS", "MINCHA_GEDOLA", "MINCHA_KETANA", "PLAG", "SUNSET", "TZAIS"};
     private static final String[] ZMANIM_LABELS = {"עלות השחר", "זריחה", "סוף זמן שמע", "סוף זמן תפילה", "חצות", "מנחה גדולה", "מנחה קטנה", "פלג המנחה", "שקיעה", "צאת הכוכבים"};
     private static final String[] TYPE_LABELS = {"חד פעמית", "קבועה", "מחזורית", "אירוע שנתי"};
@@ -107,7 +110,7 @@ public class PhoneMainActivity extends Activity {
         LinearLayout actions = row();
         Button sync = button("סנכרון מהשעון", ACCENT);
         sync.setOnClickListener(v -> requestSync());
-        Button push = button("שליחה לשעון", 0xFF234D3C);
+        Button push = button("שליחה לשעון", COPPER);
         push.setOnClickListener(v -> pushToWatch());
         actions.addView(sync);
         actions.addView(push);
@@ -122,15 +125,32 @@ public class PhoneMainActivity extends Activity {
         actions2.addView(settings);
         content.addView(actions2);
 
-        TextView status = text(statusLine(), 13, MUTED);
-        status.setPadding(0, 6, 0, 12);
-        content.addView(status);
+        LinearLayout statusCard = card();
+        TextView statusLabel = text("מצב החיבור", 12, MUTED);
+        TextView status = text(statusLine(), 15, TEXT);
+        status.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        status.setPadding(0, dp(4), 0, 0);
+        statusCard.addView(statusLabel);
+        statusCard.addView(status);
+        content.addView(statusCard, wideParams());
 
         JSONArray reminders = reminders();
+        TextView remindersTitle = text("התזכורות שלי", 20, TEXT);
+        remindersTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        remindersTitle.setGravity(Gravity.RIGHT);
+        remindersTitle.setPadding(dp(6), dp(18), dp(6), dp(8));
+        content.addView(remindersTitle, wideParams());
         if (reminders.length() == 0) {
-            TextView empty = text("אין תזכורות בטלפון. לחץ סנכרון מהשעון.", 16, MUTED);
-            empty.setPadding(0, 50, 0, 0);
-            content.addView(empty);
+            LinearLayout emptyCard = card();
+            TextView emptyIcon = text("⌚", 30, COPPER);
+            TextView empty = text("אין תזכורות בטלפון", 17, TEXT);
+            empty.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            TextView emptyHint = text("לחץ על סנכרון מהשעון כדי להתחיל", 14, MUTED);
+            emptyHint.setPadding(0, dp(6), 0, 0);
+            emptyCard.addView(emptyIcon);
+            emptyCard.addView(empty);
+            emptyCard.addView(emptyHint);
+            content.addView(emptyCard, wideParams());
         } else {
             for (DisplayReminder display : sortedDisplayReminders(reminders)) {
                 JSONObject reminder = display.reminder;
@@ -141,7 +161,7 @@ public class PhoneMainActivity extends Activity {
                     showReminderActions(reminder);
                     return true;
                 });
-                TextView time = text(timeTitle(reminder), 21, reminder.optBoolean("enabled", true) ? ACCENT : MUTED);
+                TextView time = text(timeTitle(reminder), 21, reminder.optBoolean("enabled", true) ? COPPER : MUTED);
                 time.setTypeface(Typeface.DEFAULT_BOLD);
                 TextView name = text(reminder.optString("name", "תזכורת"), 17, TEXT);
                 name.setTypeface(Typeface.DEFAULT_BOLD);
@@ -797,33 +817,47 @@ public class PhoneMainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(28, 28, 28, 36);
-        root.setBackgroundColor(BG);
+        root.setPadding(dp(20), dp(24), dp(20), dp(40));
+        GradientDrawable background = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF091C2B, 0xFF102A3B, 0xFF091C2B});
+        root.setBackground(background);
         return root;
     }
 
     private void addHeader(LinearLayout content, String title, String subtitle) {
-        TextView titleView = text(title, 28, TEXT);
+        TextView eyebrow = text("WRISTREMIND  •  COMPANION", 11, COPPER);
+        eyebrow.setLetterSpacing(0.12f);
+        eyebrow.setPadding(0, 0, 0, dp(7));
+        content.addView(eyebrow);
+        TextView titleView = text(title, 30, TEXT);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(titleView);
         TextView sub = text(subtitle, 14, MUTED);
-        sub.setPadding(0, 4, 0, 18);
+        sub.setPadding(0, dp(5), 0, dp(12));
         content.addView(sub);
+        View accent = new View(this);
+        accent.setBackgroundColor(COPPER);
+        LinearLayout.LayoutParams accentParams = new LinearLayout.LayoutParams(dp(48), dp(3));
+        accentParams.setMargins(0, 0, 0, dp(18));
+        accent.setLayoutParams(accentParams);
+        content.addView(accent);
     }
 
     private LinearLayout card() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(24, 20, 24, 20);
-        card.setBackground(round(SURFACE, 22, 0xFFE0E7E2));
+        card.setPadding(dp(20), dp(18), dp(20), dp(18));
+        card.setBackground(round(SURFACE, dp(24), BORDER));
+        card.setElevation(dp(3));
         return card;
     }
 
     private LinearLayout row() {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
-        row.setPadding(0, 4, 0, 8);
+        row.setPadding(0, dp(3), 0, dp(7));
         row.setLayoutParams(wideParams());
         return row;
     }
@@ -847,8 +881,8 @@ public class PhoneMainActivity extends Activity {
         edit.setHintTextColor(MUTED);
         edit.setGravity(Gravity.CENTER);
         edit.setTextDirection(View.TEXT_DIRECTION_RTL);
-        edit.setBackground(round(SURFACE, 18, 0xFFDCE5DF));
-        edit.setPadding(24, 8, 24, 8);
+        edit.setBackground(round(SURFACE_2, dp(18), BORDER));
+        edit.setPadding(dp(18), dp(12), dp(18), dp(12));
         return edit;
     }
 
@@ -867,6 +901,8 @@ public class PhoneMainActivity extends Activity {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
+        spinner.setBackground(round(SURFACE_2, dp(16), BORDER));
+        spinner.setPadding(dp(10), dp(6), dp(10), dp(6));
         return spinner;
     }
 
@@ -992,6 +1028,8 @@ public class PhoneMainActivity extends Activity {
 
     private NumberPicker numberPicker(int min, int max, int value) {
         NumberPicker picker = new NumberPicker(this);
+        picker.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(120)));
         picker.setTag(Integer.valueOf(min));
         int clamped = Math.max(min, Math.min(max, value));
         if (min < 0) {
@@ -1037,23 +1075,23 @@ public class PhoneMainActivity extends Activity {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
-        button.setTextSize(13);
+        button.setTextSize(14);
         button.setTextColor(textColor);
-        button.setBackground(round(color, 18, 0));
+        button.setBackground(round(color, dp(18), color == SOFT ? BORDER : 0));
         button.setSingleLine(false);
         button.setGravity(Gravity.CENTER);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
-        button.setPadding(8, 0, 8, 0);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 62, 1f);
-        params.setMargins(6, 6, 6, 6);
+        button.setPadding(dp(10), 0, dp(10), 0);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        params.setMargins(dp(4), dp(4), dp(4), dp(4));
         button.setLayoutParams(params);
         return button;
     }
 
     private LinearLayout.LayoutParams wideParams() {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(0, 8, 0, 8);
+        params.setMargins(0, dp(7), 0, dp(7));
         return params;
     }
 
@@ -1068,8 +1106,13 @@ public class PhoneMainActivity extends Activity {
     private void setScroll(LinearLayout content) {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(BG);
+        scroll.setFillViewport(true);
         scroll.addView(content);
         setContentView(scroll);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private String backupInfoText(BackupStorage.BackupEntry backup) {
