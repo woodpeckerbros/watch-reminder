@@ -296,7 +296,7 @@ public class PhoneMainActivity extends Activity {
 
         LinearLayout zmanimCard = card();
         Switch useZmanim = switchView("לפי זמני הלכה", reminder.optBoolean("useZmanim", false));
-        Spinner zman = spinner(ZMANIM_LABELS);
+        Spinner zman = prominentChoiceSpinner(ZMANIM_LABELS, "בחר זמן הלכה");
         zman.setSelection(zmanIndex(reminder.optString("zmanimKey", "CHATZOS")));
         NumberPicker offset = numberPicker(-180, 180, reminder.optInt("zmanimOffsetMinutes", 0));
         LinearLayout zmanimDetails = new LinearLayout(this);
@@ -430,10 +430,6 @@ public class PhoneMainActivity extends Activity {
         NumberPicker shemaOffset = numberPicker(0, 60, finalSettings.optInt("shemaOnTimeOffsetMinutes", 10));
         NumberPicker autoDelay = numberPicker(5, 600, finalSettings.optInt("autoSnoozeDelaySeconds", 30));
         NumberPicker autoMinutes = numberPicker(1, 240, finalSettings.optInt("autoSnoozeMinutes", 5));
-        setNarrowNumberPicker(blessing);
-        setNarrowNumberPicker(shemaOffset);
-        setNarrowNumberPicker(autoDelay);
-        setNarrowNumberPicker(autoMinutes);
         settingsCard.addView(quiet);
         settingsCard.addView(labeled("תזכורת ברכה בדקות", blessing));
         settingsCard.addView(labeled("קריאת שמע אחרי צאת הכוכבים", shemaOffset));
@@ -911,40 +907,44 @@ public class PhoneMainActivity extends Activity {
     }
 
     private Spinner reminderTypeSpinner() {
+        return prominentChoiceSpinner(TYPE_LABELS, "בחר סוג תזכורת");
+    }
+
+    private Spinner prominentChoiceSpinner(String[] labels, String prompt) {
         Spinner spinner = new Spinner(this) {
             @Override
             public boolean performClick() {
                 ArrayAdapter<String> choices = new ArrayAdapter<String>(PhoneMainActivity.this,
-                        android.R.layout.simple_list_item_1, TYPE_LABELS) {
+                        android.R.layout.simple_list_item_1, labels) {
                     @Override
                     public View getView(int position, View convertView, android.view.ViewGroup parent) {
                         TextView view = (TextView) super.getView(position, convertView, parent);
-                        styleReminderTypeChoice(view, false);
+                        styleProminentChoice(view, false);
                         return view;
                     }
                 };
                 new AlertDialog.Builder(PhoneMainActivity.this)
-                        .setTitle("בחר סוג תזכורת")
+                        .setTitle(prompt)
                         .setAdapter(choices, (dialog, which) -> setSelection(which))
                         .setNegativeButton("ביטול", null)
                         .show();
                 return true;
             }
         };
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TYPE_LABELS) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, labels) {
             @Override
             public View getView(int position, View convertView, android.view.ViewGroup parent) {
                 TextView view = (TextView) super.getView(position, convertView, parent);
-                view.setText(TYPE_LABELS[position] + "   ▼");
-                styleReminderTypeChoice(view, true);
+                view.setText(labels[position] + "   ▼");
+                styleProminentChoice(view, true);
                 return view;
             }
 
             @Override
             public View getDropDownView(int position, View convertView, android.view.ViewGroup parent) {
                 TextView view = (TextView) super.getDropDownView(position, convertView, parent);
-                view.setText(TYPE_LABELS[position]);
-                styleReminderTypeChoice(view, false);
+                view.setText(labels[position]);
+                styleProminentChoice(view, false);
                 return view;
             }
         };
@@ -955,7 +955,7 @@ public class PhoneMainActivity extends Activity {
         return spinner;
     }
 
-    private void styleReminderTypeChoice(TextView view, boolean selected) {
+    private void styleProminentChoice(TextView view, boolean selected) {
         view.setGravity(Gravity.CENTER);
         view.setTextDirection(View.TEXT_DIRECTION_RTL);
         view.setTextColor(TEXT);
@@ -1090,7 +1090,7 @@ public class PhoneMainActivity extends Activity {
     private NumberPicker numberPicker(int min, int max, int value) {
         NumberPicker picker = new NumberPicker(this);
         picker.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(120)));
+                dp(160), dp(120)));
         picker.setTag(Integer.valueOf(min));
         int clamped = Math.max(min, Math.min(max, value));
         if (min < 0) {
@@ -1109,11 +1109,6 @@ public class PhoneMainActivity extends Activity {
         }
         picker.setWrapSelectorWheel(true);
         return picker;
-    }
-
-    private void setNarrowNumberPicker(NumberPicker picker) {
-        picker.setLayoutParams(new LinearLayout.LayoutParams(
-                dp(160), dp(120)));
     }
 
     private int numberValue(NumberPicker picker) {
