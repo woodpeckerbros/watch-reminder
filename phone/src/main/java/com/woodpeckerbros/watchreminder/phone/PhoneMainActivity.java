@@ -430,6 +430,10 @@ public class PhoneMainActivity extends Activity {
         NumberPicker shemaOffset = numberPicker(0, 60, finalSettings.optInt("shemaOnTimeOffsetMinutes", 10));
         NumberPicker autoDelay = numberPicker(5, 600, finalSettings.optInt("autoSnoozeDelaySeconds", 30));
         NumberPicker autoMinutes = numberPicker(1, 240, finalSettings.optInt("autoSnoozeMinutes", 5));
+        setNarrowNumberPicker(blessing);
+        setNarrowNumberPicker(shemaOffset);
+        setNarrowNumberPicker(autoDelay);
+        setNarrowNumberPicker(autoMinutes);
         settingsCard.addView(quiet);
         settingsCard.addView(labeled("תזכורת ברכה בדקות", blessing));
         settingsCard.addView(labeled("קריאת שמע אחרי צאת הכוכבים", shemaOffset));
@@ -1048,6 +1052,11 @@ public class PhoneMainActivity extends Activity {
         }
         picker.setWrapSelectorWheel(true);
         return picker;
+    }
+
+    private void setNarrowNumberPicker(NumberPicker picker) {
+        picker.setLayoutParams(new LinearLayout.LayoutParams(
+                dp(160), dp(120)));
     }
 
     private int numberValue(NumberPicker picker) {
