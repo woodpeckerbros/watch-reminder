@@ -417,7 +417,7 @@ public class PhoneMainActivity extends Activity {
     private void showSettings() {
         screen = "settings";
         LinearLayout content = base();
-        addHeader(content, "הגדרות", "גיבויים, לוגים והגדרות כלליות");
+        addHeader(content, "הגדרות", "גיבויים והגדרות כלליות");
 
         JSONObject root = LocalReminderDocument.root(this);
         JSONObject settings = root.optJSONObject("settings");
@@ -454,7 +454,6 @@ public class PhoneMainActivity extends Activity {
         content.addView(settingsCard, wideParams());
 
         addBackupSection(content);
-        addLogSection(content);
 
         Button licenses = button("ⓘ  אודות ורישיונות", SOFT, TEXT);
         licenses.setOnClickListener(v -> showAboutAndLicenses());
