@@ -1226,23 +1226,6 @@ public class MainActivity extends Activity {
         backupCard.addView(backupActions);
         content.addView(backupCard, cardParams());
 
-        LinearLayout logsCard = card();
-        TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
-        AppFont.bold(logsTitle);
-        logsCard.addView(logsTitle);
-        TextView logsHint = text("לבדיקת תזכורות שלא קופצות בזמן", 11, COLOR_MUTED);
-        logsHint.setPadding(0, dp(3), 0, dp(6));
-        logsCard.addView(logsHint);
-        LinearLayout logsActions = actionRow();
-        Button sendLogs = pillButton("לוגים לטלפון", COLOR_ACCENT_DARK);
-        sendLogs.setOnClickListener(v -> sendLogsToPhone());
-        logsActions.addView(sendLogs);
-        logsCard.addView(logsActions);
-        Button clearLogs = pillButton("ניקוי לוגים", COLOR_SURFACE_2);
-        clearLogs.setOnClickListener(v -> confirmClearLogs());
-        logsCard.addView(clearLogs);
-        content.addView(logsCard, cardParams());
-
         LinearLayout actions = actionRow();
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
         back.setOnClickListener(v -> showList());
