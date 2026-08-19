@@ -103,10 +103,12 @@ class BackupStorage {
             }
         }
         if (file.isEmpty()) {
-            return "עדיין לא התקבל גיבוי מהשעון.";
+            return PhoneUiText.t(context, "עדיין לא התקבל גיבוי מהשעון.");
         }
         String time = new SimpleDateFormat("dd/MM HH:mm", Locale.US).format(new Date(prefs.getLong(KEY_LAST_TIME, 0)));
-        return "התקבל: " + file + "\nנשמר ב-Downloads/WatchReminder\n" + time;
+        return PhoneUiText.isEnglish(context)
+                ? "Received: " + file + "\nSaved in Downloads/WatchReminder\n" + time
+                : "התקבל: " + file + "\nנשמר ב-Downloads/WatchReminder\n" + time;
     }
 
     static byte[] lastBackup(Context context) throws Exception {
@@ -215,7 +217,7 @@ class BackupStorage {
         );
         builder.setSmallIcon(com.woodpeckerbros.watchreminder.phone.R.drawable.ic_launcher)
                 .setContentTitle("WristRemind")
-                .setContentText("הגיבוי נשמר: " + fileName)
+                .setContentText(PhoneUiText.isEnglish(context) ? "Backup saved: " + fileName : "הגיבוי נשמר: " + fileName)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
         try {

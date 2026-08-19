@@ -20,7 +20,7 @@ class WatchSyncRequester {
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {
-                        callback.onError("לא נמצא שעון מחובר");
+                        callback.onError(PhoneUiText.t(context, "לא נמצא שעון מחובר"));
                         return;
                     }
                     final int[] pending = {nodes.size()};
@@ -38,11 +38,11 @@ class WatchSyncRequester {
                                 .addOnFailureListener(error -> {
                                     pending[0]--;
                                     if (pending[0] == 0) {
-                                        callback.onError(sent[0] ? "נשלחה בקשה לחלק מהשעונים" : "בקשת הסנכרון נכשלה");
+                                        callback.onError(PhoneUiText.t(context, sent[0] ? "נשלחה בקשה לחלק מהשעונים" : "בקשת הסנכרון נכשלה"));
                                     }
                                 });
                     }
                 })
-                .addOnFailureListener(error -> callback.onError("לא הצלחתי למצוא שעון"));
+                .addOnFailureListener(error -> callback.onError(PhoneUiText.t(context, "לא הצלחתי למצוא שעון")));
     }
 }

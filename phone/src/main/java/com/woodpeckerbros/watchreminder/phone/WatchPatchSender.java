@@ -18,14 +18,14 @@ class WatchPatchSender {
 
     static void send(Context context, Callback callback) {
         if (!PendingPatchStore.hasPending(context)) {
-            callback.onError("אין שינויים לשליחה");
+            callback.onError(PhoneUiText.t(context, "אין שינויים לשליחה"));
             return;
         }
         byte[] data = PendingPatchStore.bytes(context);
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {
-                        callback.onError("לא נמצא שעון מחובר");
+                        callback.onError(PhoneUiText.t(context, "לא נמצא שעון מחובר"));
                         return;
                     }
                     final int[] pending = {nodes.size()};
@@ -48,12 +48,12 @@ class WatchPatchSender {
                                             PendingPatchStore.clear(context);
                                             callback.onSuccess();
                                         } else {
-                                            callback.onError("שליחת השינויים לשעון נכשלה");
+                                            callback.onError(PhoneUiText.t(context, "שליחת השינויים לשעון נכשלה"));
                                         }
                                     }
                                 });
                     }
                 })
-                .addOnFailureListener(error -> callback.onError("לא הצלחתי למצוא שעון"));
+                .addOnFailureListener(error -> callback.onError(PhoneUiText.t(context, "לא הצלחתי למצוא שעון")));
     }
 }

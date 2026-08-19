@@ -131,7 +131,7 @@ class LogStorage {
                 : new Notification.Builder(context);
         builder.setSmallIcon(com.woodpeckerbros.watchreminder.phone.R.drawable.ic_launcher)
                 .setContentTitle("WristRemind")
-                .setContentText("לוג התקבל: " + fileName)
+                .setContentText(PhoneUiText.isEnglish(context) ? "Log received: " + fileName : "לוג התקבל: " + fileName)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
         try {

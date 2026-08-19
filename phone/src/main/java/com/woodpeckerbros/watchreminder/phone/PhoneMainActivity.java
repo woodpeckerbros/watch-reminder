@@ -137,7 +137,7 @@ public class PhoneMainActivity extends Activity {
         JSONArray reminders = reminders();
         TextView remindersTitle = text("התזכורות שלי", 20, TEXT);
         remindersTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        remindersTitle.setGravity(Gravity.RIGHT);
+        remindersTitle.setGravity(PhoneUiText.isEnglish(this) ? Gravity.LEFT : Gravity.RIGHT);
         remindersTitle.setPadding(dp(6), dp(18), dp(6), dp(8));
         content.addView(remindersTitle, wideParams());
         if (reminders.length() == 0) {
@@ -286,9 +286,9 @@ public class PhoneMainActivity extends Activity {
         JSONArray dayArray = reminder.optJSONArray("days");
         for (int i = 0; i < dayValues.length; i++) {
             days[i] = new CheckBox(this);
-            days[i].setText(dayLabels[i]);
+            days[i].setText(t(dayLabels[i]));
             days[i].setTextColor(TEXT);
-            days[i].setTextDirection(View.TEXT_DIRECTION_RTL);
+            days[i].setTextDirection(PhoneUiText.isEnglish(this) ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_RTL);
             days[i].setChecked(contains(dayArray, dayValues[i]));
             daysCard.addView(days[i]);
         }
@@ -372,7 +372,7 @@ public class PhoneMainActivity extends Activity {
         Button save = button("שמירה", ACCENT);
         save.setOnClickListener(v -> {
             try {
-                reminder.put("name", valueOrDefault(name.getText().toString(), "תזכורת"));
+                reminder.put("name", valueOrDefault(name.getText().toString(), t("תזכורת")));
                 reminder.put("description", description.getText().toString().trim());
                 reminder.put("enabled", enabled.isChecked());
                 reminder.put("critical", critical.isChecked());
@@ -403,7 +403,7 @@ public class PhoneMainActivity extends Activity {
                 saveReminder(reminder, index);
                 showMain();
             } catch (Exception exception) {
-                Toast.makeText(this, "לא הצלחתי לשמור", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, t("לא הצלחתי לשמור"), Toast.LENGTH_LONG).show();
             }
         });
         Button cancel = button("ביטול", SOFT, TEXT);
@@ -446,7 +446,7 @@ public class PhoneMainActivity extends Activity {
                 root.put("settings", finalSettings);
                 LocalReminderDocument.saveRoot(this, root);
                 PendingPatchStore.updateSettings(this, root);
-                Toast.makeText(this, "נשמר בטלפון. שלח לשעון כדי לעדכן.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, t("נשמר בטלפון. שלח לשעון כדי לעדכן."), Toast.LENGTH_LONG).show();
             } catch (Exception ignored) {
             }
         });
@@ -527,7 +527,7 @@ public class PhoneMainActivity extends Activity {
             while ((line = reader.readLine()) != null) value.append(line).append('\n');
             return value.toString().trim();
         } catch (Exception exception) {
-            return "לא ניתן לטעון את נוסח הרישיון";
+            return t("לא ניתן לטעון את נוסח הרישיון");
         }
     }
 
@@ -593,7 +593,7 @@ public class PhoneMainActivity extends Activity {
         try {
             startActivityForResult(intent, REQUEST_PICK_BACKUP);
         } catch (Exception exception) {
-            Toast.makeText(this, "לא הצלחתי לפתוח בוחר קבצים", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("לא הצלחתי לפתוח בוחר קבצים"), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -605,16 +605,16 @@ public class PhoneMainActivity extends Activity {
         try {
             startActivityForResult(intent, REQUEST_PICK_LOG);
         } catch (Exception exception) {
-            Toast.makeText(this, "לא הצלחתי לפתוח בוחר קבצים", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("לא הצלחתי לפתוח בוחר קבצים"), Toast.LENGTH_LONG).show();
         }
     }
 
     private void requestSync() {
-        Toast.makeText(this, "מבקש סנכרון מהשעון...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, t("מבקש סנכרון מהשעון..."), Toast.LENGTH_SHORT).show();
         WatchSyncRequester.request(this, new WatchSyncRequester.Callback() {
             public void onSuccess() {
                 runOnUiThread(() -> {
-                    Toast.makeText(PhoneMainActivity.this, "נשלחה בקשה. הנתונים יופיעו כשהשעון ישלח.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(PhoneMainActivity.this, t("נשלחה בקשה. הנתונים יופיעו כשהשעון ישלח."), Toast.LENGTH_LONG).show();
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(PhoneMainActivity.this::showMain, 1800L);
                 });
             }
@@ -626,11 +626,11 @@ public class PhoneMainActivity extends Activity {
     }
 
     private void pushToWatch() {
-        Toast.makeText(this, "שולח לשעון...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, t("שולח לשעון..."), Toast.LENGTH_SHORT).show();
         WatchPatchSender.send(this, new WatchPatchSender.Callback() {
             public void onSuccess() {
                 runOnUiThread(() -> {
-                    Toast.makeText(PhoneMainActivity.this, "השינויים נשלחו לשעון. אשר בשעון.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(PhoneMainActivity.this, t("השינויים נשלחו לשעון. אשר בשעון."), Toast.LENGTH_LONG).show();
                     showMain();
                 });
             }
@@ -719,8 +719,8 @@ public class PhoneMainActivity extends Activity {
 
     private void showReminderActions(JSONObject reminder) {
         new AlertDialog.Builder(this)
-                .setTitle(reminder.optString("name", "תזכורת"))
-                .setItems(new String[]{"עריכה", "מחיקה"}, (dialog, which) -> {
+                .setTitle(reminder.optString("name", t("תזכורת")))
+                .setItems(PhoneUiText.t(this, new String[]{"עריכה", "מחיקה"}), (dialog, which) -> {
                     if (which == 0) showEditor(reminder, indexOfReminder(reminder.optString("id")));
                     if (which == 1) deleteReminder(reminder);
                 })
@@ -743,21 +743,26 @@ public class PhoneMainActivity extends Activity {
     }
 
     private String details(JSONObject reminder) {
-        if (reminder.optBoolean("critical", false)) return typeLabel(reminder) + " | חיונית";
+        if (reminder.optBoolean("critical", false)) return typeLabel(reminder) + " | " + t("חיונית");
         return typeLabel(reminder);
     }
 
     private String typeLabel(JSONObject reminder) {
         int type = typeIndex(reminder);
-        if (type == 0) return "חד פעמית";
-        if (type == 2) return "מחזורית: כל " + reminder.optInt("periodicInterval", 1) + " " + UNIT_LABELS[unitIndex(reminder.optString("periodicUnit", "days"))];
-        if (type == 3) return "אירוע שנתי";
-        return "קבועה";
+        if (type == 0) return t("חד פעמית");
+        if (type == 2) {
+            int interval = reminder.optInt("periodicInterval", 1);
+            return PhoneUiText.isEnglish(this)
+                    ? "Every " + interval + " " + t(UNIT_LABELS[unitIndex(reminder.optString("periodicUnit", "days"))])
+                    : "מחזורית: כל " + interval + " " + UNIT_LABELS[unitIndex(reminder.optString("periodicUnit", "days"))];
+        }
+        if (type == 3) return t("אירוע שנתי");
+        return t("קבועה");
     }
 
     private String timeTitle(JSONObject reminder) {
         if (reminder.optBoolean("useZmanim", false)) {
-            return ZMANIM_LABELS[zmanIndex(reminder.optString("zmanimKey", "CHATZOS"))] + " " + offsetText(reminder.optInt("zmanimOffsetMinutes", 0));
+            return t(ZMANIM_LABELS[zmanIndex(reminder.optString("zmanimKey", "CHATZOS"))]) + " " + offsetText(reminder.optInt("zmanimOffsetMinutes", 0));
         }
         return String.format(Locale.US, "%02d:%02d", reminder.optInt("hour", 9), reminder.optInt("minute", 0));
     }
@@ -769,7 +774,11 @@ public class PhoneMainActivity extends Activity {
 
     private String statusLine() {
         long updated = LocalReminderDocument.updatedAt(this);
-        if (updated == 0) return "טרם בוצע סנכרון.";
+        if (updated == 0) return t("טרם בוצע סנכרון.");
+        if (PhoneUiText.isEnglish(this)) {
+            String suffix = PendingPatchStore.hasPending(this) ? " | Pending changes: " + PendingPatchStore.count(this) : "";
+            return "Updated: " + new SimpleDateFormat("MMM d · HH:mm", Locale.US).format(new Date(updated)) + suffix;
+        }
         String suffix = PendingPatchStore.hasPending(this) ? " | שינויים ממתינים: " + PendingPatchStore.count(this) : "";
         return "עודכן: " + new SimpleDateFormat("dd/MM HH:mm", Locale.US).format(new Date(updated)) + suffix;
     }
@@ -863,23 +872,23 @@ public class PhoneMainActivity extends Activity {
 
     private TextView text(String value, int sp, int color) {
         TextView view = new TextView(this);
-        view.setText(value);
+        view.setText(t(value));
         view.setTextSize(sp);
         view.setTextColor(color);
         view.setGravity(Gravity.CENTER);
-        view.setTextDirection(View.TEXT_DIRECTION_RTL);
+        view.setTextDirection(PhoneUiText.isEnglish(this) ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_RTL);
         return view;
     }
 
     private EditText input(String hint, String value) {
         EditText edit = new EditText(this);
-        edit.setHint(hint);
+        edit.setHint(t(hint));
         edit.setText(value);
         edit.setTextSize(16);
         edit.setTextColor(TEXT);
         edit.setHintTextColor(MUTED);
         edit.setGravity(Gravity.CENTER);
-        edit.setTextDirection(View.TEXT_DIRECTION_RTL);
+        edit.setTextDirection(PhoneUiText.isEnglish(this) ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_RTL);
         edit.setBackground(round(SURFACE_2, dp(18), BORDER));
         edit.setPadding(dp(18), dp(12), dp(18), dp(12));
         return edit;
@@ -887,17 +896,17 @@ public class PhoneMainActivity extends Activity {
 
     private Switch switchView(String label, boolean checked) {
         Switch sw = new Switch(this);
-        sw.setText(label);
+        sw.setText(t(label));
         sw.setChecked(checked);
         sw.setTextSize(15);
         sw.setTextColor(TEXT);
-        sw.setTextDirection(View.TEXT_DIRECTION_RTL);
+        sw.setTextDirection(PhoneUiText.isEnglish(this) ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_RTL);
         return sw;
     }
 
     private Spinner spinner(String[] labels) {
         Spinner spinner = new Spinner(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, PhoneUiText.t(this, labels));
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
         spinner.setBackground(round(SURFACE_2, dp(16), BORDER));
@@ -910,11 +919,12 @@ public class PhoneMainActivity extends Activity {
     }
 
     private Spinner prominentChoiceSpinner(String[] labels, String prompt) {
+        String[] translatedLabels = PhoneUiText.t(this, labels);
         Spinner spinner = new Spinner(this) {
             @Override
             public boolean performClick() {
                 ArrayAdapter<String> choices = new ArrayAdapter<String>(PhoneMainActivity.this,
-                        android.R.layout.simple_list_item_1, labels) {
+                        android.R.layout.simple_list_item_1, translatedLabels) {
                     @Override
                     public View getView(int position, View convertView, android.view.ViewGroup parent) {
                         TextView view = (TextView) super.getView(position, convertView, parent);
@@ -923,18 +933,18 @@ public class PhoneMainActivity extends Activity {
                     }
                 };
                 new AlertDialog.Builder(PhoneMainActivity.this)
-                        .setTitle(prompt)
+                        .setTitle(t(prompt))
                         .setAdapter(choices, (dialog, which) -> setSelection(which))
-                        .setNegativeButton("ביטול", null)
+                        .setNegativeButton(t("ביטול"), null)
                         .show();
                 return true;
             }
         };
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, labels) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, translatedLabels) {
             @Override
             public View getView(int position, View convertView, android.view.ViewGroup parent) {
                 TextView view = (TextView) super.getView(position, convertView, parent);
-                view.setText(labels[position] + "   ▼");
+                view.setText(translatedLabels[position] + "   ▼");
                 styleProminentChoice(view, true);
                 return view;
             }
@@ -942,7 +952,7 @@ public class PhoneMainActivity extends Activity {
             @Override
             public View getDropDownView(int position, View convertView, android.view.ViewGroup parent) {
                 TextView view = (TextView) super.getDropDownView(position, convertView, parent);
-                view.setText(labels[position]);
+                view.setText(translatedLabels[position]);
                 styleProminentChoice(view, false);
                 return view;
             }
@@ -956,7 +966,7 @@ public class PhoneMainActivity extends Activity {
 
     private void styleProminentChoice(TextView view, boolean selected) {
         view.setGravity(Gravity.CENTER);
-        view.setTextDirection(View.TEXT_DIRECTION_RTL);
+        view.setTextDirection(PhoneUiText.isEnglish(this) ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_RTL);
         view.setTextColor(TEXT);
         view.setTextSize(selected ? 17 : 16);
         view.setTypeface(Typeface.DEFAULT, selected ? Typeface.BOLD : Typeface.NORMAL);
@@ -1042,6 +1052,7 @@ public class PhoneMainActivity extends Activity {
     }
 
     private String hebrewDayLabel(int day) {
+        if (PhoneUiText.isEnglish(this)) return String.valueOf(day);
         String[] labels = {
                 "", "א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט",
                 "י", "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט",
@@ -1056,31 +1067,31 @@ public class PhoneMainActivity extends Activity {
     private String hebrewMonthLabel(int month) {
         switch (month) {
             case JewishDate.NISSAN:
-                return "ניסן";
+                return PhoneUiText.isEnglish(this) ? "Nissan" : "ניסן";
             case JewishDate.IYAR:
-                return "אייר";
+                return PhoneUiText.isEnglish(this) ? "Iyar" : "אייר";
             case JewishDate.SIVAN:
-                return "סיוון";
+                return PhoneUiText.isEnglish(this) ? "Sivan" : "סיוון";
             case JewishDate.TAMMUZ:
-                return "תמוז";
+                return PhoneUiText.isEnglish(this) ? "Tammuz" : "תמוז";
             case JewishDate.AV:
-                return "אב";
+                return PhoneUiText.isEnglish(this) ? "Av" : "אב";
             case JewishDate.ELUL:
-                return "אלול";
+                return PhoneUiText.isEnglish(this) ? "Elul" : "אלול";
             case JewishDate.TISHREI:
-                return "תשרי";
+                return PhoneUiText.isEnglish(this) ? "Tishrei" : "תשרי";
             case JewishDate.CHESHVAN:
-                return "חשוון";
+                return PhoneUiText.isEnglish(this) ? "Cheshvan" : "חשוון";
             case JewishDate.KISLEV:
-                return "כסלו";
+                return PhoneUiText.isEnglish(this) ? "Kislev" : "כסלו";
             case JewishDate.TEVES:
-                return "טבת";
+                return PhoneUiText.isEnglish(this) ? "Tevet" : "טבת";
             case JewishDate.SHEVAT:
-                return "שבט";
+                return PhoneUiText.isEnglish(this) ? "Shevat" : "שבט";
             case JewishDate.ADAR:
-                return "אדר";
+                return PhoneUiText.isEnglish(this) ? "Adar" : "אדר";
             case JewishDate.ADAR_II:
-                return "אדר ב׳";
+                return PhoneUiText.isEnglish(this) ? "Adar II" : "אדר ב׳";
             default:
                 return String.valueOf(month);
         }
@@ -1133,7 +1144,7 @@ public class PhoneMainActivity extends Activity {
 
     private Button button(String label, int color, int textColor) {
         Button button = new Button(this);
-        button.setText(label);
+        button.setText(t(label));
         button.setAllCaps(false);
         button.setTextSize(14);
         button.setTextColor(textColor);
@@ -1175,6 +1186,10 @@ public class PhoneMainActivity extends Activity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
+    private String t(String value) {
+        return PhoneUiText.t(this, value);
+    }
+
     private String backupInfoText(BackupStorage.BackupEntry backup) {
         return backup.name + "\n" + new SimpleDateFormat("dd/MM HH:mm", Locale.US).format(new Date(backup.modifiedAt));
     }
@@ -1186,20 +1201,20 @@ public class PhoneMainActivity extends Activity {
     private void loadBackup(BackupStorage.BackupEntry backup) {
         try {
             LocalReminderDocument.save(this, new String(BackupStorage.readBackup(this, backup), java.nio.charset.StandardCharsets.UTF_8));
-            Toast.makeText(this, "הגיבוי נטען לעריכה", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, t("הגיבוי נטען לעריכה"), Toast.LENGTH_SHORT).show();
             showMain();
         } catch (Exception exception) {
-            Toast.makeText(this, "לא הצלחתי לטעון גיבוי", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("לא הצלחתי לטעון גיבוי"), Toast.LENGTH_LONG).show();
         }
     }
 
     private void importPickedBackup(Uri uri) {
         try {
             String fileName = BackupStorage.importBackup(this, uri, displayName(uri, ""));
-            Toast.makeText(this, "הגיבוי נוסף לרשימה: " + fileName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, PhoneUiText.isEnglish(this) ? "Backup added: " + fileName : "הגיבוי נוסף לרשימה: " + fileName, Toast.LENGTH_LONG).show();
             showSettings();
         } catch (Exception exception) {
-            Toast.makeText(this, "לא הצלחתי להוסיף את קובץ הגיבוי", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("לא הצלחתי להוסיף את קובץ הגיבוי"), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1210,9 +1225,9 @@ public class PhoneMainActivity extends Activity {
                 .putExtra(Intent.EXTRA_SUBJECT, backup.name)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(Intent.createChooser(intent, "שיתוף גיבוי"));
+            startActivity(Intent.createChooser(intent, t("שיתוף גיבוי")));
         } catch (Exception exception) {
-            Toast.makeText(this, "אין אפליקציה זמינה לשיתוף", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("אין אפליקציה זמינה לשיתוף"), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1223,9 +1238,9 @@ public class PhoneMainActivity extends Activity {
                 .putExtra(Intent.EXTRA_SUBJECT, log.name)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
-            startActivity(Intent.createChooser(intent, "שיתוף לוג"));
+            startActivity(Intent.createChooser(intent, t("שיתוף לוג")));
         } catch (Exception exception) {
-            Toast.makeText(this, "אין אפליקציה זמינה לשיתוף", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("אין אפליקציה זמינה לשיתוף"), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1234,19 +1249,19 @@ public class PhoneMainActivity extends Activity {
             android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             if (clipboard != null) {
                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText(log.name, LogStorage.readLog(this, log)));
-                Toast.makeText(this, "הלוג הועתק", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, t("הלוג הועתק"), Toast.LENGTH_SHORT).show();
             }
         } catch (Exception exception) {
-            Toast.makeText(this, "לא הצלחתי להעתיק את הלוג", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, t("לא הצלחתי להעתיק את הלוג"), Toast.LENGTH_LONG).show();
         }
     }
 
     private void showPickedLog(Uri uri) {
         LogStorage.LogEntry log = new LogStorage.LogEntry(displayName(uri, "WatchReminder log"), uri, System.currentTimeMillis());
         new AlertDialog.Builder(this)
-                .setTitle("קובץ לוג")
+                .setTitle(t("קובץ לוג"))
                 .setMessage(log.name)
-                .setItems(new String[]{"שיתוף", "העתקה"}, (dialog, which) -> {
+                .setItems(PhoneUiText.t(this, new String[]{"שיתוף", "העתקה"}), (dialog, which) -> {
                     if (which == 0) {
                         shareLog(log);
                     } else {
@@ -1270,10 +1285,10 @@ public class PhoneMainActivity extends Activity {
     }
 
     private void sendRestore(BackupStorage.BackupEntry backup) {
-        Toast.makeText(this, "שולח לשעון...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, t("שולח לשעון..."), Toast.LENGTH_SHORT).show();
         WatchRestoreSender.sendBackup(this, backup, new WatchRestoreSender.Callback() {
             public void onSuccess() {
-                runOnUiThread(() -> Toast.makeText(PhoneMainActivity.this, "נשלח לשעון. אשר בשעון.", Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Toast.makeText(PhoneMainActivity.this, t("נשלח לשעון. אשר בשעון."), Toast.LENGTH_LONG).show());
             }
             public void onError(String message) {
                 runOnUiThread(() -> Toast.makeText(PhoneMainActivity.this, message, Toast.LENGTH_LONG).show());

@@ -20,7 +20,7 @@ class WatchRestoreSender {
         try {
             send(context, BackupStorage.lastBackup(context), callback);
         } catch (Exception exception) {
-            callback.onError("אין גיבוי לשליחה");
+            callback.onError(PhoneUiText.t(context, "אין גיבוי לשליחה"));
         }
     }
 
@@ -28,14 +28,14 @@ class WatchRestoreSender {
         try {
             send(context, BackupStorage.readBackup(context, entry), callback);
         } catch (Exception exception) {
-            callback.onError("לא הצלחתי לקרוא את הגיבוי");
+            callback.onError(PhoneUiText.t(context, "לא הצלחתי לקרוא את הגיבוי"));
         }
     }
 
     static void sendCurrentDocument(Context context, Callback callback) {
         String text = LocalReminderDocument.text(context);
         if (text.trim().isEmpty()) {
-            callback.onError("אין נתונים לשליחה. בצע סנכרון מהשעון קודם.");
+            callback.onError(PhoneUiText.t(context, "אין נתונים לשליחה. בצע סנכרון מהשעון קודם."));
             return;
         }
         send(context, LocalReminderDocument.bytes(context), callback);
@@ -45,7 +45,7 @@ class WatchRestoreSender {
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {
-                        callback.onError("לא נמצא שעון מחובר");
+                        callback.onError(PhoneUiText.t(context, "לא נמצא שעון מחובר"));
                         return;
                     }
                     final int[] pending = {nodes.size()};
@@ -66,12 +66,12 @@ class WatchRestoreSender {
                                         if (sent[0]) {
                                             callback.onSuccess();
                                         } else {
-                                            callback.onError("השליחה לשעון נכשלה");
+                                            callback.onError(PhoneUiText.t(context, "השליחה לשעון נכשלה"));
                                         }
                                     }
                                 });
                     }
                 })
-                .addOnFailureListener(error -> callback.onError("לא הצלחתי למצוא שעון"));
+                .addOnFailureListener(error -> callback.onError(PhoneUiText.t(context, "לא הצלחתי למצוא שעון")));
     }
 }

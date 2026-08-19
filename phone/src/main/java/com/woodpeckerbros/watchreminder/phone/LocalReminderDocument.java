@@ -50,9 +50,9 @@ class LocalReminderDocument {
     static JSONObject root(Context context) {
         try {
             String text = text(context);
-            return text.isEmpty() ? emptyRoot() : new JSONObject(text);
+            return text.isEmpty() ? emptyRoot(context) : new JSONObject(text);
         } catch (Exception ignored) {
-            return emptyRoot();
+            return emptyRoot(context);
         }
     }
 
@@ -74,7 +74,7 @@ class LocalReminderDocument {
         return text(context).getBytes(StandardCharsets.UTF_8);
     }
 
-    private static JSONObject emptyRoot() {
+    private static JSONObject emptyRoot(Context context) {
         JSONObject root = new JSONObject();
         try {
             root.put("type", "watch-reminder-backup")
@@ -106,7 +106,7 @@ class LocalReminderDocument {
                             .put("jewishMode", false))
                     .put("quietTimeRules", new JSONArray())
                     .put("zmanimLocation", new JSONObject()
-                            .put("name", "פתח תקווה, ישראל")
+                            .put("name", PhoneUiText.isEnglish(context) ? "Petah Tikva, Israel" : "פתח תקווה, ישראל")
                             .put("latitude", 32.084)
                             .put("longitude", 34.8878)
                             .put("elevation", 0)
