@@ -104,9 +104,8 @@ public class ReminderAlertActivity extends Activity {
         ImageView icon = new ImageView(this);
         icon.setImageResource(R.drawable.ic_alert_ringing_bell);
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        icon.setPadding(dp(9), dp(9), dp(9), dp(9));
-        icon.setBackground(rounded(COLOR_ACCENT, dp(40), 0));
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(50), dp(50));
+        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(42), dp(42));
         iconParams.setMargins(0, dp(2), 0, dp(8));
         icon.setLayoutParams(iconParams);
         TextView name = text(alertReminderName, 21, COLOR_TEXT);
