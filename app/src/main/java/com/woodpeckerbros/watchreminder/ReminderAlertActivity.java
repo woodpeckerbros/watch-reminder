@@ -106,16 +106,13 @@ public class ReminderAlertActivity extends Activity {
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(64), dp(64));
         iconParams.setMargins(0, dp(2), 0, dp(8));
         icon.setLayoutParams(iconParams);
-        TextView title = text("זמן לתזכורת", 18, COLOR_TEXT);
-        AppFont.bold(title);
-        TextView name = text(alertReminderName, 25, COLOR_TEXT);
+        TextView name = text(alertReminderName, 21, COLOR_TEXT);
         AppFont.bold(name);
         name.setPadding(0, dp(7), 0, dp(7));
         TextView description = text(reminderDescription, 14, COLOR_MUTED);
         description.setPadding(dp(6), 0, dp(6), dp(8));
 
         card.addView(icon);
-        card.addView(title);
         card.addView(name);
         if (!reminderDescription.isEmpty()) {
             card.addView(description);

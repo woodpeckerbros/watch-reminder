@@ -181,6 +181,7 @@ public class UiText {
         put("כבוי", "Off");
         put("תזכורת דף היומי פעילה", "Daf Yomi reminder active");
         put("זמן לתזכורת", "Time for a Reminder");
+        put("אפשר לדחות", "Snooze options");
         put("בדיקת לימוד דף היומי", "Daf Yomi Study Check");
         put("תיקון סימון", "Fix Marking");
         put("אם סימנת בטעות שלמדת, אפשר להחזיר דף לרשימת ההשלמות", "If you marked a page learned by mistake, you can move it back to the catch-up list");
@@ -244,6 +245,8 @@ public class UiText {
         put("סוף זמן שמע גר״א", "Latest Shema (GRA)");
         put("סוף זמן ברכות ק״ש", "Latest Shema Blessings");
         put("חצות", "Halachic Midday");
+        put("חצות יום", "Halachic Midday");
+        put("חצות לילה", "Halachic Midnight");
         put("מנחה גדולה", "Mincha Gedola");
         put("מנחה קטנה", "Mincha Ketana");
         put("פלג המנחה", "Plag HaMincha");
