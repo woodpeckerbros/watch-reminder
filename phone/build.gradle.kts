@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace = "com.woodpeckerbros.watchreminder.phone"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.woodpeckerbros.watchreminder"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 100
+        versionName = "1.01"
     }
 
     compileOptions {
