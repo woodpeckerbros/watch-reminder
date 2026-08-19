@@ -180,6 +180,7 @@ public class UiText {
         put("פעילה", "Active");
         put("כבוי", "Off");
         put("תזכורת דף היומי פעילה", "Daf Yomi reminder active");
+        put("זמן לתזכורת", "Time for a Reminder");
         put("בדיקת לימוד דף היומי", "Daf Yomi Study Check");
         put("תיקון סימון", "Fix Marking");
         put("אם סימנת בטעות שלמדת, אפשר להחזיר דף לרשימת ההשלמות", "If you marked a page learned by mistake, you can move it back to the catch-up list");
