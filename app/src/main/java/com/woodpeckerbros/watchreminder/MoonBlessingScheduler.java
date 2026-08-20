@@ -12,6 +12,7 @@ public class MoonBlessingScheduler {
     static final String EXTRA_KIND = "moon_kind";
     static final String EXTRA_MONTH_KEY = "moon_month_key";
     static final String EXTRA_TRIGGER_AT = "moon_trigger_at";
+    static final String EXTRA_RETRY = "moon_retry";
     static final String KIND_PRE_START = "pre_start";
     static final String KIND_QUESTION = "question";
     static final String KIND_LAST_NIGHT = "last_night";
@@ -40,11 +41,31 @@ public class MoonBlessingScheduler {
     }
 
     public static void cancel(Context context) {
+        cancelScheduledEvent(context);
+        cancelRetry(context);
+    }
+
+    private static void cancelScheduledEvent(Context context) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager != null) {
             alarmManager.cancel(pendingIntent(context, KIND_PRE_START, "", 0));
             alarmManager.cancel(pendingIntent(context, KIND_QUESTION, "", 0));
             alarmManager.cancel(pendingIntent(context, KIND_LAST_NIGHT, "", 0));
+        }
+    }
+
+    static void schedulePreStartRetry(Context context, String monthKey, long originalTriggerAt, int minutes) {
+        long retryAt = ReminderScheduler.ceilToMinute(System.currentTimeMillis() + Math.max(1, minutes) * 60_000L);
+        AppLog.d(context, "moon blessing pre-start retry original="
+                + NextReminderCalculator.formatDateTime(originalTriggerAt)
+                + " at=" + NextReminderCalculator.formatDateTime(retryAt));
+        setBest(context, retryAt, retryPendingIntent(context, monthKey, originalTriggerAt));
+    }
+
+    static void cancelRetry(Context context) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager != null) {
+            alarmManager.cancel(retryPendingIntent(context, "", 0L));
         }
     }
 
@@ -124,6 +145,20 @@ public class MoonBlessingScheduler {
         return PendingIntent.getBroadcast(
                 context,
                 (REQUEST_KEY + ":" + action).hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
+    private static PendingIntent retryPendingIntent(Context context, String monthKey, long originalTriggerAt) {
+        Intent intent = new Intent(context, MoonBlessingReceiver.class)
+                .putExtra(EXTRA_KIND, KIND_PRE_START)
+                .putExtra(EXTRA_MONTH_KEY, monthKey)
+                .putExtra(EXTRA_TRIGGER_AT, originalTriggerAt)
+                .putExtra(EXTRA_RETRY, true);
+        return PendingIntent.getBroadcast(
+                context,
+                (REQUEST_KEY + ":retry:" + KIND_PRE_START).hashCode(),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
