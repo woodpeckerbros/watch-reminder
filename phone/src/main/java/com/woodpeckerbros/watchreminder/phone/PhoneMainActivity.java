@@ -74,6 +74,14 @@ public class PhoneMainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 10);
         }
         showMain();
+        handleExternalBackupIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleExternalBackupIntent(intent);
     }
 
     @Override
@@ -1209,13 +1217,48 @@ public class PhoneMainActivity extends Activity {
     }
 
     private void importPickedBackup(Uri uri) {
+        importBackupUri(uri, false);
+    }
+
+    private void handleExternalBackupIntent(Intent intent) {
+        if (intent == null) return;
+        Uri uri = null;
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            uri = intent.getData();
+        } else if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class);
+            } else {
+                //noinspection deprecation
+                uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            }
+            if (uri == null && intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
+                uri = intent.getClipData().getItemAt(0).getUri();
+            }
+        }
+        intent.setAction(null);
+        if (uri != null) importBackupUri(uri, true);
+    }
+
+    private void importBackupUri(Uri uri, boolean requireBackupExtension) {
         try {
-            String fileName = BackupStorage.importBackup(this, uri, displayName(uri, ""));
+            String displayName = displayName(uri, uri.getLastPathSegment() == null ? "" : uri.getLastPathSegment());
+            if (requireBackupExtension && !hasBackupExtension(displayName)) {
+                Toast.makeText(this, t("הקובץ שנבחר אינו קובץ גיבוי של Zmanio"), Toast.LENGTH_LONG).show();
+                return;
+            }
+            String fileName = BackupStorage.importBackup(this, uri, displayName);
             Toast.makeText(this, PhoneUiText.isEnglish(this) ? "Backup added: " + fileName : "הגיבוי נוסף לרשימה: " + fileName, Toast.LENGTH_LONG).show();
             showSettings();
         } catch (Exception exception) {
             Toast.makeText(this, t("לא הצלחתי להוסיף את קובץ הגיבוי"), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private boolean hasBackupExtension(String fileName) {
+        String lower = fileName == null ? "" : fileName.toLowerCase(Locale.US);
+        return lower.endsWith(".zmbu") || lower.endsWith(".wrbu")
+                || lower.endsWith(".zmbu.txt") || lower.endsWith(".wrbu.txt");
     }
 
     private void shareBackup(BackupStorage.BackupEntry backup) {

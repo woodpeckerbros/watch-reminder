@@ -10,10 +10,36 @@
 
         <activity
             android:name=".PhoneMainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:pathPattern=".*\.zmbu" />
+                <data android:pathPattern=".*\.wrbu" />
+                <data android:pathPattern=".*\.zmbu\.txt" />
+                <data android:pathPattern=".*\.wrbu\.txt" />
+            </intent-filter>
+
+            <!-- Some document providers hide the file name in their content URI. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
 

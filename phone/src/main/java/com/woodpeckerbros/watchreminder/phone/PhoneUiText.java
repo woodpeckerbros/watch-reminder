@@ -87,6 +87,7 @@ final class PhoneUiText {
         put("הגיבוי נטען לעריכה", "Backup loaded for editing");
         put("לא הצלחתי לטעון גיבוי", "Could not load the backup");
         put("לא הצלחתי להוסיף את קובץ הגיבוי", "Could not add the backup file");
+        put("הקובץ שנבחר אינו קובץ גיבוי של Zmanio", "The selected file is not a Zmanio backup");
         put("שיתוף גיבוי", "Share backup"); put("שיתוף לוג", "Share log");
         put("אין אפליקציה זמינה לשיתוף", "No sharing app is available");
         put("הלוג הועתק", "Log copied"); put("לא הצלחתי להעתיק את הלוג", "Could not copy the log");
