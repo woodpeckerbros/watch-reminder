@@ -37,14 +37,14 @@ class BackupStorage {
     }
 
     static String save(Context context, byte[] data) throws Exception {
-        String fileName = "WatchReminder_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + ".wrbu";
+        String fileName = newBackupFileName();
         return saveNamed(context, data, fileName, true, true);
     }
 
     static String importBackup(Context context, Uri sourceUri, String displayName) throws Exception {
         String fileName = isBackupName(displayName)
                 ? displayName
-                : "WatchReminder_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + ".wrbu";
+                : newBackupFileName();
         try (InputStream input = context.getContentResolver().openInputStream(sourceUri)) {
             return saveNamed(context, readAll(input), fileName, false, false);
         }
@@ -54,7 +54,7 @@ class BackupStorage {
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
         values.put(MediaStore.MediaColumns.MIME_TYPE, MIME_TYPE);
-        values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/WatchReminder");
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Zmanio");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             values.put(MediaStore.MediaColumns.IS_PENDING, 1);
         }
@@ -107,8 +107,8 @@ class BackupStorage {
         }
         String time = new SimpleDateFormat("dd/MM HH:mm", Locale.US).format(new Date(prefs.getLong(KEY_LAST_TIME, 0)));
         return PhoneUiText.isEnglish(context)
-                ? "Received: " + file + "\nSaved in Downloads/WatchReminder\n" + time
-                : "התקבל: " + file + "\nנשמר ב-Downloads/WatchReminder\n" + time;
+                ? "Received: " + file + "\nSaved in Downloads/Zmanio\n" + time
+                : "התקבל: " + file + "\nנשמר ב-Downloads/Zmanio\n" + time;
     }
 
     static byte[] lastBackup(Context context) throws Exception {
@@ -156,8 +156,9 @@ class BackupStorage {
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.DATE_MODIFIED
         };
-        String selection = MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
-        String[] args = new String[]{"WatchReminder_%"};
+        String selection = "(" + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? OR "
+                + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?)";
+        String[] args = new String[]{"Zmanio_%", "WatchReminder_%"};
         try (Cursor cursor = context.getContentResolver().query(
                 collection,
                 projection,
@@ -190,10 +191,17 @@ class BackupStorage {
         return backups.isEmpty() ? null : backups.get(0);
     }
 
+    private static String newBackupFileName() {
+        return "Zmanio_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + ".zmbu";
+    }
+
     private static boolean isBackupName(String name) {
-        return name != null
-                && name.startsWith("WatchReminder_")
-                && (name.endsWith(".wrbu") || name.endsWith(".wrbu.txt"));
+        return name != null && (
+                (name.startsWith("Zmanio_")
+                        && (name.endsWith(".zmbu") || name.endsWith(".zmbu.txt")))
+                        || (name.startsWith("WatchReminder_")
+                        && (name.endsWith(".wrbu") || name.endsWith(".wrbu.txt")))
+        );
     }
 
     private static void notifySaved(Context context, String fileName) {

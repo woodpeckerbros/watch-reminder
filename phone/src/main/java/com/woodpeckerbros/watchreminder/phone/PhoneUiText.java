@@ -66,7 +66,7 @@ final class PhoneUiText {
         put("חזרה לרישיונות", "Back to licenses");
         put("לא ניתן לטעון את נוסח הרישיון", "Could not load the license text");
         put("גיבויים", "Backups");
-        put("אין קבצי ‎.wrbu‎ זמינים", "No .wrbu backup files available");
+        put("אין קבצי ‎.zmbu‎ זמינים", "No .zmbu backup files available");
         put("טעינה לעריכה", "Load for editing"); put("שלח לשעון", "Send to watch"); put("שיתוף", "Share");
         put("בחר קובץ גיבוי", "Choose backup file");
         put("לוגים מהשעון", "Watch logs"); put("אין לוגים זמינים", "No logs available");

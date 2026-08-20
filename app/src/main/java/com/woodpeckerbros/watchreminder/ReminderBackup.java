@@ -32,7 +32,7 @@ import java.util.Locale;
 
 public class ReminderBackup {
     private static final int VERSION = 1;
-    private static final String EXTENSION = ".wrbu";
+    private static final String EXTENSION = ".zmbu";
     private static final String MIME_TYPE = "application/octet-stream";
 
     private ReminderBackup() {
@@ -114,7 +114,7 @@ public class ReminderBackup {
     }
 
     public static String suggestedFileName() {
-        return "WatchReminder_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + EXTENSION;
+        return "Zmanio_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + EXTENSION;
     }
 
     public static File saveToDocuments(Context context) throws Exception {
@@ -190,8 +190,9 @@ public class ReminderBackup {
                     MediaStore.MediaColumns.DISPLAY_NAME,
                     MediaStore.MediaColumns.DATE_MODIFIED
             };
-            String selection = MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
-            String[] args = new String[]{"WatchReminder_%"};
+            String selection = "(" + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? OR "
+                    + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?)";
+            String[] args = new String[]{"Zmanio_%", "WatchReminder_%"};
             try (Cursor cursor = context.getContentResolver().query(
                     collection,
                     projection,
@@ -382,10 +383,12 @@ public class ReminderBackup {
     }
 
     private static boolean isBackupFileName(String name) {
-        return name != null
-                && name.startsWith("WatchReminder_")
-                && (name.endsWith(".wrbu")
-                || name.endsWith(".wrbu.txt"));
+        return name != null && (
+                (name.startsWith("Zmanio_")
+                        && (name.endsWith(".zmbu") || name.endsWith(".zmbu.txt")))
+                        || (name.startsWith("WatchReminder_")
+                        && (name.endsWith(".wrbu") || name.endsWith(".wrbu.txt")))
+        );
     }
 
     public static class BackupEntry {

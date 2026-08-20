@@ -536,7 +536,7 @@ public class PhoneMainActivity extends Activity {
         section.addView(text("גיבויים", 18, TEXT));
         List<BackupStorage.BackupEntry> backups = BackupStorage.listBackups(this);
         if (backups.isEmpty()) {
-            section.addView(text("אין קבצי ‎.wrbu‎ זמינים", 14, MUTED));
+            section.addView(text("אין קבצי ‎.zmbu‎ זמינים", 14, MUTED));
         } else {
             for (BackupStorage.BackupEntry backup : backups) {
                 TextView info = text(backupInfoText(backup), 14, MUTED);
