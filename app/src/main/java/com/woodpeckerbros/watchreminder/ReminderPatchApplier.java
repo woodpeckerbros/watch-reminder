@@ -12,7 +12,7 @@ public class ReminderPatchApplier {
     public static int apply(Context context, String text) throws Exception {
         JSONObject root = new JSONObject(text);
         if (!"watch-reminder-patch".equals(root.optString("type"))) {
-            throw new IllegalArgumentException("not a Watch Reminder patch");
+            throw new IllegalArgumentException("not a Zmanio patch");
         }
         JSONArray operations = root.optJSONArray("operations");
         if (operations == null) {

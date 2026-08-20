@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">WristRemind</string>
+    <string name="app_name">Zmanio</string>
     <string name="complication_next_reminder">התזכורת הקרובה</string>
     <string name="complication_blessing_reminder">תזכורת לברכה</string>
     <string name="complication_zmanim">זמני היום</string>
@@ -72,6 +72,6 @@
     <string name="ui_open_settings">פתח הגדרות</string>
     <string name="ui_later">אחר כך</string>
     <string name="ui_enable_alarms_reminders_title">אישור Alarms &amp; reminders</string>
-    <string name="ui_enable_alarms_reminders_message">כדי שהתזכורות יצלצלו בזמן גם כשהשעון במצב חיסכון או המסך כבוי, צריך לאשר לאפליקציה Alarms &amp; reminders. במסך שייפתח חפש WristRemind או Alarms &amp; reminders, פתח את WristRemind והפעל Allow.</string>
+    <string name="ui_enable_alarms_reminders_message">כדי שהתזכורות יצלצלו בזמן גם כשהשעון במצב חיסכון או המסך כבוי, צריך לאשר לאפליקציה Alarms &amp; reminders. במסך שייפתח חפש Zmanio או Alarms &amp; reminders, פתח את Zmanio והפעל Allow.</string>
     <string name="ui_enable_alarms_reminders_hint">במסך שייפתח צריך להפעיל Alarms &amp; reminders כדי שהתזכורות יפעלו בזמן.</string>
 </resources>

@@ -430,7 +430,7 @@ public class UiText {
         put("כל התזכורות הקיימות יוחלפו בתזכורות מהגיבוי.", "All existing reminders will be replaced with reminders from the backup.");
         put("ⓘ  אודות ורישיונות", "ⓘ  About & Licenses");
         put("אודות ורישיונות", "About & Licenses");
-        put("רכיבי צד שלישי ב-WristRemind", "Third-party software in WristRemind");
+        put("רכיבי צד שלישי ב-Zmanio", "Third-party software in Zmanio");
         put("האפליקציה משתמשת בתוכנות קוד פתוח וברכיבי צד שלישי. תודה ליוצרים ולתורמים שלהם.", "This app uses open-source software and third-party components. We thank their authors and contributors.");
         put("הצג רישיון", "View License");
         put("נוסח הרישיון וההודעות", "License Text & Notices");

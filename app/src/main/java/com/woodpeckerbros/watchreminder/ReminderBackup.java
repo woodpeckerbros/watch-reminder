@@ -103,7 +103,7 @@ public class ReminderBackup {
         }
         Intent intent = new Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
-                .putExtra(Intent.EXTRA_SUBJECT, "WristRemind backup")
+                .putExtra(Intent.EXTRA_SUBJECT, "Zmanio backup")
                 .putExtra(Intent.EXTRA_TEXT, text);
         try {
             context.startActivity(Intent.createChooser(intent, "ייצוא גיבוי"));
@@ -257,7 +257,7 @@ public class ReminderBackup {
     public static int importText(Context context, String text) throws Exception {
         JSONObject root = new JSONObject(text.trim());
         if (!"watch-reminder-backup".equals(root.optString("type"))) {
-            throw new IllegalArgumentException("not a Watch Reminder backup");
+            throw new IllegalArgumentException("not a Zmanio backup");
         }
         JSONArray array = root.getJSONArray("reminders");
         List<Reminder> reminders = new ArrayList<>();

@@ -202,7 +202,7 @@ class BackupStorage {
             return;
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(new NotificationChannel(CHANNEL_ID, "WristRemind Backup", NotificationManager.IMPORTANCE_DEFAULT));
+            manager.createNotificationChannel(new NotificationChannel(CHANNEL_ID, "Zmanio Backup", NotificationManager.IMPORTANCE_DEFAULT));
         }
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? new Notification.Builder(context, CHANNEL_ID)
@@ -216,7 +216,7 @@ class BackupStorage {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
         builder.setSmallIcon(com.woodpeckerbros.watchreminder.phone.R.drawable.ic_launcher)
-                .setContentTitle("WristRemind")
+                .setContentTitle("Zmanio")
                 .setContentText(PhoneUiText.isEnglish(context) ? "Backup saved: " + fileName : "הגיבוי נשמר: " + fileName)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);

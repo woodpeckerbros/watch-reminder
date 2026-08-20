@@ -51,7 +51,7 @@ public class AppLog {
     public static String exportText(Context context) {
         flushPendingWrites();
         StringBuilder builder = new StringBuilder();
-        builder.append("WristRemind diagnostics\n");
+        builder.append("Zmanio diagnostics\n");
         builder.append("Generated: ").append(format(System.currentTimeMillis())).append('\n');
         builder.append("SDK: ").append(Build.VERSION.SDK_INT).append('\n');
         builder.append("Exact alarms: ").append(ReminderScheduler.canScheduleExactAlarms(context)).append('\n');
@@ -80,7 +80,7 @@ public class AppLog {
     public static void share(Context context) {
         Intent intent = new Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
-                .putExtra(Intent.EXTRA_SUBJECT, "WristRemind logs")
+                .putExtra(Intent.EXTRA_SUBJECT, "Zmanio logs")
                 .putExtra(Intent.EXTRA_TEXT, exportText(context));
         context.startActivity(Intent.createChooser(intent, "שליחת לוגים"));
     }

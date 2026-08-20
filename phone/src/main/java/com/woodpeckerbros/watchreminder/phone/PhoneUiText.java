@@ -58,7 +58,7 @@ final class PhoneUiText {
         put("ⓘ  אודות ורישיונות", "ⓘ  About & licenses");
         put("חזרה", "Back");
         put("אודות ורישיונות", "About & licenses");
-        put("רכיבי צד שלישי ב-WristRemind", "Third-party components in WristRemind");
+        put("רכיבי צד שלישי ב-Zmanio", "Third-party components in Zmanio");
         put("אפליקציית הטלפון משתמשת ברכיבי צד שלישי. תודה ליוצרים ולתורמים שלהם.", "The phone app uses third-party components. We thank their creators and contributors.");
         put("חזרה להגדרות", "Back to settings");
         put("הצגת נוסח הרישיון", "View license text");

@@ -1247,10 +1247,10 @@ public class MainActivity extends Activity {
     private void showAboutAndLicenses() {
         currentScreen = "about_licenses";
         LinearLayout content = baseContent();
-        addTitle(content, "אודות ורישיונות", "רכיבי צד שלישי ב-WristRemind");
+        addTitle(content, "אודות ורישיונות", "רכיבי צד שלישי ב-Zmanio");
 
         LinearLayout intro = card(true);
-        TextView appName = text("WristRemind", 17, COLOR_CARD_TEXT);
+        TextView appName = text("Zmanio", 17, COLOR_CARD_TEXT);
         AppFont.bold(appName);
         appName.setGravity(Gravity.CENTER);
         intro.addView(appName);
@@ -2736,7 +2736,7 @@ public class MainActivity extends Activity {
         copy.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("WristRemind backup", ReminderBackup.exportText(this)));
+                clipboard.setPrimaryClip(ClipData.newPlainText("Zmanio backup", ReminderBackup.exportText(this)));
                 Toast.makeText(this, UiText.t(this, "הגיבוי הועתק"), Toast.LENGTH_SHORT).show();
             }
         });

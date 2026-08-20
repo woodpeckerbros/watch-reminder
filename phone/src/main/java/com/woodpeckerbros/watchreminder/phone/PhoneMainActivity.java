@@ -105,7 +105,7 @@ public class PhoneMainActivity extends Activity {
     private void showMain() {
         screen = "main";
         LinearLayout content = base();
-        addHeader(content, "WristRemind", "ניהול תזכורות שעון");
+        addHeader(content, "Zmanio", "ניהול תזכורות שעון");
 
         LinearLayout actions = row();
         Button sync = button("סנכרון מהשעון", ACCENT);
@@ -468,7 +468,7 @@ public class PhoneMainActivity extends Activity {
     private void showAboutAndLicenses() {
         screen = "about_licenses";
         LinearLayout content = base();
-        addHeader(content, "אודות ורישיונות", "רכיבי צד שלישי ב-WristRemind");
+        addHeader(content, "אודות ורישיונות", "רכיבי צד שלישי ב-Zmanio");
 
         LinearLayout intro = card();
         TextView explanation = text("אפליקציית הטלפון משתמשת ברכיבי צד שלישי. תודה ליוצרים ולתורמים שלהם.", 15, MUTED);
@@ -834,7 +834,7 @@ public class PhoneMainActivity extends Activity {
     }
 
     private void addHeader(LinearLayout content, String title, String subtitle) {
-        TextView eyebrow = text("WRISTREMIND  •  COMPANION", 11, COPPER);
+        TextView eyebrow = text("ZMANIO  •  COMPANION", 11, COPPER);
         eyebrow.setLetterSpacing(0.12f);
         eyebrow.setPadding(0, 0, 0, dp(7));
         content.addView(eyebrow);
