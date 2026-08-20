@@ -2355,9 +2355,9 @@ public class MainActivity extends Activity {
         pickerCard.addView(title);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
-        NumberPicker day = numberPicker(1, 31, calendar.get(Calendar.DAY_OF_MONTH));
-        NumberPicker month = numberPicker(1, 12, calendar.get(Calendar.MONTH) + 1);
-        NumberPicker year = numberPicker(currentYear - 10, currentYear + 10, calendar.get(Calendar.YEAR));
+        NumberPicker day = compactDateNumberPicker(1, 31, calendar.get(Calendar.DAY_OF_MONTH));
+        NumberPicker month = compactDateNumberPicker(1, 12, calendar.get(Calendar.MONTH) + 1);
+        NumberPicker year = compactDateNumberPicker(currentYear - 10, currentYear + 10, calendar.get(Calendar.YEAR));
         row.addView(pickerColumn("יום", day));
         row.addView(pickerColumn("חודש", month));
         row.addView(pickerColumn("שנה", year));
@@ -2380,11 +2380,11 @@ public class MainActivity extends Activity {
         pickerCard.addView(title);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
-        NumberPicker day = numberPicker(1, 30, jewishDate.getJewishDayOfMonth());
+        NumberPicker day = compactDateNumberPicker(1, 30, jewishDate.getJewishDayOfMonth());
         applyDisplayedValues(day, hebrewDayLabels());
-        NumberPicker month = numberPicker(1, 13, jewishDate.getJewishMonth());
+        NumberPicker month = compactDateNumberPicker(1, 13, jewishDate.getJewishMonth());
         applyDisplayedValues(month, hebrewMonthLabels());
-        NumberPicker year = numberPicker(currentYear - 10, currentYear + 10, jewishDate.getJewishYear());
+        NumberPicker year = compactDateNumberPicker(currentYear - 10, currentYear + 10, jewishDate.getJewishYear());
         row.addView(pickerColumn("יום", day));
         row.addView(pickerColumn("חודש", month));
         row.addView(pickerColumn("שנה", year));
@@ -4047,7 +4047,7 @@ public class MainActivity extends Activity {
         datePickers.setGravity(Gravity.CENTER);
         int maxMonth = selectedAnnualHebrew ? 13 : 12;
         int maxDay = selectedAnnualHebrew ? 30 : 31;
-        NumberPicker dayPicker = numberPicker(1, maxDay, Math.max(1, Math.min(maxDay, selectedDayOfMonth)));
+        NumberPicker dayPicker = compactDateNumberPicker(1, maxDay, Math.max(1, Math.min(maxDay, selectedDayOfMonth)));
         dayPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedDayOfMonth = newValue);
         NumberPicker monthPicker = numberPicker(1, maxMonth, Math.max(1, Math.min(maxMonth, selectedMonth)));
         monthPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedMonth = newValue);
@@ -4070,9 +4070,9 @@ public class MainActivity extends Activity {
         int maxDay = selectedPeriodicHebrew ? 30 : 31;
         NumberPicker dayPicker = numberPicker(1, maxDay, Math.max(1, Math.min(maxDay, selectedDayOfMonth)));
         dayPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedDayOfMonth = newValue);
-        NumberPicker monthPicker = numberPicker(1, selectedPeriodicHebrew ? 13 : 12, Math.max(1, Math.min(selectedPeriodicHebrew ? 13 : 12, selectedMonth)));
+        NumberPicker monthPicker = compactDateNumberPicker(1, selectedPeriodicHebrew ? 13 : 12, Math.max(1, Math.min(selectedPeriodicHebrew ? 13 : 12, selectedMonth)));
         monthPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedMonth = newValue);
-        NumberPicker yearPicker = numberPicker(currentYear, currentYear + 10, Math.max(currentYear, Math.min(currentYear + 10, selectedYear)));
+        NumberPicker yearPicker = compactDateNumberPicker(currentYear, currentYear + 10, Math.max(currentYear, Math.min(currentYear + 10, selectedYear)));
         yearPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedYear = newValue);
         if (selectedPeriodicHebrew) {
             applyDisplayedValues(dayPicker, hebrewDayLabels());
@@ -4202,11 +4202,11 @@ public class MainActivity extends Activity {
         dateCard.addView(dateTitle);
         LinearLayout datePickers = new LinearLayout(this);
         datePickers.setGravity(Gravity.CENTER);
-        NumberPicker dayPicker = numberPicker(1, 31, selectedDayOfMonth);
+        NumberPicker dayPicker = compactDateNumberPicker(1, 31, selectedDayOfMonth);
         dayPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedDayOfMonth = newValue);
-        NumberPicker monthPicker = numberPicker(1, 12, selectedMonth);
+        NumberPicker monthPicker = compactDateNumberPicker(1, 12, selectedMonth);
         monthPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedMonth = newValue);
-        NumberPicker yearPicker = numberPicker(Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.YEAR) + 3, selectedYear);
+        NumberPicker yearPicker = compactDateNumberPicker(Calendar.getInstance().get(Calendar.YEAR), Calendar.getInstance().get(Calendar.YEAR) + 3, selectedYear);
         yearPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedYear = newValue);
         datePickers.addView(pickerColumn("יום", dayPicker));
         datePickers.addView(pickerColumn("חודש", monthPicker));
@@ -5098,6 +5098,14 @@ public class MainActivity extends Activity {
         picker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(68), dp(86));
         params.setMargins(dp(3), 0, dp(3), 0);
+        picker.setLayoutParams(params);
+        return picker;
+    }
+
+    private NumberPicker compactDateNumberPicker(int min, int max, int value) {
+        NumberPicker picker = numberPicker(min, max, value);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(50), dp(86));
+        params.setMargins(dp(2), 0, dp(2), 0);
         picker.setLayoutParams(params);
         return picker;
     }

@@ -44,6 +44,7 @@ WatchReminder/
 
 ## 4. מה השתנה בסשן הזה
 
+- תוקן חיתוך עמודת השנה בבוררי תאריך תלת־עמודתיים בשעון: רוחב בוררי יום/חודש/שנה הותאם לאזור התוכן של מסך עגול, כך שכל ארבע ספרות השנה והכותרת מוצגות במלואן. ההתאמה חלה על תזכורת חד־פעמית, תאריך התחלה מחזורי ובוררי תאריך לועזי/עברי במסך זמני היום, בלי להקטין בוררים יחידים או זוגיים. `:app:testDebugUnitTest` ו־`:app:assembleDebug` עברו, הגרסה הותקנה באמולטור Wear OS והמסך אומת חזותית ב־454x454.
 - דרישות ההפצה של Google Play עודכנו בשני המודולים: אפליקציית Wear OS משתמשת כעת ב־`compileSdk`/`targetSdk` 35 וב־`versionCode` 101, ואפליקציית הטלפון משתמשת ב־`compileSdk`/`targetSdk` 36 וב־`versionCode` 100. לשתיהן `versionName` אחיד `1.01`, בעוד ה־package name נשאר ללא שינוי.
 - אומת מתוך ה־Merged Manifest של Release שרק חבילת השעון דורשת `android.hardware.type.watch`, כנדרש למסלול Wear OS, ושחבילת הטלפון נשארת מותאמת למסלול Mobile. אין להעלות את AAB הטלפון למסלול Wear OS.
 - `:app:testDebugUnitTest`, שתי בניות Debug ושתי בניות AAB Release עברו בהצלחה. נוצרו `app/build/outputs/bundle/release/app-release.aab` ו־`phone/build/outputs/bundle/release/phone-release.aab`, וה־APK המעודכנים הותקנו בהצלחה על אמולטור Wear OS ועל אמולטור טלפון.
