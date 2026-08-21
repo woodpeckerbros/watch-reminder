@@ -73,6 +73,42 @@ public class DafYomiStore {
         return items;
     }
 
+    public JSONArray outstandingForBackup(Context context) {
+        JSONArray result = new JSONArray();
+        java.util.HashSet<Long> added = new java.util.HashSet<>();
+        JSONArray missed = missedJson();
+        for (int i = 0; i < missed.length(); i++) {
+            JSONObject item = missed.optJSONObject(i);
+            if (item != null && added.add(item.optLong("day"))) {
+                result.put(item);
+            }
+        }
+        for (DafYomiHelper.Item item : dueItems(context)) {
+            if (!added.add(item.epochDay)) {
+                continue;
+            }
+            try {
+                result.put(new JSONObject()
+                        .put("day", item.epochDay)
+                        .put("masechta", item.masechta)
+                        .put("daf", item.daf)
+                        .put("label", item.label));
+            } catch (Exception ignored) {
+            }
+        }
+        return result;
+    }
+
+    public void restoreOutstanding(JSONArray outstanding) {
+        JSONArray safe = outstanding == null ? new JSONArray() : outstanding;
+        prefs.edit()
+                .putLong(KEY_START_DAY, epochDay(System.currentTimeMillis()))
+                .putString(KEY_ANSWERED_DAYS, "[]")
+                .putString(KEY_MISSED, safe.toString())
+                .remove(KEY_RETRY_UNTIL)
+                .commit();
+    }
+
     public long retryUntil() {
         return prefs.getLong(KEY_RETRY_UNTIL, 0);
     }

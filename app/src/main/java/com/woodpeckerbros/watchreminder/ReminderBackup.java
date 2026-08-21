@@ -27,11 +27,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 public class ReminderBackup {
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final String EXTENSION = ".zmbu";
     private static final String MIME_TYPE = "application/octet-stream";
 
@@ -82,6 +85,7 @@ public class ReminderBackup {
                             .put("language", settings.language())
                             .put("jewishMode", settings.jewishMode()))
                     .put("quietTimeRules", new QuietTimeRuleStore(context).toJsonArray())
+                    .put("userState", exportUserState(context))
                     .put("zmanimLocation", new JSONObject()
                             .put("name", zmanim.name())
                             .put("latitude", zmanim.latitude())
@@ -286,9 +290,14 @@ public class ReminderBackup {
             );
         }
         new ReminderStore(context).replaceAll(reminders);
+        JSONObject userState = root.optJSONObject("userState");
+        if (userState != null) {
+            restoreUserState(context, userState);
+        }
         if (locationJson != null) {
             ZmanimRescheduler.schedule(context);
         }
+        ReminderScheduler.scheduleNearest(context);
         ReminderScheduler.scheduleWatchdog(context);
         if (new ReminderSettings(context).serviceEnabled()) {
             ReminderForegroundService.start(context);
@@ -297,6 +306,122 @@ public class ReminderBackup {
         }
         ComplicationRefresh.request(context);
         return reminders.size();
+    }
+
+    private static JSONObject exportUserState(Context context) throws Exception {
+        return new JSONObject()
+                // Preserve only pages still requiring completion, not learned-page history.
+                .put("dafYomiOutstanding", new DafYomiStore(context).outstandingForBackup(context))
+                .put("omer", exportPreferences(context, "omer_state", "retry_until"))
+                .put("moonBlessing", exportPreferences(context, "moon_blessing_state"))
+                .put("intermittentFasting", exportPreferences(context, "intermittent_fasting"))
+                .put("reminderHistory", exportPreferences(context, "reminder_events"))
+                .put("occurrenceState", exportPreferences(context, "reminder_occurrence_state"))
+                .put("pendingSnoozes", exportPreferences(context, "reminder_snoozes"));
+    }
+
+    private static void restoreUserState(Context context, JSONObject state) throws Exception {
+        JSONArray dafYomiOutstanding = state.optJSONArray("dafYomiOutstanding");
+        if (dafYomiOutstanding != null) {
+            new DafYomiStore(context).restoreOutstanding(dafYomiOutstanding);
+        }
+        restorePreferences(context, "omer_state", state.optJSONObject("omer"));
+        restorePreferences(context, "moon_blessing_state", state.optJSONObject("moonBlessing"));
+        restorePreferences(context, "intermittent_fasting", state.optJSONObject("intermittentFasting"));
+        restorePreferences(context, "reminder_events", state.optJSONObject("reminderHistory"));
+        restorePreferences(context, "reminder_occurrence_state", state.optJSONObject("occurrenceState"));
+        restorePreferences(context, "reminder_snoozes", state.optJSONObject("pendingSnoozes"));
+
+        // AlarmManager entries are not portable. Recreate pending snooze alarms from their data.
+        for (ReminderSnoozeStore.Snooze snooze : new ReminderSnoozeStore(context).getAll()) {
+            if (new ReminderStore(context).find(snooze.reminderId) != null) {
+                ReminderScheduler.scheduleSnoozeAt(
+                        context,
+                        snooze.reminderId,
+                        snooze.reminderName,
+                        snooze.scheduledAt,
+                        snooze.originalScheduledAt
+                );
+            }
+        }
+        MoonBlessingScheduler.schedule(context);
+        DafYomiScheduler.schedule(context);
+        OmerScheduler.schedule(context);
+        IntermittentFastingScheduler.schedule(context);
+    }
+
+    private static JSONObject exportPreferences(Context context, String name, String... excludedKeys) throws Exception {
+        Set<String> excluded = new HashSet<>(Arrays.asList(excludedKeys));
+        JSONObject result = new JSONObject();
+        for (Map.Entry<String, ?> entry : context.getSharedPreferences(name, Context.MODE_PRIVATE).getAll().entrySet()) {
+            if (excluded.contains(entry.getKey()) || entry.getValue() == null) {
+                continue;
+            }
+            Object value = entry.getValue();
+            JSONObject item = new JSONObject();
+            if (value instanceof Boolean) {
+                item.put("type", "boolean").put("value", value);
+            } else if (value instanceof Integer) {
+                item.put("type", "int").put("value", value);
+            } else if (value instanceof Long) {
+                item.put("type", "long").put("value", value);
+            } else if (value instanceof Float) {
+                item.put("type", "float").put("value", value);
+            } else if (value instanceof String) {
+                item.put("type", "string").put("value", value);
+            } else if (value instanceof Set) {
+                JSONArray values = new JSONArray();
+                for (Object setValue : (Set<?>) value) {
+                    if (setValue instanceof String) {
+                        values.put(setValue);
+                    }
+                }
+                item.put("type", "stringSet").put("value", values);
+            } else {
+                continue;
+            }
+            result.put(entry.getKey(), item);
+        }
+        return result;
+    }
+
+    private static void restorePreferences(Context context, String name, JSONObject data) throws Exception {
+        if (data == null) {
+            return;
+        }
+        SharedPreferences.Editor editor = context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear();
+        java.util.Iterator<String> keys = data.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            JSONObject item = data.optJSONObject(key);
+            if (item == null) {
+                continue;
+            }
+            String type = item.optString("type");
+            if ("boolean".equals(type)) {
+                editor.putBoolean(key, item.optBoolean("value"));
+            } else if ("int".equals(type)) {
+                editor.putInt(key, item.optInt("value"));
+            } else if ("long".equals(type)) {
+                editor.putLong(key, item.optLong("value"));
+            } else if ("float".equals(type)) {
+                editor.putFloat(key, (float) item.optDouble("value"));
+            } else if ("string".equals(type)) {
+                editor.putString(key, item.optString("value"));
+            } else if ("stringSet".equals(type)) {
+                JSONArray values = item.optJSONArray("value");
+                Set<String> restored = new HashSet<>();
+                if (values != null) {
+                    for (int i = 0; i < values.length(); i++) {
+                        restored.add(values.optString(i));
+                    }
+                }
+                editor.putStringSet(key, restored);
+            }
+        }
+        if (!editor.commit()) {
+            throw new IllegalStateException("Could not restore " + name);
+        }
     }
 
     private static void restoreSettings(Context context, JSONObject json) {
