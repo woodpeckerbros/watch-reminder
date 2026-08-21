@@ -298,3 +298,8 @@ adb -s DEVICE_SERIAL install -r phone/build/outputs/apk/debug/phone-debug.apk
 - לוגים, תורי התראות פנימיים ומצבי runtime אחרים אינם נתוני משתמש ולכן אינם נכללים בגיבוי.
 - אומת build מלא: `:app:testDebugUnitTest`, `:app:assembleDebug`, `:phone:assembleDebug` — הצליחו.
 - גרסת השעון המעודכנת הותקנה בהצלחה באמולטור Wear OS; גרסת הטלפון נבנתה והותקנה בהצלחה באמולטור הטלפון.
+
+## 12. עדכון 2026-08-21 — גרסת שעון
+
+- `versionCode` של מודול השעון `:app` הועלה מ־103 ל־104 לקראת העלאה חדשה לחנות.
+- מודול הטלפון `:phone` נשאר ללא שינוי ב־`versionCode` 102.
