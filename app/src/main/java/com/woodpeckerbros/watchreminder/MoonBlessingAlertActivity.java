@@ -28,6 +28,7 @@ public class MoonBlessingAlertActivity extends Activity {
     private Runnable autoCloseRunnable;
     private boolean actionClosed;
     private String monthKey;
+    private String kind;
     private long triggerAt;
     private AlertFeedback alertFeedback;
 
@@ -42,9 +43,10 @@ public class MoonBlessingAlertActivity extends Activity {
         setShowWhenLocked(true);
         setTurnScreenOn(true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        MoonBlessingReceiver.cancelPreStartNotification(this);
+        MoonBlessingReceiver.cancelNotification(this);
 
         monthKey = getIntent().getStringExtra(MoonBlessingScheduler.EXTRA_MONTH_KEY);
+        kind = getIntent().getStringExtra(MoonBlessingScheduler.EXTRA_KIND);
         triggerAt = getIntent().getLongExtra(MoonBlessingScheduler.EXTRA_TRIGGER_AT,
                 ReminderScheduler.floorToMinute(System.currentTimeMillis()));
         String messageText = getIntent().getStringExtra("moon_alert_message");
@@ -74,9 +76,27 @@ public class MoonBlessingAlertActivity extends Activity {
         message.setPadding(dp(4), 0, dp(4), dp(7));
         card.addView(message);
 
-        Button done = button("בוצע", COLOR_ACTION);
-        done.setOnClickListener(v -> finishDone());
-        card.addView(done);
+        if (MoonBlessingScheduler.KIND_PRE_START.equals(kind)) {
+            Button done = button("בוצע", COLOR_ACTION);
+            done.setOnClickListener(v -> finishDone());
+            card.addView(done);
+        } else {
+            LinearLayout answerRow = new LinearLayout(this);
+            answerRow.setGravity(Gravity.CENTER);
+            Button yes = button("כן", COLOR_ACTION);
+            Button no = button("לא", COLOR_SURFACE);
+            LinearLayout.LayoutParams answerParams = new LinearLayout.LayoutParams(0, dp(42), 1f);
+            answerParams.setMargins(dp(3), dp(3), dp(3), dp(3));
+            yes.setLayoutParams(answerParams);
+            LinearLayout.LayoutParams noParams = new LinearLayout.LayoutParams(0, dp(42), 1f);
+            noParams.setMargins(dp(3), dp(3), dp(3), dp(3));
+            no.setLayoutParams(noParams);
+            yes.setOnClickListener(v -> answer(true));
+            no.setOnClickListener(v -> answer(false));
+            answerRow.addView(yes);
+            answerRow.addView(no);
+            card.addView(answerRow);
+        }
 
         TextView snoozeTitle = text("אפשר לדחות", 12, COLOR_MUTED);
         snoozeTitle.setPadding(0, dp(7), 0, dp(2));
@@ -128,9 +148,21 @@ public class MoonBlessingAlertActivity extends Activity {
         actionClosed = true;
         stopFeedback();
         handler.removeCallbacksAndMessages(null);
-        MoonBlessingScheduler.schedulePreStartRetry(this, monthKey, triggerAt, minutes);
+        MoonBlessingScheduler.scheduleRetry(this, kind, monthKey, triggerAt, minutes);
         MoonBlessingReceiver.cancelPreStartNotification(this);
         AppLog.d(this, "moon blessing pre-start alert snooze minutes=" + minutes);
+        finish();
+    }
+
+    private void answer(boolean blessed) {
+        actionClosed = true;
+        stopFeedback();
+        handler.removeCallbacksAndMessages(null);
+        MoonBlessingScheduler.cancelRetry(this);
+        MoonBlessingReceiver.cancelNotification(this);
+        if (blessed) new MoonBlessingStore(this).markHandled(monthKey);
+        MoonBlessingScheduler.schedule(this);
+        AppLog.d(this, "moon blessing alert answer blessed=" + blessed + " month=" + monthKey);
         finish();
     }
 
@@ -138,7 +170,8 @@ public class MoonBlessingAlertActivity extends Activity {
         ReminderSettings settings = new ReminderSettings(this);
         autoCloseRunnable = () -> {
             if (!actionClosed) {
-                AppLog.w(this, "moon blessing pre-start alert auto close; retry remains scheduled");
+                AppLog.w(this, "moon blessing alert auto close; retry remains scheduled kind=" + kind);
+                MoonBlessingReceiver.cancelNotification(this);
                 finish();
             }
         };

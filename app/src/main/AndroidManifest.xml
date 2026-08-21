@@ -199,6 +199,14 @@
             android:theme="@style/AppTheme" />
 
         <activity
+            android:name=".InformationalAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/AppTheme" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/AppThemeNoSwipeDismiss">
@@ -230,6 +238,10 @@
 
         <receiver
             android:name=".MoonBlessingReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".InformationalAlertReceiver"
             android:exported="false" />
 
         <receiver
