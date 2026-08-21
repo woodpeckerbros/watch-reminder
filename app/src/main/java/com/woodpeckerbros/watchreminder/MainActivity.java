@@ -2355,12 +2355,18 @@ public class MainActivity extends Activity {
         pickerCard.addView(title);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
-        NumberPicker day = compactDateNumberPicker(1, 31, calendar.get(Calendar.DAY_OF_MONTH));
-        NumberPicker month = compactDateNumberPicker(1, 12, calendar.get(Calendar.MONTH) + 1);
-        NumberPicker year = compactDateNumberPicker(currentYear - 10, currentYear + 10, calendar.get(Calendar.YEAR));
-        row.addView(pickerColumn("יום", day));
-        row.addView(pickerColumn("חודש", month));
-        row.addView(pickerColumn("שנה", year));
+        NumberPicker day = dateNumberPicker(1, 31, calendar.get(Calendar.DAY_OF_MONTH), 42);
+        NumberPicker month = dateNumberPicker(1, 12, calendar.get(Calendar.MONTH) + 1, 44);
+        NumberPicker year = dateNumberPicker(currentYear - 10, currentYear + 10, calendar.get(Calendar.YEAR), 64);
+        if (AppLanguage.isRtl(this)) {
+            row.addView(pickerColumn("שנה", year));
+            row.addView(pickerColumn("חודש", month));
+            row.addView(pickerColumn("יום", day));
+        } else {
+            row.addView(pickerColumn("יום", day));
+            row.addView(pickerColumn("חודש", month));
+            row.addView(pickerColumn("שנה", year));
+        }
         pickerCard.addView(row);
         Button show = pillButton("הצג", COLOR_SURFACE_2);
         show.setOnClickListener(v -> {
@@ -2380,11 +2386,11 @@ public class MainActivity extends Activity {
         pickerCard.addView(title);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
-        NumberPicker day = compactDateNumberPicker(1, 30, jewishDate.getJewishDayOfMonth());
+        NumberPicker day = dateNumberPicker(1, 30, jewishDate.getJewishDayOfMonth(), 42);
         applyDisplayedValues(day, hebrewDayLabels());
-        NumberPicker month = compactDateNumberPicker(1, 13, jewishDate.getJewishMonth());
+        NumberPicker month = dateNumberPicker(1, 13, jewishDate.getJewishMonth(), 44);
         applyDisplayedValues(month, hebrewMonthLabels());
-        NumberPicker year = compactDateNumberPicker(currentYear - 10, currentYear + 10, jewishDate.getJewishYear());
+        NumberPicker year = dateNumberPicker(currentYear - 10, currentYear + 10, jewishDate.getJewishYear(), 64);
         row.addView(pickerColumn("יום", day));
         row.addView(pickerColumn("חודש", month));
         row.addView(pickerColumn("שנה", year));
@@ -5103,8 +5109,12 @@ public class MainActivity extends Activity {
     }
 
     private NumberPicker compactDateNumberPicker(int min, int max, int value) {
+        return dateNumberPicker(min, max, value, 50);
+    }
+
+    private NumberPicker dateNumberPicker(int min, int max, int value, int widthDp) {
         NumberPicker picker = numberPicker(min, max, value);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(50), dp(86));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(widthDp), dp(86));
         params.setMargins(dp(2), 0, dp(2), 0);
         picker.setLayoutParams(params);
         return picker;
