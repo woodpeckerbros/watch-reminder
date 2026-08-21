@@ -275,6 +275,31 @@ public class ReminderEventStore {
         return new ArrayList<>(collapsedCache);
     }
 
+    public JSONArray recentForBackup(long since) {
+        JSONArray result = new JSONArray();
+        for (Event event : getAll()) {
+            long latestActivity = Math.max(event.scheduledAt, Math.max(event.firedAt, event.actionAt));
+            if (latestActivity < since) {
+                continue;
+            }
+            try {
+                result.put(event.toJson());
+            } catch (JSONException ignored) {
+            }
+        }
+        return result;
+    }
+
+    public void restoreRecent(JSONArray source) throws JSONException {
+        ArrayList<Event> restored = new ArrayList<>();
+        if (source != null) {
+            for (int i = 0; i < source.length(); i++) {
+                restored.add(Event.fromJson(source.getJSONObject(i)));
+            }
+        }
+        save(restored);
+    }
+
     private ArrayList<Event> loadAll() {
         if (rawCache != null) {
             return rawCache;

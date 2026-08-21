@@ -35,6 +35,7 @@ import java.util.Set;
 
 public class ReminderBackup {
     private static final int VERSION = 2;
+    private static final long HISTORY_BACKUP_WINDOW_MS = 48L * 60L * 60L * 1000L;
     private static final String EXTENSION = ".zmbu";
     private static final String MIME_TYPE = "application/octet-stream";
 
@@ -315,7 +316,8 @@ public class ReminderBackup {
                 .put("omer", exportPreferences(context, "omer_state", "retry_until"))
                 .put("moonBlessing", exportPreferences(context, "moon_blessing_state"))
                 .put("intermittentFasting", exportPreferences(context, "intermittent_fasting"))
-                .put("reminderHistory", exportPreferences(context, "reminder_events"))
+                .put("reminderHistory", new ReminderEventStore(context).recentForBackup(
+                        System.currentTimeMillis() - HISTORY_BACKUP_WINDOW_MS))
                 .put("occurrenceState", exportPreferences(context, "reminder_occurrence_state"))
                 .put("pendingSnoozes", exportPreferences(context, "reminder_snoozes"));
     }
@@ -328,7 +330,10 @@ public class ReminderBackup {
         restorePreferences(context, "omer_state", state.optJSONObject("omer"));
         restorePreferences(context, "moon_blessing_state", state.optJSONObject("moonBlessing"));
         restorePreferences(context, "intermittent_fasting", state.optJSONObject("intermittentFasting"));
-        restorePreferences(context, "reminder_events", state.optJSONObject("reminderHistory"));
+        JSONArray reminderHistory = state.optJSONArray("reminderHistory");
+        if (reminderHistory != null) {
+            new ReminderEventStore(context).restoreRecent(reminderHistory);
+        }
         restorePreferences(context, "reminder_occurrence_state", state.optJSONObject("occurrenceState"));
         restorePreferences(context, "reminder_snoozes", state.optJSONObject("pendingSnoozes"));
 
