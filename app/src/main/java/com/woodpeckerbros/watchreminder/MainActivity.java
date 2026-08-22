@@ -2355,18 +2355,13 @@ public class MainActivity extends Activity {
         pickerCard.addView(title);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
+        applyDatePickerDirection(row, false);
         NumberPicker day = dateNumberPicker(1, 31, calendar.get(Calendar.DAY_OF_MONTH), 42);
         NumberPicker month = dateNumberPicker(1, 12, calendar.get(Calendar.MONTH) + 1, 44);
         NumberPicker year = dateNumberPicker(currentYear - 10, currentYear + 10, calendar.get(Calendar.YEAR), 64);
-        if (AppLanguage.isRtl(this)) {
-            row.addView(pickerColumn("שנה", year));
-            row.addView(pickerColumn("חודש", month));
-            row.addView(pickerColumn("יום", day));
-        } else {
-            row.addView(pickerColumn("יום", day));
-            row.addView(pickerColumn("חודש", month));
-            row.addView(pickerColumn("שנה", year));
-        }
+        row.addView(pickerColumn("יום", day));
+        row.addView(pickerColumn("חודש", month));
+        row.addView(pickerColumn("שנה", year));
         pickerCard.addView(row);
         Button show = pillButton("הצג", COLOR_SURFACE_2);
         show.setOnClickListener(v -> {
@@ -2386,6 +2381,7 @@ public class MainActivity extends Activity {
         pickerCard.addView(title);
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
+        applyDatePickerDirection(row, true);
         NumberPicker day = dateNumberPicker(1, 30, jewishDate.getJewishDayOfMonth(), 42);
         applyDisplayedValues(day, hebrewDayLabels());
         NumberPicker month = dateNumberPicker(1, 13, jewishDate.getJewishMonth(), 44);
@@ -4051,6 +4047,7 @@ public class MainActivity extends Activity {
         holder.removeAllViews();
         LinearLayout datePickers = new LinearLayout(this);
         datePickers.setGravity(Gravity.CENTER);
+        applyDatePickerDirection(datePickers, selectedAnnualHebrew);
         int maxMonth = selectedAnnualHebrew ? 13 : 12;
         int maxDay = selectedAnnualHebrew ? 30 : 31;
         NumberPicker dayPicker = compactDateNumberPicker(1, maxDay, Math.max(1, Math.min(maxDay, selectedDayOfMonth)));
@@ -4072,9 +4069,7 @@ public class MainActivity extends Activity {
         holder.removeAllViews();
         LinearLayout datePickers = new LinearLayout(this);
         datePickers.setGravity(Gravity.CENTER);
-        datePickers.setLayoutDirection(AppLanguage.isRtl(this)
-                ? View.LAYOUT_DIRECTION_RTL
-                : View.LAYOUT_DIRECTION_LTR);
+        applyDatePickerDirection(datePickers, selectedPeriodicHebrew);
         int currentYear = selectedPeriodicHebrew ? new JewishDate(Calendar.getInstance()).getJewishYear() : Calendar.getInstance().get(Calendar.YEAR);
         int maxDay = selectedPeriodicHebrew ? 30 : 31;
         NumberPicker dayPicker = dateNumberPicker(1, maxDay, Math.max(1, Math.min(maxDay, selectedDayOfMonth)), 42);
@@ -4094,6 +4089,12 @@ public class MainActivity extends Activity {
         datePickers.addView(pickerColumn("חודש", monthPicker));
         datePickers.addView(pickerColumn("שנה", yearPicker));
         holder.addView(datePickers);
+    }
+
+    private void applyDatePickerDirection(LinearLayout row, boolean hebrewCalendar) {
+        row.setLayoutDirection(hebrewCalendar
+                ? View.LAYOUT_DIRECTION_RTL
+                : View.LAYOUT_DIRECTION_LTR);
     }
 
     private void applyDisplayedValues(NumberPicker picker, String[] values) {
@@ -4211,9 +4212,7 @@ public class MainActivity extends Activity {
         dateCard.addView(dateTitle);
         LinearLayout datePickers = new LinearLayout(this);
         datePickers.setGravity(Gravity.CENTER);
-        datePickers.setLayoutDirection(AppLanguage.isRtl(this)
-                ? View.LAYOUT_DIRECTION_RTL
-                : View.LAYOUT_DIRECTION_LTR);
+        applyDatePickerDirection(datePickers, false);
         NumberPicker dayPicker = dateNumberPicker(1, 31, selectedDayOfMonth, 42);
         dayPicker.setOnValueChangedListener((picker, oldValue, newValue) -> selectedDayOfMonth = newValue);
         NumberPicker monthPicker = dateNumberPicker(1, 12, selectedMonth, 44);

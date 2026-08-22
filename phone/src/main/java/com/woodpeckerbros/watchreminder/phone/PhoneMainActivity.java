@@ -270,6 +270,9 @@ public class PhoneMainActivity extends Activity {
             calendar.set(Calendar.MINUTE, reminder.optInt("minute", calendar.get(Calendar.MINUTE)));
         }
         DatePicker date = new DatePicker(this);
+        // Gregorian dates always progress from day on the left to year on the right,
+        // independently of the selected app language.
+        date.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         date.init(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH), null);
         TimePicker time = new TimePicker(this);
         time.setIs24HourView(true);
