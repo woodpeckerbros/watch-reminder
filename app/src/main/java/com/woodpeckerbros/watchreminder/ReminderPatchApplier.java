@@ -45,7 +45,7 @@ public class ReminderPatchApplier {
             }
         }
         ReminderScheduler.scheduleWatchdog(context);
-        ComplicationRefresh.request(context);
+        ComplicationRefresh.requestNextAndFasting(context);
         return applied;
     }
 

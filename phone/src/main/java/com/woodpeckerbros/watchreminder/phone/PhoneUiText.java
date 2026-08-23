@@ -78,7 +78,7 @@ final class PhoneUiText {
         put("השינויים נשלחו לשעון. אשר בשעון.", "Changes sent. Confirm on your watch.");
         put("עריכה", "Edit"); put("מחיקה", "Delete");
         put("בחר סוג תזכורת", "Choose reminder type");
-        put("חד פעמית", "One-time"); put("קבועה", "Weekly"); put("אירוע שנתי", "Annual event");
+        put("חד פעמית", "One-time"); put("קבועה", "Fixed"); put("אירוע שנתי", "Annual event");
         put("שעות", "hours"); put("ימים", "days"); put("שבועות", "weeks"); put("חודשים", "months"); put("שנים", "years");
         put("עלות השחר", "Dawn"); put("זריחה", "Sunrise"); put("סוף זמן שמע", "Latest Shema");
         put("סוף זמן תפילה", "Latest Prayer"); put("חצות", "Midday"); put("מנחה גדולה", "Mincha Gedola");

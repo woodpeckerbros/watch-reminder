@@ -305,7 +305,7 @@ public class ReminderBackup {
         } else {
             ReminderForegroundService.stop(context);
         }
-        ComplicationRefresh.request(context);
+        ComplicationRefresh.requestNextAndFasting(context);
         return reminders.size();
     }
 

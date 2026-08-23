@@ -1812,7 +1812,7 @@ public class MainActivity extends Activity {
                 }
                 IntermittentFastingScheduler.schedule(this);
             }
-            ComplicationRefresh.request(this);
+            ComplicationRefresh.requestFasting(this);
             showSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
@@ -1839,7 +1839,7 @@ public class MainActivity extends Activity {
         new IntermittentFastingStore(this).startEatingNow();
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
-        ComplicationRefresh.request(this);
+        ComplicationRefresh.requestFasting(this);
         Toast.makeText(this, UiText.t(this, "חלון האכילה התחיל עכשיו"), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
@@ -1849,7 +1849,7 @@ public class MainActivity extends Activity {
         new IntermittentFastingStore(this).startEatingAt(startedAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
-        ComplicationRefresh.request(this);
+        ComplicationRefresh.requestFasting(this);
         Toast.makeText(this, UiText.t(this, "סומן שהתחלת לאכול ב-") + NextReminderCalculator.formatTime(startedAt), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
@@ -1867,7 +1867,7 @@ public class MainActivity extends Activity {
         store.finishEatingAt(finishedAt, sessionStartAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
-        ComplicationRefresh.request(this);
+        ComplicationRefresh.requestFasting(this);
         Toast.makeText(this, UiText.t(this, "סומן שסיימת לאכול. חלון האכילה הבא יתעדכן לפי זמן הסיום."), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
@@ -1944,7 +1944,7 @@ public class MainActivity extends Activity {
         store.finishEatingAt(finishedAt, sessionStartAt);
         IntermittentFastingReceiver.cancelNotification(this);
         IntermittentFastingScheduler.schedule(this);
-        ComplicationRefresh.request(this);
+        ComplicationRefresh.requestFasting(this);
         Toast.makeText(this, UiText.t(this, "סומן שסיימת לאכול ב-") + NextReminderCalculator.formatTime(finishedAt), Toast.LENGTH_SHORT).show();
         refreshVisibleScreen();
     }
@@ -3398,7 +3398,6 @@ public class MainActivity extends Activity {
         if (locationValue != null && locationValue.isAttachedToWindow()) {
             locationValue.setText(zmanimLocationLine());
         }
-        ComplicationRefresh.request(this);
         if (notifyUser) {
             String message = serverResolved
                     ? "שם העיר עודכן"
