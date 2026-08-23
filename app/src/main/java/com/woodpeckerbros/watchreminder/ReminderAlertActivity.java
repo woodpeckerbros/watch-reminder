@@ -43,6 +43,7 @@ public class ReminderAlertActivity extends Activity {
     private long autoCloseDelayMs;
     private String activeOccurrenceId;
     private boolean actionClosed;
+    private boolean complicationRefreshRequested;
     private AlertFeedback alertFeedback;
 
     @Override
@@ -235,6 +236,7 @@ public class ReminderAlertActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        requestComplicationRefreshOnce();
         stopVibration();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         handler.removeCallbacksAndMessages(null);
@@ -404,8 +406,17 @@ public class ReminderAlertActivity extends Activity {
         actionClosed = true;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         new ReminderAlertQueueStore(this).complete(activeOccurrenceId);
+        requestComplicationRefreshOnce();
         finish();
         ReminderReceiver.dispatchNextQueued(this);
+    }
+
+    private void requestComplicationRefreshOnce() {
+        if (complicationRefreshRequested) {
+            return;
+        }
+        complicationRefreshRequested = true;
+        ComplicationRefresh.request(this);
     }
 
     private List<String> currentOccurrenceIds(String occurrenceId, List<String> fallback) {
