@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class TopArcClockView extends View {
+    private static final long REFRESH_INTERVAL_MS = 5_000L;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -22,7 +23,7 @@ public class TopArcClockView extends View {
         @Override
         public void run() {
             invalidate();
-            handler.postDelayed(this, 30_000L);
+            handler.postDelayed(this, REFRESH_INTERVAL_MS);
         }
     };
 

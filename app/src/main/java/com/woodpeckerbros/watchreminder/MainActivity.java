@@ -4257,7 +4257,7 @@ public class MainActivity extends Activity {
                 } else {
                     selectedDays.add(day);
                 }
-                dayButton.setBackground(rounded(selectedDays.contains(day) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
+                styleDayButton(dayButton, selectedDays.contains(day));
             });
             dayRow.addView(dayButton);
         }
@@ -5090,6 +5090,12 @@ public class MainActivity extends Activity {
         button.setPadding(0, 0, 0, 0);
         button.setTextSize(13);
         return button;
+    }
+
+    private void styleDayButton(Button button, boolean selected) {
+        int color = selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2;
+        int stroke = selected ? 0 : 0x66E2C89C;
+        button.setBackground(rounded(color, dp(18), stroke));
     }
 
     private LinearLayout compactDayRow() {
