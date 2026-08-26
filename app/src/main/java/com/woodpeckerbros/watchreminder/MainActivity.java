@@ -1437,6 +1437,8 @@ public class MainActivity extends Activity {
         Button back = pillButton("חזרה לרישיונות", COLOR_SURFACE_2);
         back.setOnClickListener(v -> showAboutAndLicenses());
         content.addView(back, matchParams());
+        View bottomSafeArea = new View(this);
+        content.addView(bottomSafeArea, new LinearLayout.LayoutParams(dp(1), dp(6)));
         setScrollableContent(content);
     }
 
