@@ -1093,6 +1093,7 @@ public class MainActivity extends Activity {
             content.addView(card, cardParams());
         }
 
+        applyTextShadow(content);
         setScrollableContent(content);
     }
 
@@ -1107,6 +1108,7 @@ public class MainActivity extends Activity {
         loadingText.setPadding(0, dp(8), 0, 0);
         loadingCard.addView(loadingText);
         content.addView(loadingCard, cardParams());
+        applyTextShadow(content);
         setScrollableContent(content);
 
         new Thread(() -> {
@@ -5118,6 +5120,18 @@ public class MainActivity extends Activity {
         TextView view = text(value, sp, color);
         view.setShadowLayer(1.5f, 1f, 1f, Color.BLACK);
         return view;
+    }
+
+    private void applyTextShadow(View view) {
+        if (view instanceof TextView) {
+            ((TextView) view).setShadowLayer(1.5f, 1f, 1f, Color.BLACK);
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                applyTextShadow(group.getChildAt(i));
+            }
+        }
     }
 
     private Button pillButton(String value, int color) {
