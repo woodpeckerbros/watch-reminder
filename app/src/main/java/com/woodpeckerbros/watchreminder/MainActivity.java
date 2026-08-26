@@ -1315,7 +1315,11 @@ public class MainActivity extends Activity {
         title.setGravity(Gravity.CENTER);
         AppFont.bold(title);
         content.addView(title, matchParams());
-        TextView hint = text("Would you like Hebrew dates, halachic times, blessings, Daf Yomi, and Omer features?", 12, COLOR_MUTED);
+        TextView hint = outlinedText(
+                "Would you like Hebrew dates, halachic times, blessings, Daf Yomi, and Omer features?",
+                12,
+                COLOR_BG,
+                COLOR_TEXT);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(10), 0, dp(18));
         content.addView(hint, matchParams());
