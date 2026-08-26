@@ -4630,17 +4630,6 @@ public class MainActivity extends Activity {
                 + " " + jewishDate.getJewishYear();
     }
 
-    private void addTopClock(FrameLayout content) {
-        TopArcClockView clock = new TopArcClockView(this);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
-        );
-        params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        clock.setLayoutParams(params);
-        content.addView(clock);
-    }
-
     private void previewVibration(String style, int durationMs) {
         stopVibrationPreview();
         if (ReminderSettings.VIBRATION_OFF.equals(style)) {
@@ -4760,7 +4749,7 @@ public class MainActivity extends Activity {
         );
         scrollParams.topMargin = dp(15);
         root.addView(scrollView, scrollParams);
-        addTopClock(root);
+        TopArcClockView.addTo(root);
         setContentView(root);
         scrollView.requestFocus();
     }

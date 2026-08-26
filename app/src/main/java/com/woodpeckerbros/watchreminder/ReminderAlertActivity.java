@@ -225,7 +225,7 @@ public class ReminderAlertActivity extends Activity {
         );
         scrollParams.topMargin = dp(15);
         root.addView(scrollView, scrollParams);
-        addTopClock(root);
+        TopArcClockView.addTo(root);
         AppTextStyle.apply(root);
         setContentView(root);
         startVibration(settings);
@@ -467,25 +467,6 @@ public class ReminderAlertActivity extends Activity {
         button.setLayoutParams(params);
         button.setPadding(0, 0, 0, 0);
         return button;
-    }
-
-    private void addTopClock(FrameLayout content) {
-        View band = new View(this);
-        band.setBackgroundColor(COLOR_BG);
-        FrameLayout.LayoutParams bandParams = new FrameLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(27)
-        );
-        bandParams.gravity = Gravity.TOP;
-        content.addView(band, bandParams);
-        TopArcClockView clock = new TopArcClockView(this);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(30)
-        );
-        params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        clock.setLayoutParams(params);
-        content.addView(clock);
     }
 
     private NumberPicker numberPicker(int min, int max, int value) {

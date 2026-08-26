@@ -7,7 +7,9 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -15,6 +17,7 @@ import java.util.Locale;
 
 public class TopArcClockView extends View {
     private static final long REFRESH_INTERVAL_MS = 5_000L;
+    private static final int OVERLAY_HEIGHT_DP = 30;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -29,12 +32,26 @@ public class TopArcClockView extends View {
 
     public TopArcClockView(Context context) {
         super(context);
+        setBackgroundColor(0x00000000);
         paint.setColor(0xFFE6E6E6);
         paint.setTextSize(dp(17));
         paint.setFakeBoldText(true);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setShadowLayer(dp(2), 0, dp(2), 0xEE000000);
         setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+    }
+
+    public static TopArcClockView addTo(FrameLayout root) {
+        TopArcClockView clock = new TopArcClockView(root.getContext());
+        int height = Math.round(OVERLAY_HEIGHT_DP
+                * root.getResources().getDisplayMetrics().density);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                height
+        );
+        params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        root.addView(clock, params);
+        return clock;
     }
 
     @Override
