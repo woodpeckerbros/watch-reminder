@@ -2434,9 +2434,11 @@ public class MainActivity extends Activity {
 
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
+            if (ZmanimHelper.KEY_TZAIS.equals(ZmanimHelper.KEYS[i])) {
+                timesCard.addView(zmanimTimeRow("צ.כוכבים ר״ת",
+                        ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis)));
+            }
         }
-        timesCard.addView(zmanimTimeRow("צאת הכוכבים לרבינו תם",
-                ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis)));
         timesCard.addView(zmanimTimeRow("דף היומי בבלי", DafYomiHelper.bavliLabel(this, dayMillis)));
         timesCard.addView(zmanimTimeRow("דף היומי ירושלמי", DafYomiHelper.yerushalmiLabel(this, dayMillis)));
         timesCard.addView(moonBlessingRow(dayMillis));
