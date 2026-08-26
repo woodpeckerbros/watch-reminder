@@ -18,6 +18,8 @@ import android.location.LocationManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.graphics.Color;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -1270,17 +1272,22 @@ public class MainActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER_HORIZONTAL);
-        content.setPadding(dp(18), dp(34), dp(18), dp(24));
+        content.setPadding(dp(18), dp(55), dp(18), dp(18));
         content.setBackgroundColor(COLOR_BG);
-        TextView title = text("בחרו שפה\nChoose a language", 20, COLOR_TEXT);
+        TextView title = text("שפה · Language", 19, COLOR_TEXT);
         title.setGravity(Gravity.CENTER);
         AppFont.bold(title);
         content.addView(title, matchParams());
-        TextView hint = text("אפשר לשנות את השפה גם בהגדרות\nYou can change this later in Settings", 12, COLOR_MUTED);
+        TextView hint = outlinedText(
+                "אפשר לשנות את השפה גם בהגדרות\nYou can change this later in Settings",
+                12,
+                COLOR_BG,
+                COLOR_TEXT);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(10), 0, dp(18));
         content.addView(hint, matchParams());
         Button hebrew = pillButton("עברית", COLOR_ACCENT_DARK);
+        hebrew.setText("עברית");
         hebrew.setOnClickListener(v -> {
             ReminderSettings settings = new ReminderSettings(this);
             settings.setLanguage(ReminderSettings.LANGUAGE_HEBREW);
@@ -1302,7 +1309,7 @@ public class MainActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER_HORIZONTAL);
-        content.setPadding(dp(18), dp(34), dp(18), dp(24));
+        content.setPadding(dp(18), dp(55), dp(18), dp(18));
         content.setBackgroundColor(COLOR_BG);
         TextView title = text("Jewish Mode", 20, COLOR_TEXT);
         title.setGravity(Gravity.CENTER);
@@ -5090,6 +5097,35 @@ public class MainActivity extends Activity {
         params.setMargins(dp(4), dp(4), dp(4), dp(4));
         button.setLayoutParams(params);
         return button;
+    }
+
+    private TextView outlinedText(String value, int size, int fillColor, int outlineColor) {
+        TextView view = new TextView(this) {
+            @Override
+            protected void onDraw(Canvas canvas) {
+                Paint paint = getPaint();
+                Paint.Style originalStyle = paint.getStyle();
+                float originalWidth = paint.getStrokeWidth();
+                int originalColor = paint.getColor();
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(dp(1));
+                paint.setColor(outlineColor);
+                super.onDraw(canvas);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(fillColor);
+                super.onDraw(canvas);
+                paint.setStyle(originalStyle);
+                paint.setStrokeWidth(originalWidth);
+                paint.setColor(originalColor);
+            }
+        };
+        AppFont.apply(view);
+        view.setText(UiText.t(this, value));
+        view.setTextColor(fillColor);
+        view.setTextSize(size);
+        view.setGravity(Gravity.CENTER);
+        view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        return view;
     }
 
     private void setSwitchText(Switch view, String value) {

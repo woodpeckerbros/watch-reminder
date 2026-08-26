@@ -60,12 +60,23 @@ public class ReminderSettings {
 
     public ReminderSettings(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        if (!prefs.contains(KEY_ONBOARDING_COMPLETE)
+        if (isUpdatedInstall(context)
+                && !prefs.contains(KEY_ONBOARDING_COMPLETE)
                 && !prefs.contains(KEY_ONBOARDING_STARTED)
                 && !prefs.getAll().isEmpty()) {
             prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply();
         }
         defaultJewishMode = defaultJewishMode();
+    }
+
+    private boolean isUpdatedInstall(Context context) {
+        try {
+            android.content.pm.PackageInfo info = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            return info.lastUpdateTime > info.firstInstallTime;
+        } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+            return false;
+        }
     }
 
     public boolean serviceEnabled() {
