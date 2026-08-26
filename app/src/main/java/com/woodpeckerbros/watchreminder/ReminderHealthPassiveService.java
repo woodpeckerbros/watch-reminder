@@ -9,10 +9,16 @@ public class ReminderHealthPassiveService extends PassiveListenerService {
     public void onUserActivityInfoReceived(UserActivityInfo info) {
         boolean asleep = UserActivityState.USER_ACTIVITY_ASLEEP.equals(info.getUserActivityState());
         AppLog.d(this, "HealthPassive userActivity asleep=" + asleep + " state=" + info.getUserActivityState());
-        new WearStateStore(this).setAsleep(asleep);
+        WearStateStore stateStore = new WearStateStore(this);
+        if (asleep) {
+            stateStore.setAsleep(true);
+        } else {
+            stateStore.markAvailable();
+        }
         ReminderAlertQueueStore queueStore = new ReminderAlertQueueStore(this);
         if (shouldDispatchAfterUserActivity(asleep, queueStore.hasDeferredAlerts())) {
             AppLog.d(this, "HealthPassive awake with deferred alerts, dispatching");
+            DeferredWearRetryReceiver.cancel(this);
             DeferredReminderDispatcher.run(this);
         } else if (!asleep) {
             AppLog.d(this, "HealthPassive awake without deferred alerts, no reschedule needed");

@@ -34,8 +34,19 @@ public class DeferredWearStateService extends Service {
     private final SensorEventListener listener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            boolean onBody = event.values != null && event.values.length > 0 && event.values[0] == 1.0f;
-            new WearStateStore(DeferredWearStateService.this).setOffBody(!onBody);
+            if (event.values == null
+                    || event.values.length == 0
+                    || (event.values[0] != 0.0f && event.values[0] != 1.0f)) {
+                AppLog.w(DeferredWearStateService.this, "DeferredWearStateService invalid sensor value");
+                return;
+            }
+            boolean onBody = event.values[0] == 1.0f;
+            WearStateStore stateStore = new WearStateStore(DeferredWearStateService.this);
+            if (onBody) {
+                stateStore.markAvailable();
+            } else {
+                stateStore.setOffBody(true);
+            }
             AppLog.d(DeferredWearStateService.this, "DeferredWearStateService onBody=" + onBody);
             if (onBody) {
                 DeferredWearRetryReceiver.cancel(DeferredWearStateService.this);

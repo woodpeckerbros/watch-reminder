@@ -108,6 +108,7 @@ public class WearStateGate {
 
     public static void defer(Context context, String reminderId, String reminderName, long originalScheduledAt) {
         AppLog.w(context, "WearStateGate defer id=" + reminderId + " name=" + reminderName);
+        HealthStateRegistrar.register(context);
         DeferredWearStateService.start(context);
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.request(context);

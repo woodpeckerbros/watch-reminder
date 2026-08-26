@@ -42,6 +42,19 @@ public class WearStateStore {
                 .apply();
     }
 
+    /**
+     * A confirmed wake or on-body transition means alerts can be delivered now.
+     * Clear both independently sourced flags atomically so one stale signal cannot
+     * keep the deferred queue blocked after the other source confirms availability.
+     */
+    public void markAvailable() {
+        prefs.edit()
+                .putBoolean(KEY_ASLEEP, false)
+                .putBoolean(KEY_OFF_BODY, false)
+                .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
+                .apply();
+    }
+
     private boolean fresh() {
         long updatedAt = prefs.getLong(KEY_UPDATED_AT, 0);
         return updatedAt > 0 && System.currentTimeMillis() - updatedAt < STATE_TTL_MS;

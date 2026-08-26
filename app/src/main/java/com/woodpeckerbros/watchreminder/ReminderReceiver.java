@@ -198,9 +198,13 @@ public class ReminderReceiver extends BroadcastReceiver {
             DeferredWearStateService.start(context);
             return;
         }
-        ReminderAlertQueueStore.QueuedAlert alert = new ReminderAlertQueueStore(context).popNext();
+        ReminderAlertQueueStore queueStore = new ReminderAlertQueueStore(context);
+        ReminderAlertQueueStore.QueuedAlert alert = queueStore.popNext();
         if (alert == null) {
             AppLog.d(context, "dispatchNextQueued empty");
+            if (!queueStore.hasDeferredAlerts()) {
+                DeferredWearRetryReceiver.cancel(context);
+            }
             return;
         }
         AppLog.d(context, "dispatchNextQueued occurrence=" + alert.occurrenceId + " name=" + alert.reminderName);

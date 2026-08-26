@@ -215,6 +215,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        ReminderAlertQueueStore deferredQueue = new ReminderAlertQueueStore(this);
+        if (deferredQueue.hasDeferredAlerts()) {
+            AppLog.d(this, "MainActivity resumed by user with deferred alerts, marking available");
+            new WearStateStore(this).markAvailable();
+            DeferredWearRetryReceiver.cancel(this);
+        }
         if (store != null && exactAlarmRequestStarted && ReminderScheduler.canScheduleExactAlarms(this)) {
             exactAlarmRequestStarted = false;
             store.rescheduleAll();
