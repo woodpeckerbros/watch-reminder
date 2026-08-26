@@ -1037,7 +1037,7 @@ public class MainActivity extends Activity {
     private void showHistory() {
         currentScreen = "history";
         LinearLayout content = baseContent();
-        addTitle(content, "היסטוריה", "לחיצה ארוכה על תזכורת פותחת פעולות אפשריות");
+        addOutlinedTitle(content, "היסטוריה", "לחיצה ארוכה על תזכורת פותחת פעולות אפשריות");
 
         LinearLayout topActions = actionRow();
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
@@ -1048,7 +1048,9 @@ public class MainActivity extends Activity {
         if (events.isEmpty()) {
             topActions.addView(back);
             content.addView(topActions);
-            content.addView(emptyState("אין התראות שחלפו"));
+            TextView empty = outlinedText("אין התראות שחלפו", 15, COLOR_MUTED, COLOR_BG);
+            empty.setPadding(0, dp(28), 0, 0);
+            content.addView(empty);
         } else {
             Button clearHistory = pillButton("ניקוי הכל", 0xFF7E2A35);
             clearHistory.setOnClickListener(v -> clearHistoryInBackground());
@@ -5087,6 +5089,20 @@ public class MainActivity extends Activity {
         content.addView(subtitleView);
     }
 
+    private void addOutlinedTitle(LinearLayout content, String title, String subtitle) {
+        TextView titleView = outlinedText(title, 22, COLOR_TEXT, COLOR_BG);
+        AppFont.bold(titleView);
+        titleView.setPadding(0, 0, 0, dp(2));
+        content.addView(titleView);
+        if (subtitle == null || subtitle.trim().isEmpty()) {
+            titleView.setPadding(0, 0, 0, dp(12));
+            return;
+        }
+        TextView subtitleView = outlinedText(subtitle, 11, COLOR_MUTED, COLOR_BG);
+        subtitleView.setPadding(dp(18), 0, dp(18), dp(12));
+        content.addView(subtitleView);
+    }
+
     private TextView text(String value, int sp, int color) {
         TextView view = new TextView(this);
         AppFont.apply(view);
@@ -5124,7 +5140,7 @@ public class MainActivity extends Activity {
                 float originalWidth = paint.getStrokeWidth();
                 int originalColor = paint.getColor();
                 paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(dp(1));
+                paint.setStrokeWidth(1f);
                 paint.setColor(outlineColor);
                 super.onDraw(canvas);
                 paint.setStyle(Paint.Style.FILL);
