@@ -1048,7 +1048,7 @@ public class MainActivity extends Activity {
         if (events.isEmpty()) {
             topActions.addView(back);
             content.addView(topActions);
-            TextView empty = outlinedText("אין התראות שחלפו", 15, COLOR_MUTED, COLOR_BG);
+            TextView empty = outlinedText("אין התראות שחלפו", 15, COLOR_MUTED, COLOR_ACCENT);
             empty.setPadding(0, dp(28), 0, 0);
             content.addView(empty);
         } else {
@@ -5090,7 +5090,7 @@ public class MainActivity extends Activity {
     }
 
     private void addOutlinedTitle(LinearLayout content, String title, String subtitle) {
-        TextView titleView = outlinedText(title, 22, COLOR_TEXT, COLOR_BG);
+        TextView titleView = outlinedText(title, 22, COLOR_TEXT, COLOR_ACCENT);
         AppFont.bold(titleView);
         titleView.setPadding(0, 0, 0, dp(2));
         content.addView(titleView);
@@ -5098,7 +5098,7 @@ public class MainActivity extends Activity {
             titleView.setPadding(0, 0, 0, dp(12));
             return;
         }
-        TextView subtitleView = outlinedText(subtitle, 11, COLOR_MUTED, COLOR_BG);
+        TextView subtitleView = outlinedText(subtitle, 11, COLOR_MUTED, COLOR_ACCENT);
         subtitleView.setPadding(dp(18), 0, dp(18), dp(12));
         content.addView(subtitleView);
     }
