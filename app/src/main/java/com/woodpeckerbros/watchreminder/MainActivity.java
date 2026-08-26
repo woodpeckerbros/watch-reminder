@@ -3801,7 +3801,6 @@ public class MainActivity extends Activity {
         LinearLayout editorTitles = new LinearLayout(this);
         editorTitles.setOrientation(LinearLayout.VERTICAL);
         editorTitles.setGravity(Gravity.CENTER_HORIZONTAL);
-        editorTitles.setPadding(0, dp(22), 0, 0);
         addTitle(editorTitles, reminder == null ? "תזכורת חדשה" : "עריכת תזכורת", "שם, זמן, סוג ופעילות");
         editorHeader.addView(editorTitles, new FrameLayout.LayoutParams(-1, -2));
 
@@ -3818,7 +3817,7 @@ public class MainActivity extends Activity {
         editorHelp.setBackgroundColor(Color.TRANSPARENT);
         FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(40), dp(40));
         helpParams.gravity = Gravity.TOP | Gravity.LEFT;
-        helpParams.setMargins(dp(10), 0, 0, 0);
+        helpParams.setMargins(0, 0, 0, 0);
         editorHeader.addView(editorHelp, helpParams);
         content.addView(editorHeader, matchParams());
 
