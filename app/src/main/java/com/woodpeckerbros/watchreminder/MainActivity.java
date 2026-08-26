@@ -1098,30 +1098,16 @@ public class MainActivity extends Activity {
 
     private void addEditorHelp(
             FrameLayout root,
+            Button help,
             View name,
             View description,
-            View stateAndType,
-            View zmanim,
-            View date,
-            View time,
-            View actions
+            View state,
+            View recurringType,
+            View oneTimeType,
+            View periodicType,
+            View annualType,
+            View zmanim
     ) {
-        Button help = new Button(this);
-        AppFont.bold(help);
-        help.setText("?");
-        help.setTextSize(15);
-        help.setTextColor(COLOR_TEXT);
-        help.setAllCaps(false);
-        help.setPadding(0, 0, 0, 0);
-        help.setMinWidth(0);
-        help.setMinHeight(0);
-        help.setContentDescription(getString(R.string.ui_editor_help_button));
-        help.setBackground(rounded(0xE6344A43, dp(18), COLOR_LUXURY_GOLD));
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dp(30), dp(30));
-        params.gravity = Gravity.TOP | Gravity.RIGHT;
-        params.setMargins(0, dp(70), dp(13), 0);
-        root.addView(help, params);
-
         help.setOnClickListener(view -> {
             hideKeyboard(nameInput);
             help.setVisibility(View.INVISIBLE);
@@ -1137,9 +1123,29 @@ public class MainActivity extends Activity {
                     getString(R.string.ui_editor_help_description_text)
             ));
             steps.add(new ScreenHelpTour.Step(
-                    stateAndType,
-                    getString(R.string.ui_editor_help_type_title),
-                    getString(R.string.ui_editor_help_type_text)
+                    state,
+                    getString(R.string.ui_editor_help_status_title),
+                    getString(R.string.ui_editor_help_status_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    recurringType,
+                    getString(R.string.ui_editor_help_fixed_title),
+                    getString(R.string.ui_editor_help_fixed_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    oneTimeType,
+                    getString(R.string.ui_editor_help_one_time_title),
+                    getString(R.string.ui_editor_help_one_time_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    periodicType,
+                    getString(R.string.ui_editor_help_periodic_title),
+                    getString(R.string.ui_editor_help_periodic_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    annualType,
+                    getString(R.string.ui_editor_help_annual_title),
+                    getString(R.string.ui_editor_help_annual_text)
             ));
             if (zmanim != null) {
                 steps.add(new ScreenHelpTour.Step(
@@ -1148,21 +1154,6 @@ public class MainActivity extends Activity {
                         getString(R.string.ui_editor_help_zmanim_text)
                 ));
             }
-            steps.add(new ScreenHelpTour.Step(
-                    date,
-                    getString(R.string.ui_editor_help_date_title),
-                    getString(R.string.ui_editor_help_date_text)
-            ));
-            steps.add(new ScreenHelpTour.Step(
-                    time,
-                    getString(R.string.ui_editor_help_time_title),
-                    getString(R.string.ui_editor_help_time_text)
-            ));
-            steps.add(new ScreenHelpTour.Step(
-                    actions,
-                    getString(R.string.ui_editor_help_save_title),
-                    getString(R.string.ui_editor_help_save_text)
-            ));
             new ScreenHelpTour(
                     root,
                     activeScrollView,
@@ -3795,7 +3786,29 @@ public class MainActivity extends Activity {
                 : new HashSet<>(reminder.days);
 
         LinearLayout content = baseContent();
-        addTitle(content, reminder == null ? "תזכורת חדשה" : "עריכת תזכורת", "שם, זמן, סוג ופעילות");
+        FrameLayout editorHeader = new FrameLayout(this);
+        LinearLayout editorTitles = new LinearLayout(this);
+        editorTitles.setOrientation(LinearLayout.VERTICAL);
+        editorTitles.setGravity(Gravity.CENTER_HORIZONTAL);
+        addTitle(editorTitles, reminder == null ? "תזכורת חדשה" : "עריכת תזכורת", "שם, זמן, סוג ופעילות");
+        editorHeader.addView(editorTitles, new FrameLayout.LayoutParams(-1, -2));
+
+        Button editorHelp = new Button(this);
+        AppFont.bold(editorHelp);
+        editorHelp.setText("?");
+        editorHelp.setTextSize(13);
+        editorHelp.setTextColor(COLOR_TEXT);
+        editorHelp.setAllCaps(false);
+        editorHelp.setPadding(0, 0, 0, 0);
+        editorHelp.setMinWidth(0);
+        editorHelp.setMinHeight(0);
+        editorHelp.setContentDescription(getString(R.string.ui_editor_help_button));
+        editorHelp.setBackground(rounded(0xE6344A43, dp(12), COLOR_LUXURY_GOLD));
+        FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(22), dp(22));
+        helpParams.gravity = Gravity.TOP | Gravity.LEFT;
+        helpParams.setMargins(dp(10), dp(5), 0, 0);
+        editorHeader.addView(editorHelp, helpParams);
+        content.addView(editorHeader, matchParams());
 
         nameInput = new EditText(this);
         AppFont.apply(nameInput);
@@ -3845,17 +3858,20 @@ public class MainActivity extends Activity {
         content.addView(descriptionInput, descriptionParams);
 
         LinearLayout stateCard = card();
+        LinearLayout stateControls = new LinearLayout(this);
+        stateControls.setOrientation(LinearLayout.VERTICAL);
         Switch editorSwitch = new Switch(this);
         setSwitchText(editorSwitch, "פעילה");
         editorSwitch.setChecked(selectedEnabled);
         editorSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> selectedEnabled = isChecked);
-        stateCard.addView(editorSwitch);
+        stateControls.addView(editorSwitch);
 
         Switch criticalSwitch = new Switch(this);
         setSwitchText(criticalSwitch, "חיונית");
         criticalSwitch.setChecked(selectedCritical);
         criticalSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> selectedCritical = isChecked);
-        stateCard.addView(criticalSwitch);
+        stateControls.addView(criticalSwitch);
+        stateCard.addView(stateControls, matchParams());
 
         LinearLayout modeRow = actionRow();
         modeRow.setPadding(0, dp(4), 0, dp(12));
@@ -3979,13 +3995,15 @@ public class MainActivity extends Activity {
         FrameLayout editorRoot = setScrollableContent(content);
         addEditorHelp(
                 editorRoot,
+                editorHelp,
                 nameInput,
                 descriptionInput,
-                stateCard,
-                jewishMode ? zmanimCard : null,
-                dateSection,
-                timeCard,
-                actions
+                stateControls,
+                recurringButton,
+                oneTimeButton,
+                periodicButton,
+                annualButton,
+                jewishMode ? zmanimCard : null
         );
     }
 
