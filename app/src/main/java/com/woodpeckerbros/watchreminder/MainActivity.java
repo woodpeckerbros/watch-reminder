@@ -3817,7 +3817,7 @@ public class MainActivity extends Activity {
         editorHelp.setBackgroundColor(Color.TRANSPARENT);
         FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(40), dp(40));
         helpParams.gravity = Gravity.TOP | Gravity.LEFT;
-        helpParams.setMargins(0, 0, 0, 0);
+        helpParams.setMargins(-dp(6), dp(6), 0, 0);
         editorHeader.addView(editorHelp, helpParams);
         content.addView(editorHeader, matchParams());
 
