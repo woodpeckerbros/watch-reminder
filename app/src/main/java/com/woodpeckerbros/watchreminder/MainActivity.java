@@ -150,6 +150,7 @@ public class MainActivity extends Activity {
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
     private boolean permissionRequestInFlight;
+    private boolean permissionExplanationVisible;
     private boolean askedPostNotificationsThisSession;
     private boolean askedLocationThisSession;
     private boolean askedActivityRecognitionThisSession;
@@ -202,14 +203,28 @@ public class MainActivity extends Activity {
         createdAt = System.currentTimeMillis();
         store = new ReminderStore(this);
         handleIntent(getIntent());
-        showList();
+        ReminderSettings onboardingSettings = new ReminderSettings(this);
+        if (onboardingSettings.onboardingComplete()) {
+            showList();
+        } else if (ReminderSettings.LANGUAGE_ENGLISH.equals(onboardingSettings.language())) {
+            onboardingSettings.markOnboardingStarted();
+            showJewishModeOnboarding();
+        } else {
+            onboardingSettings.markOnboardingStarted();
+            showLanguageOnboarding();
+        }
         mainHandler.postDelayed(() -> {
+            if (!new ReminderSettings(MainActivity.this).onboardingComplete()) {
+                return;
+            }
             openPendingBlessingReminder();
             openPendingRestoreFromPhone();
             openPendingZmanimDay();
             openPendingFastingSettings();
         }, 260L);
-        scheduleStartupMaintenance();
+        if (new ReminderSettings(this).onboardingComplete()) {
+            scheduleStartupMaintenance();
+        }
     }
 
     @Override
@@ -1248,6 +1263,85 @@ public class MainActivity extends Activity {
         content.addView(actions);
 
         setScrollableContent(content);
+    }
+
+    private void showLanguageOnboarding() {
+        currentScreen = "onboarding_language";
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
+        content.setPadding(dp(18), dp(34), dp(18), dp(24));
+        content.setBackgroundColor(COLOR_BG);
+        TextView title = text("בחרו שפה\nChoose a language", 20, COLOR_TEXT);
+        title.setGravity(Gravity.CENTER);
+        AppFont.bold(title);
+        content.addView(title, matchParams());
+        TextView hint = text("אפשר לשנות את השפה גם בהגדרות\nYou can change this later in Settings", 12, COLOR_MUTED);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(0, dp(10), 0, dp(18));
+        content.addView(hint, matchParams());
+        Button hebrew = pillButton("עברית", COLOR_ACCENT_DARK);
+        hebrew.setOnClickListener(v -> {
+            ReminderSettings settings = new ReminderSettings(this);
+            settings.setLanguage(ReminderSettings.LANGUAGE_HEBREW);
+            settings.setJewishMode(true);
+            completeOnboarding();
+        });
+        content.addView(hebrew, matchParams());
+        Button english = pillButton("English", COLOR_SURFACE_2);
+        english.setOnClickListener(v -> {
+            new ReminderSettings(this).setLanguage(ReminderSettings.LANGUAGE_ENGLISH);
+            recreate();
+        });
+        content.addView(english, matchParams());
+        setScrollableContent(content);
+    }
+
+    private void showJewishModeOnboarding() {
+        currentScreen = "onboarding_jewish_mode";
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
+        content.setPadding(dp(18), dp(34), dp(18), dp(24));
+        content.setBackgroundColor(COLOR_BG);
+        TextView title = text("Jewish Mode", 20, COLOR_TEXT);
+        title.setGravity(Gravity.CENTER);
+        AppFont.bold(title);
+        content.addView(title, matchParams());
+        TextView hint = text("Would you like Hebrew dates, halachic times, blessings, Daf Yomi, and Omer features?", 12, COLOR_MUTED);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(0, dp(10), 0, dp(18));
+        content.addView(hint, matchParams());
+        Button enable = pillButton("Enable Jewish Mode", COLOR_ACCENT_DARK);
+        enable.setOnClickListener(v -> {
+            applyOnboardingJewishMode(true);
+            completeOnboarding();
+        });
+        content.addView(enable, matchParams());
+        Button skip = pillButton("Not now", COLOR_SURFACE_2);
+        skip.setOnClickListener(v -> {
+            applyOnboardingJewishMode(false);
+            completeOnboarding();
+        });
+        content.addView(skip, matchParams());
+        setScrollableContent(content);
+    }
+
+    private void applyOnboardingJewishMode(boolean enabled) {
+        ReminderSettings settings = new ReminderSettings(this);
+        settings.setJewishMode(enabled);
+        if (enabled) {
+            settings.setJewishDayRemindersEnabled(true);
+            settings.setTekufaRemindersEnabled(true);
+        }
+    }
+
+    private void completeOnboarding() {
+        new ReminderSettings(this).setOnboardingComplete(true);
+        store.rescheduleAll();
+        JewishDayScheduler.schedule(this);
+        TekufaScheduler.schedule(this);
+        recreate();
     }
 
     private void showAboutAndLicenses() {
@@ -4284,7 +4378,9 @@ public class MainActivity extends Activity {
     }
 
     private void requestMissingAccessIfNeeded() {
-        if (permissionRequestInFlight || exactAlarmRequestStarted || fullScreenIntentRequestStarted) {
+        if (!new ReminderSettings(this).onboardingComplete()
+                || permissionRequestInFlight || permissionExplanationVisible
+                || exactAlarmRequestStarted || fullScreenIntentRequestStarted) {
             return;
         }
         if (requestNotificationAccessIfNeeded()) {
@@ -4307,9 +4403,14 @@ public class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                 && !askedPostNotificationsThisSession) {
             askedPostNotificationsThisSession = true;
-            permissionRequestInFlight = true;
-            AppLog.w(this, "request permission POST_NOTIFICATIONS");
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+            showPermissionExplanation(
+                    R.string.ui_permission_notifications_title,
+                    R.string.ui_permission_notifications_message,
+                    () -> {
+                        permissionRequestInFlight = true;
+                        AppLog.w(this, "request permission POST_NOTIFICATIONS");
+                        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+                    });
             return true;
         }
         return false;
@@ -4323,9 +4424,14 @@ public class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && !askedLocationThisSession) {
             askedLocationThisSession = true;
-            permissionRequestInFlight = true;
-            AppLog.w(this, "request permission ACCESS_FINE_LOCATION");
-            requestLocationPermissions();
+            showPermissionExplanation(
+                    R.string.ui_permission_location_title,
+                    R.string.ui_permission_location_message,
+                    () -> {
+                        permissionRequestInFlight = true;
+                        AppLog.w(this, "request permission ACCESS_FINE_LOCATION");
+                        requestLocationPermissions();
+                    });
             return true;
         }
         return false;
@@ -4343,9 +4449,14 @@ public class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED
                 && !askedActivityRecognitionThisSession) {
             askedActivityRecognitionThisSession = true;
-            permissionRequestInFlight = true;
-            AppLog.w(this, "request permission ACTIVITY_RECOGNITION");
-            requestPermissions(new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, REQUEST_ACTIVITY_RECOGNITION);
+            showPermissionExplanation(
+                    R.string.ui_permission_activity_title,
+                    R.string.ui_permission_activity_message,
+                    () -> {
+                        permissionRequestInFlight = true;
+                        AppLog.w(this, "request permission ACTIVITY_RECOGNITION");
+                        requestPermissions(new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, REQUEST_ACTIVITY_RECOGNITION);
+                    });
             return true;
         }
         return false;
@@ -4356,9 +4467,14 @@ public class MainActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED
                 && !askedBodySensorsThisSession) {
             askedBodySensorsThisSession = true;
-            permissionRequestInFlight = true;
-            AppLog.w(this, "request permission BODY_SENSORS");
-            requestPermissions(new String[]{Manifest.permission.BODY_SENSORS}, REQUEST_BODY_SENSORS);
+            showPermissionExplanation(
+                    R.string.ui_permission_sensors_title,
+                    R.string.ui_permission_sensors_message,
+                    () -> {
+                        permissionRequestInFlight = true;
+                        AppLog.w(this, "request permission BODY_SENSORS");
+                        requestPermissions(new String[]{Manifest.permission.BODY_SENSORS}, REQUEST_BODY_SENSORS);
+                    });
             return true;
         }
         return false;
@@ -4412,6 +4528,14 @@ public class MainActivity extends Activity {
         }
         fullScreenIntentRequestStarted = true;
         askedFullScreenThisSession = true;
+        showPermissionExplanation(
+                R.string.ui_permission_full_screen_title,
+                R.string.ui_permission_full_screen_message,
+                this::openFullScreenIntentSettings);
+        return true;
+    }
+
+    private void openFullScreenIntentSettings() {
         AppLog.w(this, "request setting FULL_SCREEN_INTENT");
         Intent intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
                 .setData(Uri.parse("package:" + getPackageName()));
@@ -4422,7 +4546,25 @@ public class MainActivity extends Activity {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
             startActivity(fallback);
         }
-        return true;
+    }
+
+    private void showPermissionExplanation(int titleRes, int messageRes, Runnable request) {
+        permissionExplanationVisible = true;
+        new AlertDialog.Builder(this)
+                .setTitle(getString(titleRes))
+                .setMessage(getString(messageRes))
+                .setPositiveButton(R.string.ui_continue, (dialog, which) -> {
+                    permissionExplanationVisible = false;
+                    request.run();
+                })
+                .setNegativeButton(R.string.ui_not_now, (dialog, which) -> {
+                    permissionExplanationVisible = false;
+                    if (fullScreenIntentRequestStarted) {
+                        fullScreenIntentRequestStarted = false;
+                    }
+                })
+                .setOnCancelListener(dialog -> permissionExplanationVisible = false)
+                .show();
     }
 
     private boolean canUseFullScreenIntent() {

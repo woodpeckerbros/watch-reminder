@@ -46,6 +46,8 @@ public class ReminderSettings {
     private static final String KEY_OMER_OFFSET_MINUTES = "omer_offset_minutes";
     private static final String KEY_LANGUAGE = "language";
     private static final String KEY_JEWISH_MODE = "jewish_mode";
+    private static final String KEY_ONBOARDING_COMPLETE = "onboarding_complete";
+    private static final String KEY_ONBOARDING_STARTED = "onboarding_started";
     private static final String KEY_JEWISH_DAY_REMINDERS_ENABLED = "jewish_day_reminders_enabled";
     private static final String KEY_TEKUFA_REMINDERS_ENABLED = "tekufa_reminders_enabled";
     private static final String KEY_INTERMITTENT_FASTING_ENABLED = "intermittent_fasting_enabled";
@@ -58,6 +60,11 @@ public class ReminderSettings {
 
     public ReminderSettings(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (!prefs.contains(KEY_ONBOARDING_COMPLETE)
+                && !prefs.contains(KEY_ONBOARDING_STARTED)
+                && !prefs.getAll().isEmpty()) {
+            prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply();
+        }
         defaultJewishMode = defaultJewishMode();
     }
 
@@ -317,6 +324,18 @@ public class ReminderSettings {
             editor.putBoolean(KEY_TEKUFA_REMINDERS_ENABLED, true);
         }
         editor.apply();
+    }
+
+    public boolean onboardingComplete() {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false);
+    }
+
+    public void setOnboardingComplete(boolean complete) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, complete).apply();
+    }
+
+    public void markOnboardingStarted() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_STARTED, true).apply();
     }
 
     private boolean defaultJewishMode() {
