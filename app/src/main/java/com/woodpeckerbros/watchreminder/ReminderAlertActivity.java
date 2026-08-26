@@ -223,7 +223,6 @@ public class ReminderAlertActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         );
-        scrollParams.topMargin = dp(15);
         root.addView(scrollView, scrollParams);
         TopArcClockView.addTo(root);
         AppTextStyle.apply(root);
