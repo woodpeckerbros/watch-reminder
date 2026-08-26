@@ -128,7 +128,7 @@ public class UiText {
         put("שניות", "Seconds");
         put("דחייה אוטומטית", "Auto Snooze");
         put("אם אין תגובה, המסך נסגר והתזכורת נדחית", "If there is no response, the screen closes and the reminder is snoozed");
-        put("המתנה בשניות", "Wait, seconds");
+        put("המתנה לתגובה לפני סגירה (שניות)", "Wait for response before closing (seconds)");
         put("הקפצה חוזרת לאחר סגירה (דקות)", "Repeat after closing (minutes)");
         put("כמה דקות אחרי החיוב להזכיר לברך", "Minutes after becoming obligated to send the blessing reminder");
         put("זמני שקט - לא להפריע", "Quiet Times - Do Not Disturb");

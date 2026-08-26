@@ -1909,7 +1909,7 @@ public class MainActivity extends Activity {
         autoHint.setPadding(0, dp(3), 0, dp(5));
         autoCard.addView(autoHint);
         NumberPicker autoDelayPicker = numberPicker(5, 600, settings.autoSnoozeDelaySeconds());
-        autoCard.addView(pickerColumn("המתנה בשניות", autoDelayPicker));
+        autoCard.addView(pickerColumn("המתנה לתגובה לפני סגירה (שניות)", autoDelayPicker));
         NumberPicker autoSnoozePicker = numberPicker(1, 240, settings.autoSnoozeMinutes());
         autoCard.addView(pickerColumn("הקפצה חוזרת לאחר סגירה (דקות)", autoSnoozePicker));
         content.addView(autoCard, cardParams());
