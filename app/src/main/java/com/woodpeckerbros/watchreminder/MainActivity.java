@@ -1093,7 +1093,6 @@ public class MainActivity extends Activity {
             content.addView(card, cardParams());
         }
 
-        applyTextShadow(content);
         setScrollableContent(content);
     }
 
@@ -1108,7 +1107,6 @@ public class MainActivity extends Activity {
         loadingText.setPadding(0, dp(8), 0, 0);
         loadingCard.addView(loadingText);
         content.addView(loadingCard, cardParams());
-        applyTextShadow(content);
         setScrollableContent(content);
 
         new Thread(() -> {
@@ -4721,6 +4719,7 @@ public class MainActivity extends Activity {
     }
 
     private void setScrollableContent(LinearLayout content, int backgroundDrawableRes) {
+        AppTextStyle.apply(content);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
 
@@ -5113,25 +5112,14 @@ public class MainActivity extends Activity {
         view.setTextColor(color);
         view.setGravity(Gravity.CENTER);
         view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        AppTextStyle.apply(view);
         return view;
     }
 
     private TextView shadowedText(String value, int sp, int color) {
         TextView view = text(value, sp, color);
-        view.setShadowLayer(1.5f, 1f, 1f, Color.BLACK);
+        AppTextStyle.apply(view);
         return view;
-    }
-
-    private void applyTextShadow(View view) {
-        if (view instanceof TextView) {
-            ((TextView) view).setShadowLayer(1.5f, 1f, 1f, Color.BLACK);
-        }
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            for (int i = 0; i < group.getChildCount(); i++) {
-                applyTextShadow(group.getChildAt(i));
-            }
-        }
     }
 
     private Button pillButton(String value, int color) {
@@ -5148,6 +5136,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(100), dp(40));
         params.setMargins(dp(4), dp(4), dp(4), dp(4));
         button.setLayoutParams(params);
+        AppTextStyle.apply(button);
         return button;
     }
 
@@ -5186,6 +5175,7 @@ public class MainActivity extends Activity {
         view.setTextColor(COLOR_TEXT);
         view.setTextSize(14);
         view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        AppTextStyle.apply(view);
     }
 
     private String[] translated(String[] values) {

@@ -226,6 +226,7 @@ public class ReminderAlertActivity extends Activity {
         scrollParams.topMargin = dp(15);
         root.addView(scrollView, scrollParams);
         addTopClock(root);
+        AppTextStyle.apply(root);
         setContentView(root);
         startVibration(settings);
 

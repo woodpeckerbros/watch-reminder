@@ -62,6 +62,7 @@ public class InformationalAlertActivity extends Activity {
         scroll.setPadding(dp(14), dp(18), dp(14), dp(18));
         scroll.setBackgroundColor(0xFF061522);
         scroll.addView(card, new ScrollView.LayoutParams(-1, -2));
+        AppTextStyle.apply(scroll);
         setContentView(scroll);
         feedback = AlertFeedback.start(this, new ReminderSettings(this));
         handler.postDelayed(this::autoClose, new ReminderSettings(this).autoSnoozeDelayMs());

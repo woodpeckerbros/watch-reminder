@@ -122,6 +122,7 @@ public class DafYomiAlertActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
+        AppTextStyle.apply(root);
         setContentView(root);
         startVibration(new ReminderSettings(this));
         scheduleAutoClose();

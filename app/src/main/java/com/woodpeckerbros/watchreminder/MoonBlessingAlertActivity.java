@@ -119,6 +119,7 @@ public class MoonBlessingAlertActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
         root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        AppTextStyle.apply(root);
         setContentView(root);
 
         alertFeedback = AlertFeedback.start(this, new ReminderSettings(this));
