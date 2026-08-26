@@ -25,6 +25,7 @@ public class UiText {
         res("מחזורית", R.string.ui_repeating);
         res("מחזוריות", R.string.ui_repeating_title);
         res("אירוע שנתי", R.string.ui_annual_event);
+        res("שנתית", R.string.ui_annual);
         res("שעה", R.string.ui_hour);
         res("דקה", R.string.ui_minute);
         res("דקות", R.string.ui_minutes);

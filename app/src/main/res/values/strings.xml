@@ -18,14 +18,14 @@
     <string name="ui_editor_help_description_title">תיאור נוסף</string>
     <string name="ui_editor_help_description_text">אפשר להוסיף פרטים שיופיעו לצד שם התזכורת. השדה אינו חובה.</string>
     <string name="ui_editor_help_status_title">מצב התזכורת</string>
-    <string name="ui_editor_help_status_text">„פעילה” קובעת אם התזכורת תתוזמן ותוכל להופיע. „חיונית” מסמנת אותה כתזכורת חשובה.</string>
+    <string name="ui_editor_help_status_text">„פעילה” קובעת אם התזכורת תתוזמן. „חיונית” תופיע מיד גם בזמן שינה או כשהשעון אינו על היד.</string>
     <string name="ui_editor_help_fixed_title">תזכורת קבועה</string>
     <string name="ui_editor_help_fixed_text">תזכורת שחוזרת בכל שבוע בימים שתבחר ובאותה שעה. מתאימה למשל לתרופה בימי חול או לפעולה שבועית קבועה.</string>
     <string name="ui_editor_help_one_time_title">תזכורת חד־פעמית</string>
     <string name="ui_editor_help_one_time_text">תזכורת שמופיעה פעם אחת בלבד בתאריך ובשעה שתבחר, ולאחר מכן אינה חוזרת.</string>
     <string name="ui_editor_help_periodic_title">תזכורת מחזורית</string>
     <string name="ui_editor_help_periodic_text">תזכורת שחוזרת במרווח קבוע שתבחר, למשל כל מספר שעות, ימים, שבועות, חודשים או שנים, החל מתאריך התחלה.</string>
-    <string name="ui_editor_help_annual_title">אירוע שנתי</string>
+    <string name="ui_editor_help_annual_title">תזכורת שנתית</string>
     <string name="ui_editor_help_annual_text">תזכורת שחוזרת פעם בשנה בתאריך לועזי או עברי. אפשר להתריע מספר שעות מראש ולהוסיף מספר שעולה בכל שנה.</string>
     <string name="ui_editor_help_zmanim_title">זמן הלכתי</string>
     <string name="ui_editor_help_zmanim_text">אפשר להצמיד את התזכורת לזמן הלכתי המשתנה בכל יום לפי המיקום, ולהוסיף מספר דקות לפניו או אחריו.</string>
@@ -41,6 +41,7 @@
     <string name="ui_repeating">מחזורית</string>
     <string name="ui_repeating_title">מחזוריות</string>
     <string name="ui_annual_event">אירוע שנתי</string>
+    <string name="ui_annual">שנתית</string>
     <string name="ui_hour">שעה</string>
     <string name="ui_minute">דקה</string>
     <string name="ui_minutes">דקות</string>

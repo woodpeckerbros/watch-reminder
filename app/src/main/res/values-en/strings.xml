@@ -18,14 +18,14 @@
     <string name="ui_editor_help_description_title">Additional description</string>
     <string name="ui_editor_help_description_text">Add optional details that will appear with the reminder name.</string>
     <string name="ui_editor_help_status_title">Reminder status</string>
-    <string name="ui_editor_help_status_text">Active controls whether the reminder is scheduled and can appear. Critical marks it as an important reminder.</string>
+    <string name="ui_editor_help_status_text">Active controls scheduling. Critical alerts immediately even while you are asleep or the watch is off your wrist.</string>
     <string name="ui_editor_help_fixed_title">Fixed reminder</string>
     <string name="ui_editor_help_fixed_text">Repeats every week on the selected weekdays at the same time. Useful for weekday medication or a regular weekly task.</string>
     <string name="ui_editor_help_one_time_title">One-time reminder</string>
     <string name="ui_editor_help_one_time_text">Appears only once at the selected date and time, and does not repeat afterward.</string>
     <string name="ui_editor_help_periodic_title">Repeating reminder</string>
     <string name="ui_editor_help_periodic_text">Repeats at a chosen interval, such as every number of hours, days, weeks, months, or years, starting from a selected date.</string>
-    <string name="ui_editor_help_annual_title">Annual event</string>
+    <string name="ui_editor_help_annual_title">Annual reminder</string>
     <string name="ui_editor_help_annual_text">Repeats once a year on a Gregorian or Hebrew date. It can alert several hours early and include a number that increases each year.</string>
     <string name="ui_editor_help_zmanim_title">Halachic time</string>
     <string name="ui_editor_help_zmanim_text">Tie the reminder to a daily halachic time calculated for your location, with an optional offset before or after it.</string>
@@ -41,6 +41,7 @@
     <string name="ui_repeating">Repeating</string>
     <string name="ui_repeating_title">Repeating</string>
     <string name="ui_annual_event">Annual Event</string>
+    <string name="ui_annual">Annual</string>
     <string name="ui_hour">Hour</string>
     <string name="ui_minute">Minute</string>
     <string name="ui_minutes">Minutes</string>

@@ -78,6 +78,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
+    private static final String EDITOR_HELP_PREFS = "editor_help";
+    private static final String EDITOR_HELP_SHOWN = "tour_shown";
     public static final String EXTRA_FOCUS_REMINDER_ID = "focus_reminder_id";
     public static final String EXTRA_FOCUS_NEXT_REMINDER = "focus_next_reminder";
     public static final String EXTRA_OPEN_BLESSING_REMINDER = "open_blessing_reminder";
@@ -1128,14 +1130,14 @@ public class MainActivity extends Activity {
                     getString(R.string.ui_editor_help_status_text)
             ));
             steps.add(new ScreenHelpTour.Step(
-                    recurringType,
-                    getString(R.string.ui_editor_help_fixed_title),
-                    getString(R.string.ui_editor_help_fixed_text)
-            ));
-            steps.add(new ScreenHelpTour.Step(
                     oneTimeType,
                     getString(R.string.ui_editor_help_one_time_title),
                     getString(R.string.ui_editor_help_one_time_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    recurringType,
+                    getString(R.string.ui_editor_help_fixed_title),
+                    getString(R.string.ui_editor_help_fixed_text)
             ));
             steps.add(new ScreenHelpTour.Step(
                     periodicType,
@@ -1165,6 +1167,15 @@ public class MainActivity extends Activity {
                     () -> help.setVisibility(View.VISIBLE)
             ).start();
         });
+    }
+
+    private void startEditorHelpAutomaticallyIfNeeded(Button help) {
+        SharedPreferences preferences = getSharedPreferences(EDITOR_HELP_PREFS, MODE_PRIVATE);
+        if (preferences.getBoolean(EDITOR_HELP_SHOWN, false)) {
+            return;
+        }
+        preferences.edit().putBoolean(EDITOR_HELP_SHOWN, true).apply();
+        help.postDelayed(help::performClick, 500L);
     }
 
     private void clearHistoryInBackground() {
@@ -3790,23 +3801,24 @@ public class MainActivity extends Activity {
         LinearLayout editorTitles = new LinearLayout(this);
         editorTitles.setOrientation(LinearLayout.VERTICAL);
         editorTitles.setGravity(Gravity.CENTER_HORIZONTAL);
+        editorTitles.setPadding(0, dp(22), 0, 0);
         addTitle(editorTitles, reminder == null ? "תזכורת חדשה" : "עריכת תזכורת", "שם, זמן, סוג ופעילות");
         editorHeader.addView(editorTitles, new FrameLayout.LayoutParams(-1, -2));
 
         Button editorHelp = new Button(this);
         AppFont.bold(editorHelp);
         editorHelp.setText("?");
-        editorHelp.setTextSize(13);
-        editorHelp.setTextColor(COLOR_TEXT);
+        editorHelp.setTextSize(16);
+        editorHelp.setTextColor(COLOR_LUXURY_GOLD);
         editorHelp.setAllCaps(false);
         editorHelp.setPadding(0, 0, 0, 0);
         editorHelp.setMinWidth(0);
         editorHelp.setMinHeight(0);
         editorHelp.setContentDescription(getString(R.string.ui_editor_help_button));
-        editorHelp.setBackground(rounded(0xE6344A43, dp(12), COLOR_LUXURY_GOLD));
-        FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(22), dp(22));
+        editorHelp.setBackgroundColor(Color.TRANSPARENT);
+        FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(40), dp(40));
         helpParams.gravity = Gravity.TOP | Gravity.LEFT;
-        helpParams.setMargins(dp(10), dp(5), 0, 0);
+        helpParams.setMargins(dp(10), 0, 0, 0);
         editorHeader.addView(editorHelp, helpParams);
         content.addView(editorHeader, matchParams());
 
@@ -3878,7 +3890,7 @@ public class MainActivity extends Activity {
         Button recurringButton = smallWideButton("קבועה", (!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
         Button oneTimeButton = smallWideButton("חד פעמית", selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
         Button periodicButton = smallWideButton("מחזורית", selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
-        Button annualButton = smallWideButton("אירוע שנתי", selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
+        Button annualButton = smallWideButton("שנתית", selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
         setModeChoiceParams(oneTimeButton);
         setModeChoiceParams(recurringButton);
         setModeChoiceParams(periodicButton);
@@ -4005,6 +4017,7 @@ public class MainActivity extends Activity {
                 annualButton,
                 jewishMode ? zmanimCard : null
         );
+        startEditorHelpAutomaticallyIfNeeded(editorHelp);
     }
 
     private void saveReminder() {
