@@ -79,8 +79,8 @@
     <string name="ui_permission_location_message">המיקום משמש לחישוב מדויק של זמני היום והזמנים ההלכתיים באזור שלך. Zmanio אינה משתפת את המיקום. במסך הבא השעון יבקש גישה למיקום.</string>
     <string name="ui_permission_activity_title">למה צריך זיהוי פעילות?</string>
     <string name="ui_permission_activity_message">ההרשאה מאפשרת להתאים תזכורות הקשורות לפעילות ולמצב הגוף. במסך הבא השעון יבקש גישה לנתוני פעילות.</string>
-    <string name="ui_permission_sensors_title">למה צריך גישה לחיישנים?</string>
-    <string name="ui_permission_sensors_message">הגישה לחיישני הגוף מאפשרת להפעיל תזכורות שתלויות בנתוני בריאות. במסך הבא השעון יבקש את האישור.</string>
+    <string name="ui_permission_sensors_title">למה צריך לזהות את מצב השעון?</string>
+    <string name="ui_permission_sensors_message">כדי לא להעיר בזמן שינה ולא להפעיל התראה כשהשעון אינו על היד, Zmanio משתמשת בחיישנים כדי לזהות את המצב הנוכחי. כך אפשר להציג את ההתראה מיד כשמתאים, או להמתין עד שהמשתמש ער והשעון שוב על היד. במסך הבא השעון יבקש גישה לחיישנים.</string>
     <string name="ui_permission_full_screen_title">למה צריך התראות במסך מלא?</string>
     <string name="ui_permission_full_screen_message">האישור מאפשר לתזכורת חשובה להופיע מעל המסך הנוכחי גם כשהשעון נעול. במסך הבא יש לאפשר זאת עבור Zmanio.</string>
     <string name="ui_enable_alarms_reminders_title">אישור Alarms &amp; reminders</string>
