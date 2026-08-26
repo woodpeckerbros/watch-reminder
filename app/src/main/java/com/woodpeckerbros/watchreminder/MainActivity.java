@@ -1096,6 +1096,86 @@ public class MainActivity extends Activity {
         setScrollableContent(content);
     }
 
+    private void addEditorHelp(
+            FrameLayout root,
+            View name,
+            View description,
+            View stateAndType,
+            View zmanim,
+            View date,
+            View time,
+            View actions
+    ) {
+        Button help = new Button(this);
+        AppFont.bold(help);
+        help.setText("?");
+        help.setTextSize(15);
+        help.setTextColor(COLOR_TEXT);
+        help.setAllCaps(false);
+        help.setPadding(0, 0, 0, 0);
+        help.setMinWidth(0);
+        help.setMinHeight(0);
+        help.setContentDescription(getString(R.string.ui_editor_help_button));
+        help.setBackground(rounded(0xE6344A43, dp(18), COLOR_LUXURY_GOLD));
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dp(30), dp(30));
+        params.gravity = Gravity.TOP | Gravity.RIGHT;
+        params.setMargins(0, dp(70), dp(13), 0);
+        root.addView(help, params);
+
+        help.setOnClickListener(view -> {
+            hideKeyboard(nameInput);
+            help.setVisibility(View.INVISIBLE);
+            List<ScreenHelpTour.Step> steps = new java.util.ArrayList<>();
+            steps.add(new ScreenHelpTour.Step(
+                    name,
+                    getString(R.string.ui_editor_help_name_title),
+                    getString(R.string.ui_editor_help_name_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    description,
+                    getString(R.string.ui_editor_help_description_title),
+                    getString(R.string.ui_editor_help_description_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    stateAndType,
+                    getString(R.string.ui_editor_help_type_title),
+                    getString(R.string.ui_editor_help_type_text)
+            ));
+            if (zmanim != null) {
+                steps.add(new ScreenHelpTour.Step(
+                        zmanim,
+                        getString(R.string.ui_editor_help_zmanim_title),
+                        getString(R.string.ui_editor_help_zmanim_text)
+                ));
+            }
+            steps.add(new ScreenHelpTour.Step(
+                    date,
+                    getString(R.string.ui_editor_help_date_title),
+                    getString(R.string.ui_editor_help_date_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    time,
+                    getString(R.string.ui_editor_help_time_title),
+                    getString(R.string.ui_editor_help_time_text)
+            ));
+            steps.add(new ScreenHelpTour.Step(
+                    actions,
+                    getString(R.string.ui_editor_help_save_title),
+                    getString(R.string.ui_editor_help_save_text)
+            ));
+            new ScreenHelpTour(
+                    root,
+                    activeScrollView,
+                    steps,
+                    getString(R.string.ui_help_previous),
+                    getString(R.string.ui_help_next),
+                    getString(R.string.ui_help_finish),
+                    getString(R.string.ui_help_close),
+                    () -> help.setVisibility(View.VISIBLE)
+            ).start();
+        });
+    }
+
     private void clearHistoryInBackground() {
         currentScreen = "history";
         LinearLayout content = baseContent();
@@ -3896,7 +3976,17 @@ public class MainActivity extends Activity {
         actions.addView(cancel);
         content.addView(actions);
 
-        setScrollableContent(content);
+        FrameLayout editorRoot = setScrollableContent(content);
+        addEditorHelp(
+                editorRoot,
+                nameInput,
+                descriptionInput,
+                stateCard,
+                jewishMode ? zmanimCard : null,
+                dateSection,
+                timeCard,
+                actions
+        );
     }
 
     private void saveReminder() {
@@ -4702,12 +4792,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void setScrollableContent(LinearLayout content) {
+    private FrameLayout setScrollableContent(LinearLayout content) {
         int period = homeIllustrationPeriod();
-        setScrollableContent(content, homeIllustrationResource(period));
+        return setScrollableContent(content, homeIllustrationResource(period));
     }
 
-    private void setScrollableContent(LinearLayout content, int backgroundDrawableRes) {
+    private FrameLayout setScrollableContent(LinearLayout content, int backgroundDrawableRes) {
         AppTextStyle.apply(content);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
@@ -4751,6 +4841,7 @@ public class MainActivity extends Activity {
         TopArcClockView.addTo(root);
         setContentView(root);
         scrollView.requestFocus();
+        return root;
     }
 
     private boolean handleHorizontalBackSwipe(MotionEvent event) {
