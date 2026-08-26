@@ -248,6 +248,9 @@ public class UiText {
         put("חצות", "Halachic Midday");
         put("חצות יום", "Halachic Midday");
         put("חצות לילה", "Halachic Midnight");
+        put("צאת הכוכבים לרבינו תם", "Rabbeinu Tam nightfall");
+        put("דף היומי בבלי", "Daf Yomi Bavli");
+        put("דף היומי ירושלמי", "Daf Yomi Yerushalmi");
         put("מנחה גדולה", "Mincha Gedola");
         put("מנחה קטנה", "Mincha Ketana");
         put("פלג המנחה", "Plag HaMincha");

@@ -5,6 +5,7 @@ import android.content.Context;
 import com.kosherjava.zmanim.hebrewcalendar.Daf;
 import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
 import com.kosherjava.zmanim.hebrewcalendar.YomiCalculator;
+import com.kosherjava.zmanim.hebrewcalendar.YerushalmiYomiCalculator;
 
 import java.util.Calendar;
 import java.util.Locale;
@@ -20,6 +21,30 @@ public class DafYomiHelper {
         Daf daf = YomiCalculator.getDafYomiBavli(jewishCalendar);
         String label = daf.getMasechta() + " דף " + dafLabel(daf.getDaf());
         return new Item(epochDay, daf.getMasechta(), daf.getDaf(), label);
+    }
+
+    public static String bavliLabel(Context context, long dateMillis) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(dateMillis);
+        Daf daf = YomiCalculator.getDafYomiBavli(JewishCalendarHelper.calendar(context, calendar));
+        String masechta = AppLanguage.isEnglish(context) ? daf.getMasechtaTransliterated() : daf.getMasechta();
+        String page = AppLanguage.isEnglish(context) ? String.valueOf(daf.getDaf()) : dafLabel(daf.getDaf());
+        return masechta + " " + page;
+    }
+
+    public static String yerushalmiLabel(Context context, long dateMillis) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(dateMillis);
+        Daf daf = YerushalmiYomiCalculator.getDafYomiYerushalmi(
+                JewishCalendarHelper.calendar(context, calendar));
+        if (daf == null) {
+            return AppLanguage.isEnglish(context) ? "No daf today" : "אין דף היום";
+        }
+        String masechta = AppLanguage.isEnglish(context)
+                ? daf.getYerushalmiMasechtaTransliterated()
+                : daf.getYerushalmiMasechta();
+        String page = AppLanguage.isEnglish(context) ? String.valueOf(daf.getDaf()) : dafLabel(daf.getDaf());
+        return masechta + " " + page;
     }
 
     public static String dafLabel(int daf) {
