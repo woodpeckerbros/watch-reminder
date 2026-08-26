@@ -23,6 +23,7 @@ public class TopArcClockView extends View {
     private static final int CLOCK_BORDER_WIDTH_DP = 2;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final CanvasTextStyle textStyle;
     private final Path path = new Path();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.US);
@@ -41,13 +42,12 @@ public class TopArcClockView extends View {
         paint.setFakeBoldText(true);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setShadowLayer(dp(2), 0, dp(2), 0xEE000000);
-        AppTextStyle.initialize(
-                paint,
-                borderPaint,
+        textStyle = new CanvasTextStyle(
                 CLOCK_TEXT_COLOR,
                 CLOCK_BORDER_COLOR,
                 dp(CLOCK_BORDER_WIDTH_DP)
         );
+        textStyle.apply(paint, borderPaint);
         setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     }
 
