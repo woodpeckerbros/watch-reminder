@@ -620,7 +620,7 @@ public class MainActivity extends Activity {
         settingsButton.setOnClickListener(v -> showSettings());
         content.addView(settingsButton, matchParams());
         View bottomSafeArea = new View(this);
-        content.addView(bottomSafeArea, new LinearLayout.LayoutParams(dp(1), dp(36)));
+        content.addView(bottomSafeArea, new LinearLayout.LayoutParams(dp(1), dp(6)));
         setScrollableContent(content, homeBackgroundResource);
         rememberReminderListFingerprint();
         loadHomeUpcomingAsync(upcomingContainer, loadGeneration);
