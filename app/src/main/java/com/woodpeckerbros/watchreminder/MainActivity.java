@@ -1911,7 +1911,7 @@ public class MainActivity extends Activity {
         NumberPicker autoDelayPicker = numberPicker(5, 600, settings.autoSnoozeDelaySeconds());
         autoCard.addView(pickerColumn("המתנה בשניות", autoDelayPicker));
         NumberPicker autoSnoozePicker = numberPicker(1, 240, settings.autoSnoozeMinutes());
-        autoCard.addView(pickerColumn("דחייה בדקות", autoSnoozePicker));
+        autoCard.addView(pickerColumn("הקפצה חוזרת לאחר סגירה (דקות)", autoSnoozePicker));
         content.addView(autoCard, cardParams());
 
         LinearLayout actions = actionRow();
