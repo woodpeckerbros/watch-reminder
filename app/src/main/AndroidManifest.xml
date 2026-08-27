@@ -185,7 +185,6 @@
             android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
-        <activity android:name=".smartwake.SmartAlarmSettingsActivity" android:exported="false" android:theme="@style/AppTheme" />
         <activity android:name=".smartwake.SmartAlarmAlertActivity" android:excludeFromRecents="true" android:exported="false"
             android:showWhenLocked="true" android:taskAffinity="" android:theme="@style/AppTheme" />
 

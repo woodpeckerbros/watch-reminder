@@ -11,6 +11,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.media.RingtoneManager;
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmStore;
 
 public class AlertFeedback {
     private final Context context;
@@ -27,6 +28,19 @@ public class AlertFeedback {
         return feedback;
     }
 
+    public static AlertFeedback startSmartAlarm(Context context, SmartAlarmStore settings) {
+        AlertFeedback feedback = new AlertFeedback(context);
+        feedback.startConfigured(
+                settings.alertDurationSeconds() * 1000,
+                settings.vibrationEnabled(),
+                settings.vibrationStyle(),
+                settings.vibrationStrength(),
+                settings.soundEnabled(),
+                settings.soundVolumePercent(),
+                settings.soundUri());
+        return feedback;
+    }
+
     public void stop() {
         handler.removeCallbacksAndMessages(null);
         stopSound();
@@ -34,19 +48,20 @@ public class AlertFeedback {
     }
 
     private void startInternal(ReminderSettings settings) {
-        int durationMs = settings.alertDurationMs();
-        if (settings.vibrationEnabled()) {
-            startVibration(settings);
-        }
-        if (settings.alertSoundEnabled() && settings.alertVolumePercent() > 0) {
-            startSound(settings);
-        }
+        startConfigured(settings.alertDurationMs(), settings.vibrationEnabled(), settings.vibrationStyle(), 3,
+                settings.alertSoundEnabled(), settings.alertVolumePercent(), settings.alertSoundUri());
+    }
+
+    private void startConfigured(int durationMs, boolean vibrationEnabled, String vibrationStyle, int vibrationStrength,
+                                 boolean soundEnabled, int volumePercent, String soundUri) {
+        if (vibrationEnabled) startVibration(vibrationStyle, vibrationStrength, durationMs);
+        if (soundEnabled && volumePercent > 0) startSound(soundUri, volumePercent);
         handler.postDelayed(this::stop, durationMs);
     }
 
-    private void startSound(ReminderSettings settings) {
+    private void startSound(String savedUri, int volumePercent) {
         try {
-            Uri uri = soundUri(settings);
+            Uri uri = soundUri(savedUri);
             if (uri == null) {
                 return;
             }
@@ -57,7 +72,7 @@ public class AlertFeedback {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build());
             }
-            float volume = settings.alertVolumePercent() / 100f;
+            float volume = volumePercent / 100f;
             player.setVolume(volume, volume);
             player.setLooping(true);
             player.setDataSource(context, uri);
@@ -69,8 +84,7 @@ public class AlertFeedback {
         }
     }
 
-    private Uri soundUri(ReminderSettings settings) {
-        String saved = settings.alertSoundUri();
+    private Uri soundUri(String saved) {
         if (saved != null && !saved.trim().isEmpty()) {
             return Uri.parse(saved);
         }
@@ -95,16 +109,21 @@ public class AlertFeedback {
         player = null;
     }
 
-    private void startVibration(ReminderSettings settings) {
+    private void startVibration(String style, int strength, int durationMs) {
         stopVibration(context);
-        if (ReminderSettings.VIBRATION_OFF.equals(settings.vibrationStyle())) {
+        if (ReminderSettings.VIBRATION_OFF.equals(style)) {
             return;
         }
+        long[] pattern = ReminderSettings.vibrationPattern(style, durationMs);
+        int amplitude = strength <= 1 ? 80 : strength == 2 ? 160 : 255;
+        int[] amplitudes = new int[pattern.length];
+        for (int index = 0; index < amplitudes.length; index++) amplitudes[index] = index % 2 == 1 ? amplitude : 0;
+        VibrationEffect effect = VibrationEffect.createWaveform(pattern, amplitudes, -1);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 VibratorManager manager = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
                 if (manager != null) {
-                    manager.getDefaultVibrator().vibrate(VibrationEffect.createWaveform(settings.vibrationPattern(), -1));
+                    manager.getDefaultVibrator().vibrate(effect);
                 }
             } catch (Exception ignored) {
             }
@@ -112,7 +131,7 @@ public class AlertFeedback {
         }
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         if (vibrator != null) {
-            vibrator.vibrate(VibrationEffect.createWaveform(settings.vibrationPattern(), -1));
+            vibrator.vibrate(effect);
         }
     }
 

@@ -18,9 +18,11 @@ public final class SmartAlarmScheduler {
         cancel(context);
         SmartAlarmStore store = new SmartAlarmStore(context);
         if (!store.enabled()) return;
-        long targetAt = nextTarget(store.hour(), store.minute(), System.currentTimeMillis());
+        long targetAt = nextTarget(store.hour(), store.minute(), store.daysMask(), System.currentTimeMillis());
+        if (targetAt == Long.MAX_VALUE) return;
         long windowAt = targetAt - store.windowMinutes() * 60_000L;
-        new SmartAlarmStateStore(context).begin(targetAt);
+        SmartAlarmStateStore state = new SmartAlarmStateStore(context);
+        state.beginSnooze(targetAt, state.snoozeUsed() + 1);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
         setWindowAlarm(context, manager, windowAt, windowIntent(context, targetAt));
@@ -51,12 +53,17 @@ public final class SmartAlarmScheduler {
         if (manager != null) manager.cancel(deadlineIntent(context, 0));
     }
 
-    static long nextTarget(int hour, int minute, long now) {
+    static long nextTarget(int hour, int minute, int daysMask, long now) {
+        if (daysMask == 0) return Long.MAX_VALUE;
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(now); calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute);
         calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0);
-        if (calendar.getTimeInMillis() <= now) calendar.add(Calendar.DAY_OF_YEAR, 1);
-        return calendar.getTimeInMillis();
+        for (int offset = 0; offset <= 7; offset++) {
+            if (offset > 0) calendar.add(Calendar.DAY_OF_YEAR, 1);
+            boolean selected = (daysMask & (1 << calendar.get(Calendar.DAY_OF_WEEK))) != 0;
+            if (selected && calendar.getTimeInMillis() > now) return calendar.getTimeInMillis();
+        }
+        return Long.MAX_VALUE;
     }
 
     private static void setWindowAlarm(Context context, AlarmManager manager, long at, PendingIntent intent) {

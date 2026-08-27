@@ -15,7 +15,6 @@ import androidx.core.content.ContextCompat;
 
 import com.woodpeckerbros.watchreminder.AlertFeedback;
 import com.woodpeckerbros.watchreminder.R;
-import com.woodpeckerbros.watchreminder.ReminderSettings;
 
 public final class SmartAlarmRingingService extends Service {
     private static final String CHANNEL = "smart_alarm_ringing_v1";
@@ -37,9 +36,9 @@ public final class SmartAlarmRingingService extends Service {
         if (manager != null) manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Alarm ringing", NotificationManager.IMPORTANCE_LOW));
         startForeground(NOTIFICATION_ID, new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Smart Alarm").setContentText("ההתראה פעילה").setOngoing(true).build());
-        ReminderSettings settings = new ReminderSettings(this);
-        feedback = AlertFeedback.start(this, settings);
-        handler.postDelayed(this::stopSelf, Math.max(1_000L, settings.alertDurationMs() + 500L));
+        SmartAlarmStore settings = new SmartAlarmStore(this);
+        feedback = AlertFeedback.startSmartAlarm(this, settings);
+        handler.postDelayed(this::stopSelf, settings.alertDurationSeconds() * 1000L + 500L);
     }
 
     @Override public void onDestroy() {

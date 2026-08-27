@@ -55,7 +55,8 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmSettingsActivity;
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmScheduler;
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmStore;
 
 import com.kosherjava.zmanim.hebrewcalendar.HebrewDateFormatter;
 import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
@@ -95,6 +96,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_CREATE_BACKUP_FILE = 30;
     private static final int REQUEST_OPEN_BACKUP_FILE = 31;
     private static final int REQUEST_PICK_RINGTONE = 32;
+    private static final int REQUEST_PICK_SMART_ALARM_RINGTONE = 33;
     private static final int COLOR_BG = 0xFF0B2133;
     private static final int COLOR_SURFACE = 0xFF142A3A;
     private static final int COLOR_SURFACE_2 = 0xFF1A3042;
@@ -511,15 +513,25 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+        if (resultCode != RESULT_OK || data == null) {
+            return;
+        }
+        if (requestCode == REQUEST_PICK_RINGTONE || requestCode == REQUEST_PICK_SMART_ALARM_RINGTONE) {
+            Uri picked = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
+            if (requestCode == REQUEST_PICK_SMART_ALARM_RINGTONE) {
+                new SmartAlarmStore(this).setSoundUri(picked == null ? "" : picked.toString());
+                showSmartAlarmSettings();
+                return;
+            }
+            new ReminderSettings(this).setAlertSoundUri(picked == null ? "" : picked.toString());
+            showSettings();
             return;
         }
         Uri uri = data.getData();
-        if (requestCode == REQUEST_PICK_RINGTONE) {
-            Uri picked = data == null ? null : data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-            new ReminderSettings(this).setAlertSoundUri(picked == null ? "" : picked.toString());
-            showSettings();
-        } else if (requestCode == REQUEST_CREATE_BACKUP_FILE) {
+        if (uri == null) {
+            return;
+        }
+        if (requestCode == REQUEST_CREATE_BACKUP_FILE) {
             try {
                 ReminderBackup.writeToUri(this, uri);
                 Toast.makeText(this, UiText.t(this, "הגיבוי נשמר"), Toast.LENGTH_SHORT).show();
@@ -604,7 +616,7 @@ public class MainActivity extends Activity {
         shortcutsTitle.setPadding(0, dp(12), 0, dp(2));
         content.addView(shortcutsTitle);
         Button smartAlarmButton = pillButton("שעון מעורר חכם", COLOR_SURFACE_2);
-        smartAlarmButton.setOnClickListener(v -> startActivity(new Intent(this, SmartAlarmSettingsActivity.class)));
+        smartAlarmButton.setOnClickListener(v -> showSmartAlarmSettings());
         content.addView(smartAlarmButton, matchParams());
         if (jewishMode) {
             LinearLayout jewishActions = actionRow();
@@ -1215,6 +1227,139 @@ public class MainActivity extends Activity {
     private void showHistory(int scrollY) {
         showHistory();
         restoreScrollY(scrollY);
+    }
+
+    private void showSmartAlarmSettings() {
+        currentScreen = "smart_alarm_settings";
+        SmartAlarmStore smart = new SmartAlarmStore(this);
+        LinearLayout content = baseContent();
+        addTitle(content, "שעון מעורר חכם", "");
+
+        LinearLayout enabledCard = card(true);
+        Switch enabledSwitch = new Switch(this);
+        setSwitchText(enabledSwitch, "שעון מעורר פעיל");
+        enabledSwitch.setChecked(smart.enabled());
+        enabledCard.addView(enabledSwitch);
+        content.addView(enabledCard, cardParams());
+
+        LinearLayout timeCard = card();
+        TextView timeTitle = text("שעת השכמה", 15, COLOR_CARD_TEXT);
+        AppFont.bold(timeTitle);
+        timeCard.addView(timeTitle);
+        NumberPicker hourPicker = numberPicker(0, 23, smart.hour());
+        NumberPicker minutePicker = numberPicker(0, 59, smart.minute());
+        timeCard.addView(timePickerRow(hourPicker, minutePicker));
+        content.addView(timeCard, cardParams());
+
+        final int[] selectedDaysMask = {smart.daysMask()};
+        LinearLayout daysCard = card();
+        TextView daysTitle = text("ימי פעילות", 15, COLOR_CARD_TEXT);
+        AppFont.bold(daysTitle);
+        daysCard.addView(daysTitle);
+        String[] dayLabels = AppLanguage.isEnglish(this)
+                ? new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+                : new String[]{"א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"};
+        LinearLayout firstDays = compactDayRow();
+        LinearLayout secondDays = compactDayRow();
+        for (int index = 0; index < 7; index++) {
+            int calendarDay = Calendar.SUNDAY + index;
+            Button day = dayButton(dayLabels[index], COLOR_SURFACE_2);
+            styleDayButton(day, (selectedDaysMask[0] & (1 << calendarDay)) != 0);
+            day.setOnClickListener(v -> {
+                selectedDaysMask[0] ^= 1 << calendarDay;
+                styleDayButton(day, (selectedDaysMask[0] & (1 << calendarDay)) != 0);
+            });
+            (index < 4 ? firstDays : secondDays).addView(day);
+        }
+        daysCard.addView(firstDays);
+        daysCard.addView(secondDays);
+        content.addView(daysCard, cardParams());
+
+        LinearLayout smartWindowCard = card();
+        TextView smartWindowTitle = text("חלון השכמה חכם", 15, COLOR_CARD_TEXT);
+        AppFont.bold(smartWindowTitle);
+        smartWindowCard.addView(smartWindowTitle);
+        NumberPicker windowPicker = numberPicker(5, 60, smart.windowMinutes());
+        smartWindowCard.addView(pickerColumn("דקות לפני שעת ההשכמה", windowPicker));
+        content.addView(smartWindowCard, cardParams());
+
+        LinearLayout snoozeCard = card();
+        TextView snoozeTitle = text("נודניק", 15, COLOR_CARD_TEXT);
+        AppFont.bold(snoozeTitle);
+        snoozeCard.addView(snoozeTitle);
+        LinearLayout snoozeRow = new LinearLayout(this);
+        snoozeRow.setGravity(Gravity.CENTER);
+        snoozeRow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        NumberPicker snoozeInterval = numberPicker(1, 30, smart.snoozeMinutes());
+        NumberPicker snoozeCount = numberPicker(0, 10, smart.snoozeCount());
+        snoozeRow.addView(pickerColumn("כל כמה דקות", snoozeInterval));
+        snoozeRow.addView(pickerColumn("מספר פעמים", snoozeCount));
+        snoozeCard.addView(snoozeRow);
+        TextView snoozeHint = text("0 פעמים מבטל את אפשרות הנודניק", 10, COLOR_CARD_MUTED);
+        snoozeCard.addView(snoozeHint);
+        content.addView(snoozeCard, cardParams());
+
+        LinearLayout feedbackCard = card();
+        TextView feedbackTitle = text("רטט וצלצול", 15, COLOR_CARD_TEXT);
+        AppFont.bold(feedbackTitle);
+        feedbackCard.addView(feedbackTitle);
+
+        Switch vibrationSwitch = new Switch(this);
+        setSwitchText(vibrationSwitch, "רטט");
+        vibrationSwitch.setChecked(smart.vibrationEnabled());
+        feedbackCard.addView(vibrationSwitch);
+        String[] vibrationLabels = {"רגיל", "עדין", "חזק", "ארוך"};
+        String[] vibrationValues = {SmartAlarmStore.VIBRATION_NORMAL, SmartAlarmStore.VIBRATION_GENTLE,
+                SmartAlarmStore.VIBRATION_STRONG, SmartAlarmStore.VIBRATION_LONG};
+        Spinner vibrationSpinner = new Spinner(this);
+        vibrationSpinner.setAdapter(spinnerAdapter(translated(vibrationLabels)));
+        vibrationSpinner.setSelection(indexOf(vibrationValues, smart.vibrationStyle()));
+        feedbackCard.addView(vibrationSpinner, matchParams());
+        String[] strengthLabels = translated(new String[]{"עוצמה עדינה", "עוצמה בינונית", "עוצמה חזקה"});
+        Spinner strengthSpinner = new Spinner(this);
+        strengthSpinner.setAdapter(spinnerAdapter(strengthLabels));
+        strengthSpinner.setSelection(smart.vibrationStrength() - 1);
+        feedbackCard.addView(strengthSpinner, matchParams());
+
+        Switch soundSwitch = new Switch(this);
+        setSwitchText(soundSwitch, "צלצול");
+        soundSwitch.setChecked(smart.soundEnabled());
+        feedbackCard.addView(soundSwitch);
+        TextView ringtoneValue = text(ringtoneTitle(smart.soundUri()), 11, COLOR_CARD_MUTED);
+        feedbackCard.addView(ringtoneValue);
+        Button chooseRingtone = pillButton("בחירת צלצול", COLOR_SURFACE_2);
+        chooseRingtone.setOnClickListener(v -> openRingtonePicker(smart.soundUri(), REQUEST_PICK_SMART_ALARM_RINGTONE));
+        feedbackCard.addView(chooseRingtone);
+        NumberPicker volumePicker = numberPicker(1, 10, Math.max(1, smart.soundVolumePercent() / 10));
+        feedbackCard.addView(pickerColumn("עוצמת צלצול", volumePicker));
+        NumberPicker durationPicker = numberPicker(5, 120, smart.alertDurationSeconds());
+        feedbackCard.addView(pickerColumn("משך ההתראה בשניות", durationPicker));
+        content.addView(feedbackCard, cardParams());
+
+        LinearLayout actions = actionRow();
+        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
+        save.setOnClickListener(v -> {
+            if (selectedDaysMask[0] == 0 && enabledSwitch.isChecked()) {
+                Toast.makeText(this, UiText.t(this, "צריך לבחור לפחות יום אחד"), Toast.LENGTH_SHORT).show();
+                return;
+            }
+            smart.save(enabledSwitch.isChecked(), hourPicker.getValue(), minutePicker.getValue(),
+                    selectedDaysMask[0], windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
+                    vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                    strengthSpinner.getSelectedItemPosition() + 1, soundSwitch.isChecked(), volumePicker.getValue() * 10,
+                    smart.soundUri(), durationPicker.getValue());
+            SmartAlarmScheduler.reschedule(this);
+            Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();
+            showList();
+        });
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showList());
+        actions.addView(save);
+        actions.addView(back);
+        content.addView(actions);
+        View bottomSafeArea = new View(this);
+        content.addView(bottomSafeArea, new LinearLayout.LayoutParams(dp(1), dp(16)));
+        setScrollableContent(content);
     }
 
     private void showSettings() {
@@ -4786,6 +4931,10 @@ public class MainActivity extends Activity {
     }
 
     private void openRingtonePicker(String currentUriText) {
+        openRingtonePicker(currentUriText, REQUEST_PICK_RINGTONE);
+    }
+
+    private void openRingtonePicker(String currentUriText, int requestCode) {
         stopVibrationPreview();
         Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
                 .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM | RingtoneManager.TYPE_NOTIFICATION)
@@ -4797,7 +4946,7 @@ public class MainActivity extends Activity {
                 : Uri.parse(currentUriText);
         intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, existing);
         try {
-            startActivityForResult(intent, REQUEST_PICK_RINGTONE);
+            startActivityForResult(intent, requestCode);
         } catch (Exception exception) {
             AppLog.e(this, "ringtone picker failed", exception);
             Toast.makeText(this, UiText.t(this, "לא הצלחתי לפתוח בחירת צלצול"), Toast.LENGTH_SHORT).show();
@@ -4955,6 +5104,10 @@ public class MainActivity extends Activity {
         }
         if ("about_licenses".equals(currentScreen)) {
             showSettings();
+            return true;
+        }
+        if ("smart_alarm_settings".equals(currentScreen)) {
+            showList();
             return true;
         }
         if ("settings".equals(currentScreen)

@@ -3,47 +3,137 @@ package com.woodpeckerbros.watchreminder.smartwake;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.woodpeckerbros.watchreminder.AppLanguage;
 import com.woodpeckerbros.watchreminder.AppTextStyle;
+import com.woodpeckerbros.watchreminder.R;
+import com.woodpeckerbros.watchreminder.TopArcClockView;
+
+import java.util.Calendar;
 
 public final class SmartAlarmAlertActivity extends Activity {
     private long targetAt;
+    private SmartAlarmStore settings;
 
     @Override protected void onCreate(Bundle state) {
-        super.onCreate(state); setShowWhenLocked(true); setTurnScreenOn(true);
+        super.onCreate(state);
+        setShowWhenLocked(true);
+        setTurnScreenOn(true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         targetAt = getIntent().getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
-        LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.CENTER);
-        root.setPadding(dp(28), dp(34), dp(28), dp(28)); root.setBackgroundColor(Color.rgb(7, 17, 22));
-        TextView title = label("זמן להתעורר", 25); root.addView(title);
-        TextView reason = label("Smart Alarm", 15); reason.setTextColor(Color.rgb(214, 183, 102)); root.addView(reason);
-        Button dismiss = button("כיבוי"); dismiss.setOnClickListener(v -> dismissAlarm()); root.addView(dismiss);
-        Button snooze = button("נודניק " + new SmartAlarmStore(this).snoozeMinutes() + " דקות");
-        snooze.setOnClickListener(v -> snooze()); root.addView(snooze);
-        AppTextStyle.apply(root);
-        setContentView(root);
+        settings = new SmartAlarmStore(this);
+        setContentView(content());
+    }
+
+    private View content() {
+        FrameLayout frame = new FrameLayout(this);
+        ImageView background = new ImageView(this);
+        background.setImageResource(backgroundForNow());
+        background.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        frame.addView(background, new FrameLayout.LayoutParams(-1, -1));
+        View scrim = new View(this);
+        scrim.setBackgroundColor(0x72000000);
+        frame.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setGravity(Gravity.CENTER_HORIZONTAL);
+        body.setPadding(dp(24), dp(46), dp(24), dp(18));
+        boolean english = AppLanguage.isEnglish(this);
+        body.addView(label(english ? "Time to wake up" : "זמן להתעורר", 24, Color.WHITE));
+        body.addView(label(english ? "Smart Alarm" : "שעון מעורר חכם", 15, 0xFFFFD27A));
+
+        int used = new SmartAlarmStateStore(this).snoozeUsed();
+        int remaining = Math.max(0, settings.snoozeCount() - used);
+        if (settings.snoozeCount() > 0) {
+            body.addView(label(english ? remaining + " snoozes remaining" : "נותרו " + remaining + " נודניקים", 13, 0xFFE8E8E8));
+        }
+        Button dismiss = button(english ? "Dismiss" : "כיבוי", 0xFF7E2A35);
+        dismiss.setOnClickListener(v -> dismissAlarm());
+        body.addView(dismiss);
+        if (remaining > 0) {
+            Button snooze = button((english ? "Snooze " : "נודניק ") + settings.snoozeMinutes()
+                    + (english ? " min" : " דקות"), 0xFF176B5B);
+            snooze.setOnClickListener(v -> snooze());
+            body.addView(snooze);
+        }
+        body.addView(new View(this), new LinearLayout.LayoutParams(1, dp(16)));
+        AppTextStyle.apply(body);
+        scroll.addView(body, new ScrollView.LayoutParams(-1, -1));
+        frame.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        TopArcClockView.addTo(frame);
+        return frame;
+    }
+
+    private int backgroundForNow() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour >= 5 && hour < 11) return R.drawable.home_horizon_morning;
+        if (hour >= 11 && hour < 16) return R.drawable.home_horizon_noon;
+        if (hour >= 16 && hour < 19) return R.drawable.home_horizon_evening;
+        return R.drawable.home_horizon_night;
     }
 
     private void dismissAlarm() {
-        new SmartAlarmStateStore(this).dismiss(targetAt); stopFeedback(); SmartAlarmScheduler.scheduleNextAfterHandled(this); close();
+        new SmartAlarmStateStore(this).dismiss(targetAt);
+        stopFeedback();
+        SmartAlarmScheduler.scheduleNextAfterHandled(this);
+        close();
     }
+
     private void snooze() {
-        stopFeedback(); SmartAlarmScheduler.scheduleSnooze(this, targetAt, new SmartAlarmStore(this).snoozeMinutes()); close();
+        stopFeedback();
+        SmartAlarmScheduler.scheduleSnooze(this, targetAt, settings.snoozeMinutes());
+        close();
     }
+
+    private TextView label(String value, int size, int color) {
+        TextView text = new TextView(this);
+        text.setText(value);
+        text.setTextColor(color);
+        text.setTextSize(size);
+        text.setGravity(Gravity.CENTER);
+        text.setPadding(dp(3), dp(5), dp(3), dp(5));
+        return text;
+    }
+
+    private Button button(String value, int color) {
+        Button button = new Button(this);
+        button.setText(value);
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(16);
+        button.setAllCaps(false);
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(color);
+        shape.setCornerRadius(dp(24));
+        shape.setStroke(dp(1), 0x99FFFFFF);
+        button.setBackground(shape);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(184), dp(48));
+        params.setMargins(0, dp(8), 0, 0);
+        button.setLayoutParams(params);
+        return button;
+    }
+
     private void close() {
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE); if (manager != null) manager.cancel(0x534d5704);
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(0x534d5704);
         finishAndRemoveTask();
     }
-    private TextView label(String value, int size) { TextView text = new TextView(this); text.setText(value); text.setTextColor(Color.WHITE); text.setTextSize(size); text.setGravity(Gravity.CENTER); text.setPadding(4, dp(8), 4, dp(12)); return text; }
-    private Button button(String value) { Button button = new Button(this); button.setText(value); button.setTextSize(16); LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(dp(180), dp(50)); p.setMargins(0, dp(8), 0, 0); button.setLayoutParams(p); return button; }
+
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private void stopFeedback() { SmartAlarmRingingService.stop(this); }
-    @Override public void onBackPressed() { /* Alarm requires an explicit dismiss or snooze action. */ }
+    @Override public void onBackPressed() { }
     @Override protected void onDestroy() { stopFeedback(); super.onDestroy(); }
 }
