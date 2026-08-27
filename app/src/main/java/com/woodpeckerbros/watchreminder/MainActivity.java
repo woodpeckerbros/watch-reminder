@@ -603,7 +603,7 @@ public class MainActivity extends Activity {
         AppFont.bold(shortcutsTitle);
         shortcutsTitle.setPadding(0, dp(12), 0, dp(2));
         content.addView(shortcutsTitle);
-        Button smartAlarmButton = pillButton("Smart Alarm", COLOR_SURFACE_2);
+        Button smartAlarmButton = pillButton("שעון מעורר חכם", COLOR_SURFACE_2);
         smartAlarmButton.setOnClickListener(v -> startActivity(new Intent(this, SmartAlarmSettingsActivity.class)));
         content.addView(smartAlarmButton, matchParams());
         if (jewishMode) {
@@ -1364,18 +1364,32 @@ public class MainActivity extends Activity {
         content.setGravity(Gravity.CENTER_HORIZONTAL);
         content.setPadding(dp(18), dp(55), dp(18), dp(18));
         content.setBackgroundColor(COLOR_BG);
-        TextView title = text("שפה · Language", 19, COLOR_TEXT);
-        title.setGravity(Gravity.CENTER);
-        AppFont.bold(title);
-        content.addView(title, matchParams());
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setGravity(Gravity.CENTER);
+        titleRow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        TextView englishTitle = text("Language", 19, COLOR_TEXT);
+        TextView titleSeparator = text(" · ", 19, COLOR_TEXT);
+        TextView hebrewTitle = text("שפה", 19, COLOR_TEXT);
+        AppFont.bold(englishTitle);
+        AppFont.bold(titleSeparator);
+        AppFont.bold(hebrewTitle);
+        titleRow.addView(englishTitle);
+        titleRow.addView(titleSeparator);
+        titleRow.addView(hebrewTitle);
+        content.addView(titleRow, matchParams());
         TextView hint = outlinedText(
                 "אפשר לשנות את השפה גם בהגדרות\nYou can change this later in Settings",
                 12,
-                COLOR_BG,
-                COLOR_TEXT);
+                COLOR_BG);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(10), 0, dp(18));
         content.addView(hint, matchParams());
+        Button english = pillButton("English", COLOR_SURFACE_2);
+        english.setOnClickListener(v -> {
+            new ReminderSettings(this).setLanguage(ReminderSettings.LANGUAGE_ENGLISH);
+            recreate();
+        });
+        content.addView(english, matchParams());
         Button hebrew = pillButton("עברית", COLOR_ACCENT_DARK);
         hebrew.setText("עברית");
         hebrew.setOnClickListener(v -> {
@@ -1385,12 +1399,6 @@ public class MainActivity extends Activity {
             completeOnboarding();
         });
         content.addView(hebrew, matchParams());
-        Button english = pillButton("English", COLOR_SURFACE_2);
-        english.setOnClickListener(v -> {
-            new ReminderSettings(this).setLanguage(ReminderSettings.LANGUAGE_ENGLISH);
-            recreate();
-        });
-        content.addView(english, matchParams());
         setScrollableContent(content);
     }
 
@@ -1408,8 +1416,7 @@ public class MainActivity extends Activity {
         TextView hint = outlinedText(
                 "Would you like Hebrew dates, halachic times, blessings, Daf Yomi, and Omer features?",
                 12,
-                COLOR_BG,
-                COLOR_TEXT);
+                COLOR_BG);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(10), 0, dp(18));
         content.addView(hint, matchParams());
@@ -5253,7 +5260,8 @@ public class MainActivity extends Activity {
         return button;
     }
 
-    private TextView outlinedText(String value, int size, int fillColor, int outlineColor) {
+    private TextView outlinedText(String value, int size, int fillColor) {
+        int outlineColor = contrastingTextColor(fillColor);
         TextView view = new TextView(this) {
             @Override
             protected void onDraw(Canvas canvas) {
@@ -5280,6 +5288,14 @@ public class MainActivity extends Activity {
         view.setGravity(Gravity.CENTER);
         view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
         return view;
+    }
+
+    private int contrastingTextColor(int color) {
+        double red = Color.red(color) / 255.0;
+        double green = Color.green(color) / 255.0;
+        double blue = Color.blue(color) / 255.0;
+        double luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+        return luminance < 0.5 ? Color.WHITE : Color.BLACK;
     }
 
     private void setSwitchText(Switch view, String value) {

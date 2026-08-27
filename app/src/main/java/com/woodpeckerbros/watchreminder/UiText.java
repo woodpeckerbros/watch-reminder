@@ -210,6 +210,7 @@ public class UiText {
         put("אוטומטי לפי השעון", "Automatic by watch language");
         put("עברית", "Hebrew");
         put("אנגלית", "English");
+        put("שעון מעורר חכם", "Smart Alarm");
         put("זמנים יהודיים", "Jewish Times");
         put("קריאת שמע של ערבית בזמנה", "Evening Shema on Time");
         put("כמה דקות אחרי צאת הכוכבים לתזכר. אם הזמן כבר עבר, התזכורת תוגדר לפי ההגדרה הכללית למעלה.", "Remind this many minutes after nightfall. If that time has passed, the general setting above will be used.");
