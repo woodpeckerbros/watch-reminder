@@ -326,7 +326,7 @@ public class MainActivity extends Activity {
                 ReminderReceiver.dispatchNextQueued(MainActivity.this);
                 DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
                 OmerScheduler.dispatchIfDueNow(MainActivity.this);
-                refreshVisibleScreen();
+                refreshVisibleScreenAfterStartupMaintenance();
                 if (!showMissedReminderReliabilityPromptIfNeeded()) {
                     requestMissingAccessIfNeeded();
                 }
@@ -5531,6 +5531,16 @@ public class MainActivity extends Activity {
         lastReminderListFingerprint = currentFingerprint;
         store = new ReminderStore(this);
         refreshVisibleScreen();
+    }
+
+    private void refreshVisibleScreenAfterStartupMaintenance() {
+        if ("list".equals(currentScreen) || "all_reminders".equals(currentScreen)) {
+            refreshVisibleScreenIfRemindersChanged();
+            return;
+        }
+        if ("history".equals(currentScreen) || "fasting_settings".equals(currentScreen)) {
+            refreshVisibleScreen();
+        }
     }
 
     private void rememberReminderListFingerprint() {
