@@ -5273,44 +5273,17 @@ public class MainActivity extends Activity {
     }
 
     private TextView outlinedExactText(String value, int size, int fillColor, int textDirection) {
-        int outlineColor = contrastingTextColor(fillColor);
-        TextView view = new TextView(this) {
-            @Override
-            protected void onDraw(Canvas canvas) {
-                Paint paint = getPaint();
-                Paint.Style originalStyle = paint.getStyle();
-                float originalWidth = paint.getStrokeWidth();
-                int originalColor = paint.getColor();
-                paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(1f);
-                paint.setColor(outlineColor);
-                setTextColor(outlineColor);
-                super.onDraw(canvas);
-                paint.setStyle(Paint.Style.FILL);
-                paint.setColor(fillColor);
-                setTextColor(fillColor);
-                super.onDraw(canvas);
-                paint.setStyle(originalStyle);
-                paint.setStrokeWidth(originalWidth);
-                paint.setColor(originalColor);
-            }
-        };
-        AppFont.apply(view);
+        TextView view = new TextView(this);
         view.setText(value);
-        view.setTextColor(fillColor);
         view.setTextSize(size);
         view.setGravity(Gravity.CENTER);
         view.setTextDirection(textDirection);
-        view.setShadowLayer(0, 0, 0, Color.TRANSPARENT);
+        AppTextStyle.apply(
+                view,
+                fillColor,
+                AppTextStyle.contrastingColor(fillColor),
+                AppTextStyle.DEFAULT_BORDER_WIDTH_PX);
         return view;
-    }
-
-    private int contrastingTextColor(int color) {
-        double red = Color.red(color) / 255.0;
-        double green = Color.green(color) / 255.0;
-        double blue = Color.blue(color) / 255.0;
-        double luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-        return luminance < 0.5 ? Color.WHITE : Color.BLACK;
     }
 
     private void setSwitchText(Switch view, String value) {

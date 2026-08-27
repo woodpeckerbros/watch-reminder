@@ -14,6 +14,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.woodpeckerbros.watchreminder.AppTextStyle;
+
 public final class SmartAlarmSettingsActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state); SmartAlarmStore store = new SmartAlarmStore(this);
@@ -32,7 +34,7 @@ public final class SmartAlarmSettingsActivity extends Activity {
             if (!enabled.isChecked() || hasSmartWakePermissions()) finish();
         }); content.addView(save);
         Button cancel = new Button(this); cancel.setText("חזרה"); cancel.setOnClickListener(v -> finish()); content.addView(cancel);
-        ScrollView scroll = new ScrollView(this); scroll.addView(content); setContentView(scroll);
+        ScrollView scroll = new ScrollView(this); scroll.addView(content); AppTextStyle.apply(scroll); setContentView(scroll);
     }
     private NumberPicker picker(int min, int max, int value) { NumberPicker p = new NumberPicker(this); p.setMinValue(min); p.setMaxValue(max); p.setValue(value); p.setWrapSelectorWheel(true); return p; }
     private TextView text(String value, int size) { TextView t = new TextView(this); t.setText(value); t.setTextSize(size); t.setGravity(Gravity.CENTER); t.setPadding(0, dp(7), 0, dp(9)); return t; }

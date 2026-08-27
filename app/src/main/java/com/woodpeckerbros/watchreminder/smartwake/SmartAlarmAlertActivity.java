@@ -10,6 +10,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.woodpeckerbros.watchreminder.AppTextStyle;
+
 public final class SmartAlarmAlertActivity extends Activity {
     private long targetAt;
 
@@ -24,6 +26,7 @@ public final class SmartAlarmAlertActivity extends Activity {
         Button dismiss = button("כיבוי"); dismiss.setOnClickListener(v -> dismissAlarm()); root.addView(dismiss);
         Button snooze = button("נודניק " + new SmartAlarmStore(this).snoozeMinutes() + " דקות");
         snooze.setOnClickListener(v -> snooze()); root.addView(snooze);
+        AppTextStyle.apply(root);
         setContentView(root);
     }
 
