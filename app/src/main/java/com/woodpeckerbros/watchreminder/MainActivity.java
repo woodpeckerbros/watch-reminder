@@ -161,6 +161,8 @@ public class MainActivity extends Activity {
     private RingtoneChoiceListener smartAlarmRingtoneListener;
     private String smartAlarmRingtoneSelectedUri = "";
     private String ringtoneReturnScreen = "smart_alarm_settings";
+    private int editingSmartAlarmId;
+    private boolean editingSmartAlarmNew;
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
     private boolean permissionRequestInFlight;
@@ -1233,8 +1235,68 @@ public class MainActivity extends Activity {
 
     private void showSmartAlarmSettings() {
         stopSmartAlarmPreview();
-        currentScreen = "smart_alarm_settings";
-        SmartAlarmStore smart = new SmartAlarmStore(this);
+        editingSmartAlarmId = 0;
+        editingSmartAlarmNew = false;
+        currentScreen = "smart_alarm_list";
+        LinearLayout content = baseContent();
+        addTitle(content, "שעונים מעוררים חכמים", "");
+        ArrayList<Integer> alarmIds = SmartAlarmStore.ids(this);
+        if (alarmIds.isEmpty()) {
+            LinearLayout empty = card();
+            empty.addView(text("עדיין לא הוגדר שעון מעורר חכם", 13, COLOR_CARD_MUTED));
+            content.addView(empty, cardParams());
+        }
+        for (int alarmId : alarmIds) {
+            SmartAlarmStore alarm = new SmartAlarmStore(this, alarmId);
+            LinearLayout alarmCard = card(true);
+            TextView time = text(String.format(Locale.US, "%02d:%02d", alarm.hour(), alarm.minute()), 25, COLOR_CARD_TEXT);
+            AppFont.bold(time);
+            alarmCard.addView(time);
+            TextView days = text(smartAlarmDaysLabel(alarm.daysMask()), 11, COLOR_CARD_MUTED);
+            alarmCard.addView(days);
+            Switch enabled = new Switch(this);
+            setSwitchText(enabled, "פעיל");
+            enabled.setChecked(alarm.enabled());
+            enabled.setOnClickListener(v -> {
+                alarm.setEnabled(enabled.isChecked());
+                SmartAlarmScheduler.reschedule(this, alarmId);
+            });
+            alarmCard.addView(enabled);
+            Button edit = pillButton("עריכה", COLOR_SURFACE_2);
+            edit.setOnClickListener(v -> showSmartAlarmEditor(alarmId, false));
+            alarmCard.addView(edit);
+            content.addView(alarmCard, cardParams());
+        }
+        Button add = pillButton("הוספת שעון מעורר", COLOR_ACCENT_DARK);
+        add.setOnClickListener(v -> {
+            int alarmId = SmartAlarmStore.create(this);
+            showSmartAlarmEditor(alarmId, true);
+        });
+        content.addView(add, matchParams());
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showList());
+        content.addView(back, matchParams());
+        content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(16)));
+        setScrollableContent(content);
+    }
+
+    private String smartAlarmDaysLabel(int mask) {
+        String[] labels = AppLanguage.isEnglish(this)
+                ? new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+                : new String[]{"א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"};
+        ArrayList<String> selected = new ArrayList<>();
+        for (int index = 0; index < 7; index++) {
+            if ((mask & (1 << (Calendar.SUNDAY + index))) != 0) selected.add(labels[index]);
+        }
+        return android.text.TextUtils.join(" · ", selected);
+    }
+
+    private void showSmartAlarmEditor(int alarmId, boolean newAlarm) {
+        stopSmartAlarmPreview();
+        currentScreen = "smart_alarm_editor";
+        editingSmartAlarmId = alarmId;
+        editingSmartAlarmNew = newAlarm;
+        SmartAlarmStore smart = new SmartAlarmStore(this, alarmId);
         final String[] selectedSoundUri = {smart.soundUri()};
         LinearLayout content = baseContent();
         addTitle(content, "שעון מעורר חכם", "");
@@ -1402,15 +1464,28 @@ public class MainActivity extends Activity {
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(), soundVolume.slider.getProgress() * 10,
                     selectedSoundUri[0], durationPicker.getValue());
             stopSmartAlarmPreview();
-            SmartAlarmScheduler.reschedule(this);
+            SmartAlarmScheduler.reschedule(this, alarmId);
             Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();
-            showList();
+            showSmartAlarmSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> { stopSmartAlarmPreview(); showList(); });
+        back.setOnClickListener(v -> {
+            stopSmartAlarmPreview();
+            if (newAlarm) SmartAlarmStore.delete(this, alarmId);
+            showSmartAlarmSettings();
+        });
         actions.addView(save);
         actions.addView(back);
         content.addView(actions);
+        if (!newAlarm) {
+            Button delete = pillButton("מחיקת שעון מעורר", 0xFF7E2A35);
+            delete.setOnClickListener(v -> {
+                SmartAlarmScheduler.cancel(this, alarmId);
+                SmartAlarmStore.delete(this, alarmId);
+                showSmartAlarmSettings();
+            });
+            content.addView(delete, matchParams());
+        }
         View bottomSafeArea = new View(this);
         content.addView(bottomSafeArea, new LinearLayout.LayoutParams(dp(1), dp(16)));
         setScrollableContent(content);
@@ -5384,8 +5459,14 @@ public class MainActivity extends Activity {
             showSettings();
             return true;
         }
-        if ("smart_alarm_settings".equals(currentScreen)) {
+        if ("smart_alarm_list".equals(currentScreen)) {
             showList();
+            return true;
+        }
+        if ("smart_alarm_editor".equals(currentScreen)) {
+            stopSmartAlarmPreview();
+            if (editingSmartAlarmNew && editingSmartAlarmId > 0) SmartAlarmStore.delete(this, editingSmartAlarmId);
+            showSmartAlarmSettings();
             return true;
         }
         if ("settings".equals(currentScreen)

@@ -7,7 +7,12 @@ public final class SmartAlarmStateStore {
     private final SharedPreferences prefs;
 
     public SmartAlarmStateStore(Context context) {
-        prefs = context.getApplicationContext().getSharedPreferences("smart_alarm_state", Context.MODE_PRIVATE);
+        this(context, 1);
+    }
+
+    public SmartAlarmStateStore(Context context, int alarmId) {
+        prefs = context.getApplicationContext().getSharedPreferences(
+                alarmId == 1 ? "smart_alarm_state" : "smart_alarm_state_" + alarmId, Context.MODE_PRIVATE);
     }
 
     public synchronized void begin(long targetAt) {
@@ -35,4 +40,5 @@ public final class SmartAlarmStateStore {
     }
 
     public int snoozeUsed() { return prefs.getInt("snooze_used", 0); }
+    public void clear() { prefs.edit().clear().apply(); }
 }

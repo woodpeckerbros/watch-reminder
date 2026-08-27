@@ -3,8 +3,17 @@ package com.woodpeckerbros.watchreminder.smartwake;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 public final class SmartAlarmStore {
     private static final String PREFS = "smart_alarm";
+    private static final String REGISTRY = "smart_alarm_registry";
     private static final String KEY_SNOOZE_DEFAULT_MIGRATED = "snooze_default_5_migrated";
     private static final String KEY_VIBRATION_LEVELS_MIGRATED = "vibration_10_levels_migrated";
     public static final int ALL_DAYS_MASK = 0xFE;
@@ -14,12 +23,22 @@ public final class SmartAlarmStore {
     public static final String VIBRATION_STRONG = "strong";
     public static final String VIBRATION_LONG = "long";
     private final SharedPreferences prefs;
+    private final Context context;
+    private final int id;
 
     public SmartAlarmStore(Context context) {
-        prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        this(context, 1);
+    }
+
+    public SmartAlarmStore(Context context, int id) {
+        this.context = context.getApplicationContext();
+        this.id = Math.max(1, id);
+        prefs = this.context.getSharedPreferences(prefsName(this.id), Context.MODE_PRIVATE);
         migrateSnoozeDefaultOnce();
         migrateVibrationLevelsOnce();
     }
+
+    public int id() { return id; }
 
     public boolean enabled() { return prefs.getBoolean("enabled", false); }
     public int hour() { return prefs.getInt("hour", 6); }
@@ -48,9 +67,95 @@ public final class SmartAlarmStore {
                 .putInt("vibration_strength", vibrationStrength).putBoolean("sound_enabled", soundEnabled)
                 .putInt("sound_volume_percent", soundVolumePercent).putString("sound_uri", soundUri == null ? "" : soundUri)
                 .putInt("alert_duration_seconds", alertDurationSeconds).apply();
+        register(context, id);
     }
 
     public void setSoundUri(String uri) { prefs.edit().putString("sound_uri", uri == null ? "" : uri).apply(); }
+    public void setEnabled(boolean enabled) { prefs.edit().putBoolean("enabled", enabled).apply(); register(context, id); }
+
+    public static ArrayList<Integer> ids(Context context) {
+        migrateLegacy(context);
+        Set<String> values = context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE)
+                .getStringSet("ids", Collections.emptySet());
+        ArrayList<Integer> result = new ArrayList<>();
+        for (String value : values) try { result.add(Integer.parseInt(value)); } catch (NumberFormatException ignored) { }
+        Collections.sort(result);
+        return result;
+    }
+
+    public static int create(Context context) {
+        SharedPreferences registry = context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);
+        int id = Math.max(1, registry.getInt("next_id", 1));
+        registry.edit().putInt("next_id", id + 1).apply();
+        register(context, id);
+        new SmartAlarmStore(context, id).setEnabled(true);
+        return id;
+    }
+
+    public static void delete(Context context, int id) {
+        context.getApplicationContext().getSharedPreferences(prefsName(id), Context.MODE_PRIVATE).edit().clear().apply();
+        SharedPreferences registry = context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);
+        Set<String> ids = new HashSet<>(registry.getStringSet("ids", Collections.emptySet()));
+        ids.remove(String.valueOf(id));
+        registry.edit().putStringSet("ids", ids).apply();
+        new SmartAlarmStateStore(context, id).clear();
+    }
+
+    public static JSONArray toJson(Context context) throws Exception {
+        JSONArray result = new JSONArray();
+        for (int id : ids(context)) {
+            SmartAlarmStore alarm = new SmartAlarmStore(context, id);
+            result.put(new JSONObject().put("id", id).put("enabled", alarm.enabled())
+                    .put("hour", alarm.hour()).put("minute", alarm.minute()).put("daysMask", alarm.daysMask())
+                    .put("windowMinutes", alarm.windowMinutes()).put("snoozeMinutes", alarm.snoozeMinutes())
+                    .put("snoozeCount", alarm.snoozeCount()).put("vibrationEnabled", alarm.vibrationEnabled())
+                    .put("vibrationStyle", alarm.vibrationStyle()).put("vibrationStrength", alarm.vibrationStrength())
+                    .put("soundEnabled", alarm.soundEnabled()).put("soundVolumePercent", alarm.soundVolumePercent())
+                    .put("soundUri", alarm.soundUri()).put("alertDurationSeconds", alarm.alertDurationSeconds()));
+        }
+        return result;
+    }
+
+    public static void restoreJson(Context context, JSONArray values) {
+        for (int id : ids(context)) delete(context, id);
+        if (values == null) return;
+        int highest = 0;
+        for (int index = 0; index < values.length(); index++) {
+            JSONObject value = values.optJSONObject(index);
+            if (value == null) continue;
+            int id = Math.max(1, value.optInt("id", index + 1)); highest = Math.max(highest, id);
+            SmartAlarmStore alarm = new SmartAlarmStore(context, id);
+            alarm.save(value.optBoolean("enabled", false), value.optInt("hour", 6), value.optInt("minute", 30),
+                    value.optInt("daysMask", DEFAULT_DAYS_MASK), value.optInt("windowMinutes", 30),
+                    value.optInt("snoozeMinutes", 5), value.optInt("snoozeCount", 3),
+                    value.optBoolean("vibrationEnabled", true), value.optString("vibrationStyle", VIBRATION_NORMAL),
+                    value.optInt("vibrationStrength", 6), value.optBoolean("soundEnabled", true),
+                    value.optInt("soundVolumePercent", 80), value.optString("soundUri", ""),
+                    value.optInt("alertDurationSeconds", 30));
+        }
+        context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()
+                .putInt("next_id", highest + 1).apply();
+    }
+
+    private static String prefsName(int id) { return id == 1 ? PREFS : PREFS + "_" + id; }
+
+    private static void migrateLegacy(Context context) {
+        Context app = context.getApplicationContext();
+        SharedPreferences registry = app.getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);
+        if (registry.getBoolean("legacy_checked", false)) return;
+        SharedPreferences legacy = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        Set<String> ids = new HashSet<>(registry.getStringSet("ids", Collections.emptySet()));
+        if (legacy.contains("enabled") || legacy.contains("hour")) ids.add("1");
+        registry.edit().putStringSet("ids", ids).putInt("next_id", ids.contains("1") ? 2 : 1)
+                .putBoolean("legacy_checked", true).apply();
+    }
+
+    private static void register(Context context, int id) {
+        SharedPreferences registry = context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);
+        Set<String> ids = new HashSet<>(registry.getStringSet("ids", Collections.emptySet()));
+        ids.add(String.valueOf(id));
+        registry.edit().putStringSet("ids", ids).putInt("next_id", Math.max(registry.getInt("next_id", 1), id + 1)).apply();
+    }
 
     private void migrateSnoozeDefaultOnce() {
         if (prefs.getBoolean(KEY_SNOOZE_DEFAULT_MIGRATED, false)) return;

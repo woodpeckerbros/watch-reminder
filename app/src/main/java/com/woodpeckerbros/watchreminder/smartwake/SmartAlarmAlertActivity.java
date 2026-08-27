@@ -24,6 +24,7 @@ import java.util.Calendar;
 
 public final class SmartAlarmAlertActivity extends Activity {
     private long targetAt;
+    private int alarmId = 1;
     private SmartAlarmStore settings;
 
     @Override protected void onCreate(Bundle state) {
@@ -32,7 +33,8 @@ public final class SmartAlarmAlertActivity extends Activity {
         setTurnScreenOn(true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         targetAt = getIntent().getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
-        settings = new SmartAlarmStore(this);
+        alarmId = getIntent().getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        settings = new SmartAlarmStore(this, alarmId);
         setContentView(content());
     }
 
@@ -56,7 +58,7 @@ public final class SmartAlarmAlertActivity extends Activity {
         body.addView(label(english ? "Time to wake up" : "זמן להתעורר", 24, Color.WHITE));
         body.addView(label(english ? "Smart Alarm" : "שעון מעורר חכם", 15, 0xFFFFD27A));
 
-        int used = new SmartAlarmStateStore(this).snoozeUsed();
+        int used = new SmartAlarmStateStore(this, alarmId).snoozeUsed();
         int remaining = Math.max(0, settings.snoozeCount() - used);
         if (settings.snoozeCount() > 0) {
             body.addView(label(english ? remaining + " snoozes remaining" : "נותרו " + remaining + " נודניקים", 13, 0xFFE8E8E8));
@@ -87,15 +89,15 @@ public final class SmartAlarmAlertActivity extends Activity {
     }
 
     private void dismissAlarm() {
-        new SmartAlarmStateStore(this).dismiss(targetAt);
+        new SmartAlarmStateStore(this, alarmId).dismiss(targetAt);
         stopFeedback();
-        SmartAlarmScheduler.scheduleNextAfterHandled(this);
+        SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId);
         close();
     }
 
     private void snooze() {
         stopFeedback();
-        SmartAlarmScheduler.scheduleSnooze(this, targetAt, settings.snoozeMinutes());
+        SmartAlarmScheduler.scheduleSnooze(this, alarmId, targetAt, settings.snoozeMinutes());
         close();
     }
 
@@ -128,7 +130,7 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     private void close() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager != null) manager.cancel(0x534d5704);
+        if (manager != null) manager.cancel(0x534d5704 + alarmId);
         finishAndRemoveTask();
     }
 

@@ -34,6 +34,9 @@ import com.woodpeckerbros.watchreminder.R;
 import com.woodpeckerbros.watchreminder.WearStateStore;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class SmartWakeMonitoringService extends Service implements SensorEventListener {
     private static volatile boolean active;
@@ -44,8 +47,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private final Handler handler = new Handler(Looper.getMainLooper());
     private SensorManager sensorManager;
     private Sensor accelerometer, gyroscope;
-    private SmartWakeDetector detector;
-    private long targetAt;
+    private final Map<Integer, MonitorSession> sessions = new ConcurrentHashMap<>();
     private MeasureClient measureClient;
     private float gravityX, gravityY, gravityZ;
 
@@ -55,7 +57,9 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         }
         @Override public void onDataReceived(DataPointContainer data) {
             List<SampleDataPoint<Double>> points = data.getData(DataType.HEART_RATE_BPM);
-            for (SampleDataPoint<Double> point : points) detector.addHeartRate(point.getValue());
+            for (SampleDataPoint<Double> point : points) {
+                for (MonitorSession session : sessions.values()) session.detector.addHeartRate(point.getValue());
+            }
             if (!points.isEmpty()) AppLog.d(SmartWakeMonitoringService.this,
                     "SmartWake live HR samples=" + points.size() + " bpm=" + points.get(points.size() - 1).getValue());
         }
@@ -65,11 +69,15 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         }
     };
 
-    public static void start(Context context, long targetAt) {
-        Intent intent = new Intent(context, SmartWakeMonitoringService.class).putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt);
+    public static void start(Context context, int alarmId, long targetAt) {
+        Intent intent = new Intent(context, SmartWakeMonitoringService.class)
+                .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId).putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt);
         ContextCompat.startForegroundService(context, intent);
     }
-    public static void stop(Context context) { context.startService(new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_STOP)); }
+    public static void stop(Context context, int alarmId) {
+        context.startService(new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_STOP)
+                .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId));
+    }
     public static void updateActivity(Context context, boolean asleep) {
         if (!active) return;
         context.startService(new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_ACTIVITY).putExtra("asleep", asleep));
@@ -85,18 +93,29 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && ACTION_STOP.equals(intent.getAction())) { stopSelf(); return START_NOT_STICKY; }
-        if (intent != null && ACTION_ACTIVITY.equals(intent.getAction())) {
-            if (detector != null) detector.setAsleep(intent.getBooleanExtra("asleep", false));
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            sessions.remove(intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1));
+            if (sessions.isEmpty()) stopSelf();
             return START_NOT_STICKY;
         }
-        targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
-        if (targetAt <= System.currentTimeMillis() || new SmartAlarmStateStore(this).fired(targetAt)) { stopSelf(); return START_NOT_STICKY; }
-        detector = new SmartWakeDetector(System.currentTimeMillis());
+        if (intent != null && ACTION_ACTIVITY.equals(intent.getAction())) {
+            boolean asleep = intent.getBooleanExtra("asleep", false);
+            for (MonitorSession session : sessions.values()) session.detector.setAsleep(asleep);
+            return START_NOT_STICKY;
+        }
+        long targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
+        int alarmId = intent == null ? 1 : intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        if (targetAt <= System.currentTimeMillis() || new SmartAlarmStateStore(this, alarmId).fired(targetAt)) {
+            if (sessions.isEmpty()) stopSelf();
+            return START_NOT_STICKY;
+        }
+        SmartWakeDetector detector = new SmartWakeDetector(System.currentTimeMillis());
         detector.setAsleep(new WearStateStore(this).asleep());
-        registerMotion(); registerHeartRate();
+        boolean firstSession = sessions.isEmpty();
+        sessions.put(alarmId, new MonitorSession(alarmId, targetAt, detector));
+        if (firstSession) { registerMotion(); registerHeartRate(); }
         handler.removeCallbacks(evaluateRunnable); handler.postDelayed(evaluateRunnable, 30_000L);
-        AppLog.d(this, "SmartWake monitoring started target=" + targetAt + " accel=" + (accelerometer != null)
+        AppLog.d(this, "SmartWake monitoring started id=" + alarmId + " target=" + targetAt + " accel=" + (accelerometer != null)
                 + " gyro=" + (gyroscope != null) + "; live sleep stages LIGHT/DEEP/REM unavailable in Health Services 1.1 API");
         return START_REDELIVER_INTENT;
     }
@@ -137,26 +156,36 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     private final Runnable evaluateRunnable = new Runnable() {
         @Override public void run() {
-            if (detector == null || System.currentTimeMillis() >= targetAt) { stopSelf(); return; }
-            SmartWakeDetector.Decision decision = detector.evaluate(System.currentTimeMillis());
-            AppLog.d(SmartWakeMonitoringService.this, "SmartWake score=" + decision.score + " hr=" + decision.heartRateMean
-                    + " hrvProxy=" + decision.heartRateVariability + " slope=" + decision.heartRateSlope
-                    + " bursts=" + decision.movementBursts + " energy=" + decision.movementEnergy);
-            if (decision.shouldWake) SmartAlarmReceiver.fire(SmartWakeMonitoringService.this, targetAt, "estimated_wake_window");
-            else handler.postDelayed(this, 30_000L);
+            long now = System.currentTimeMillis();
+            for (MonitorSession session : new ArrayList<>(sessions.values())) {
+                if (now >= session.targetAt) { sessions.remove(session.alarmId); continue; }
+                SmartWakeDetector.Decision decision = session.detector.evaluate(now);
+                AppLog.d(SmartWakeMonitoringService.this, "SmartWake id=" + session.alarmId + " score=" + decision.score
+                        + " hr=" + decision.heartRateMean + " hrvProxy=" + decision.heartRateVariability
+                        + " slope=" + decision.heartRateSlope + " bursts=" + decision.movementBursts
+                        + " energy=" + decision.movementEnergy);
+                if (decision.shouldWake) {
+                    sessions.remove(session.alarmId);
+                    SmartAlarmReceiver.fire(SmartWakeMonitoringService.this, session.alarmId,
+                            session.targetAt, "estimated_wake_window");
+                }
+            }
+            if (sessions.isEmpty()) stopSelf(); else handler.postDelayed(this, 30_000L);
         }
     };
 
     @Override public void onSensorChanged(SensorEvent event) {
-        if (detector == null || event.values.length == 0) return;
-        if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) detector.addHeartRate(event.values[0]);
+        if (sessions.isEmpty() || event.values.length == 0) return;
+        if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
+            for (MonitorSession session : sessions.values()) session.detector.addHeartRate(event.values[0]);
+        }
         else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER && event.values.length >= 3) {
             gravityX = .8f * gravityX + .2f * event.values[0]; gravityY = .8f * gravityY + .2f * event.values[1]; gravityZ = .8f * gravityZ + .2f * event.values[2];
             double linear = Math.sqrt(Math.pow(event.values[0]-gravityX,2)+Math.pow(event.values[1]-gravityY,2)+Math.pow(event.values[2]-gravityZ,2));
-            detector.addMotion(linear);
+            for (MonitorSession session : sessions.values()) session.detector.addMotion(linear);
         } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE && event.values.length >= 3) {
             double rotation = Math.sqrt(event.values[0]*event.values[0]+event.values[1]*event.values[1]+event.values[2]*event.values[2]);
-            detector.addMotion(rotation * 0.35);
+            for (MonitorSession session : sessions.values()) session.detector.addMotion(rotation * 0.35);
         }
     }
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
@@ -173,4 +202,11 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         if (manager != null) manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Wake monitoring", NotificationManager.IMPORTANCE_LOW));
     }
     @Nullable @Override public IBinder onBind(Intent intent) { return null; }
+
+    private static final class MonitorSession {
+        final int alarmId; final long targetAt; final SmartWakeDetector detector;
+        MonitorSession(int alarmId, long targetAt, SmartWakeDetector detector) {
+            this.alarmId = alarmId; this.targetAt = targetAt; this.detector = detector;
+        }
+    }
 }

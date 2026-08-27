@@ -217,6 +217,10 @@ public class UiText {
         put("עברית", "Hebrew");
         put("אנגלית", "English");
         put("שעון מעורר חכם", "Smart Alarm");
+        put("שעונים מעוררים חכמים", "Smart Alarms");
+        put("עדיין לא הוגדר שעון מעורר חכם", "No smart alarms yet");
+        put("הוספת שעון מעורר", "Add alarm");
+        put("מחיקת שעון מעורר", "Delete alarm");
         put("שעון מעורר פעיל", "Smart Alarm enabled");
         put("שעת השכמה", "Wake-up time");
         put("ימי פעילות", "Active days");

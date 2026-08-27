@@ -12,45 +12,64 @@ import java.util.Calendar;
 
 public final class SmartAlarmScheduler {
     public static final String EXTRA_TARGET_AT = "smart_alarm_target_at";
+    public static final String EXTRA_ALARM_ID = "smart_alarm_id";
     private SmartAlarmScheduler() {}
 
     public static void reschedule(Context context) {
         cancel(context);
-        SmartAlarmStore store = new SmartAlarmStore(context);
+        for (int alarmId : SmartAlarmStore.ids(context)) schedule(context, alarmId);
+    }
+
+    public static void reschedule(Context context, int alarmId) {
+        cancel(context, alarmId);
+        schedule(context, alarmId);
+    }
+
+    private static void schedule(Context context, int alarmId) {
+        SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
         if (!store.enabled()) return;
         long targetAt = nextTarget(store.hour(), store.minute(), store.daysMask(), System.currentTimeMillis());
         if (targetAt == Long.MAX_VALUE) return;
         long windowAt = targetAt - store.windowMinutes() * 60_000L;
-        SmartAlarmStateStore state = new SmartAlarmStateStore(context);
+        SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+        state.begin(targetAt);
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager == null) return;
+        setWindowAlarm(context, manager, windowAt, windowIntent(context, alarmId, targetAt));
+        setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
+        AppLog.d(context, "SmartAlarm scheduled id=" + alarmId + " window=" + windowAt + " target=" + targetAt);
+    }
+
+    public static void scheduleSnooze(Context context, int alarmId, long originalTargetAt, int minutes) {
+        cancel(context, alarmId);
+        long targetAt = System.currentTimeMillis() + minutes * 60_000L;
+        SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         state.beginSnooze(targetAt, state.snoozeUsed() + 1);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (manager == null) return;
-        setWindowAlarm(context, manager, windowAt, windowIntent(context, targetAt));
-        setDeadlineAlarm(context, manager, targetAt, deadlineIntent(context, targetAt));
-        AppLog.d(context, "SmartAlarm scheduled window=" + windowAt + " target=" + targetAt);
+        if (manager != null) setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
+        AppLog.d(context, "SmartAlarm snoozed id=" + alarmId + " original=" + originalTargetAt + " target=" + targetAt);
     }
 
-    public static void scheduleSnooze(Context context, long originalTargetAt, int minutes) {
-        cancel(context);
-        long targetAt = System.currentTimeMillis() + minutes * 60_000L;
-        new SmartAlarmStateStore(context).begin(targetAt);
-        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (manager != null) setDeadlineAlarm(context, manager, targetAt, deadlineIntent(context, targetAt));
-        AppLog.d(context, "SmartAlarm snoozed original=" + originalTargetAt + " target=" + targetAt);
-    }
-
-    public static void scheduleNextAfterHandled(Context context) { reschedule(context); }
+    public static void scheduleNextAfterHandled(Context context, int alarmId) { reschedule(context, alarmId); }
 
     public static void cancel(Context context) {
+        for (int alarmId : SmartAlarmStore.ids(context)) cancel(context, alarmId);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (manager == null) return;
-        manager.cancel(windowIntent(context, 0));
-        manager.cancel(deadlineIntent(context, 0));
+        if (manager != null) {
+            manager.cancel(legacyWindowIntent(context)); manager.cancel(legacyDeadlineIntent(context));
+        }
     }
 
-    public static void cancelDeadline(Context context) {
+    public static void cancel(Context context, int alarmId) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (manager != null) manager.cancel(deadlineIntent(context, 0));
+        if (manager == null) return;
+        manager.cancel(windowIntent(context, alarmId, 0));
+        manager.cancel(deadlineIntent(context, alarmId, 0));
+    }
+
+    public static void cancelDeadline(Context context, int alarmId) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager != null) manager.cancel(deadlineIntent(context, alarmId, 0));
     }
 
     static long nextTarget(int hour, int minute, int daysMask, long now) {
@@ -76,10 +95,10 @@ public final class SmartAlarmScheduler {
         }
     }
 
-    private static void setDeadlineAlarm(Context context, AlarmManager manager, long at, PendingIntent intent) {
+    private static void setDeadlineAlarm(Context context, AlarmManager manager, int alarmId, long at, PendingIntent intent) {
         try {
             if (ReminderScheduler.canScheduleExactAlarms(context))
-                manager.setAlarmClock(new AlarmManager.AlarmClockInfo(at, alertIntent(context, at)), intent);
+                manager.setAlarmClock(new AlarmManager.AlarmClockInfo(at, alertIntent(context, alarmId, at)), intent);
             else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent);
         } catch (SecurityException error) {
             AppLog.e(context, "SmartAlarm exact deadline permission missing", error);
@@ -87,18 +106,25 @@ public final class SmartAlarmScheduler {
         }
     }
 
-    private static PendingIntent windowIntent(Context context, long targetAt) {
-        Intent intent = new Intent(context, SmartWakeWindowReceiver.class).putExtra(EXTRA_TARGET_AT, targetAt);
-        return PendingIntent.getBroadcast(context, 0x534d5701, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    private static PendingIntent windowIntent(Context context, int alarmId, long targetAt) {
+        Intent intent = alarmIntent(context, SmartWakeWindowReceiver.class, alarmId, targetAt);
+        return PendingIntent.getBroadcast(context, requestCode(alarmId, 1), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static PendingIntent deadlineIntent(Context context, long targetAt) {
-        Intent intent = new Intent(context, SmartAlarmReceiver.class).putExtra(EXTRA_TARGET_AT, targetAt).putExtra("reason", "deadline");
-        return PendingIntent.getBroadcast(context, 0x534d5702, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    private static PendingIntent deadlineIntent(Context context, int alarmId, long targetAt) {
+        Intent intent = alarmIntent(context, SmartAlarmReceiver.class, alarmId, targetAt).putExtra("reason", "deadline");
+        return PendingIntent.getBroadcast(context, requestCode(alarmId, 2), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static PendingIntent alertIntent(Context context, long targetAt) {
-        Intent intent = new Intent(context, SmartAlarmAlertActivity.class).putExtra(EXTRA_TARGET_AT, targetAt);
-        return PendingIntent.getActivity(context, 0x534d5703, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    private static PendingIntent alertIntent(Context context, int alarmId, long targetAt) {
+        Intent source = alarmIntent(context, SmartAlarmAlertActivity.class, alarmId, targetAt);
+        return PendingIntent.getActivity(context, requestCode(alarmId, 3), source, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
+
+    private static Intent alarmIntent(Context context, Class<?> type, int alarmId, long targetAt) {
+        return new Intent(context, type).putExtra(EXTRA_ALARM_ID, alarmId).putExtra(EXTRA_TARGET_AT, targetAt);
+    }
+    private static int requestCode(int alarmId, int kind) { return 0x53000000 | ((alarmId & 0xfffff) << 3) | kind; }
+    private static PendingIntent legacyWindowIntent(Context context) { return PendingIntent.getBroadcast(context, 0x534d5701, new Intent(context, SmartWakeWindowReceiver.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE); }
+    private static PendingIntent legacyDeadlineIntent(Context context) { return PendingIntent.getBroadcast(context, 0x534d5702, new Intent(context, SmartAlarmReceiver.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE); }
 }

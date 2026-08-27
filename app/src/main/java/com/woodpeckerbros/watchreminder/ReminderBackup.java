@@ -13,6 +13,9 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.widget.Toast;
 
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmScheduler;
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmStore;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -56,6 +59,7 @@ public class ReminderBackup {
                     .put("exportedAt", System.currentTimeMillis())
                     .put("exportedAtText", new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new Date()))
                     .put("reminders", reminders)
+                    .put("smartAlarms", SmartAlarmStore.toJson(context))
                     .put("settings", new JSONObject()
                             .put("serviceEnabled", settings.serviceEnabled())
                             .put("checkIntervalSeconds", settings.checkIntervalSeconds())
@@ -275,6 +279,11 @@ public class ReminderBackup {
         if (settingsJson != null) {
             restoreSettings(context, settingsJson);
         }
+        JSONArray smartAlarms = root.optJSONArray("smartAlarms");
+        if (smartAlarms != null) {
+            SmartAlarmScheduler.cancel(context);
+            SmartAlarmStore.restoreJson(context, smartAlarms);
+        }
         JSONArray quietRules = root.optJSONArray("quietTimeRules");
         if (quietRules != null) {
             new QuietTimeRuleStore(context).replaceAll(quietRules);
@@ -301,6 +310,7 @@ public class ReminderBackup {
         }
         ReminderScheduler.scheduleNearest(context);
         ReminderScheduler.scheduleWatchdog(context);
+        SmartAlarmScheduler.reschedule(context);
         if (new ReminderSettings(context).serviceEnabled()) {
             ReminderForegroundService.start(context);
         } else {

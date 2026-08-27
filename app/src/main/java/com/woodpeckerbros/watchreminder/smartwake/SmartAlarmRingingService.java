@@ -22,8 +22,9 @@ public final class SmartAlarmRingingService extends Service {
     private AlertFeedback feedback;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    public static void start(Context context) {
-        ContextCompat.startForegroundService(context, new Intent(context, SmartAlarmRingingService.class));
+    public static void start(Context context, int alarmId) {
+        ContextCompat.startForegroundService(context, new Intent(context, SmartAlarmRingingService.class)
+                .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId));
     }
 
     public static void stop(Context context) {
@@ -36,9 +37,16 @@ public final class SmartAlarmRingingService extends Service {
         if (manager != null) manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Alarm ringing", NotificationManager.IMPORTANCE_LOW));
         startForeground(NOTIFICATION_ID, new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Smart Alarm").setContentText("ההתראה פעילה").setOngoing(true).build());
-        SmartAlarmStore settings = new SmartAlarmStore(this);
+    }
+
+    @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        int alarmId = intent == null ? 1 : intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        if (feedback != null) feedback.stop();
+        handler.removeCallbacksAndMessages(null);
+        SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
         feedback = AlertFeedback.startSmartAlarm(this, settings);
         handler.postDelayed(this::stopSelf, settings.alertDurationSeconds() * 1000L + 500L);
+        return START_NOT_STICKY;
     }
 
     @Override public void onDestroy() {
