@@ -113,6 +113,11 @@ public class UiText {
         put("צלצול", "Sound");
         put("בחירת צלצול", "Choose Sound");
         put("לחיצה משמיעה דוגמה", "Tap to hear a preview");
+        put("ברירת מחדל", "Default");
+        put("קלאסי", "Classic");
+        put("מנגינות", "Melodies");
+        put("טבע ורגוע", "Nature and calm");
+        put("עוצמת רטט", "Vibration strength");
         put("צלצול ברירת מחדל", "Default sound");
         put("עוצמת צלצול", "Sound volume");
         put("אורך התראה בשניות", "Alert length, seconds");

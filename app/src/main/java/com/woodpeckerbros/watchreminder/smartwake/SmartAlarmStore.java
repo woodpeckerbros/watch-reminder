@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 public final class SmartAlarmStore {
     private static final String PREFS = "smart_alarm";
+    private static final String KEY_SNOOZE_DEFAULT_MIGRATED = "snooze_default_5_migrated";
     public static final int ALL_DAYS_MASK = 0xFE;
     public static final int DEFAULT_DAYS_MASK = ALL_DAYS_MASK & ~(1 << java.util.Calendar.SATURDAY);
     public static final String VIBRATION_GENTLE = "gentle";
@@ -15,6 +16,7 @@ public final class SmartAlarmStore {
 
     public SmartAlarmStore(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        migrateSnoozeDefaultOnce();
     }
 
     public boolean enabled() { return prefs.getBoolean("enabled", false); }
@@ -47,6 +49,15 @@ public final class SmartAlarmStore {
     }
 
     public void setSoundUri(String uri) { prefs.edit().putString("sound_uri", uri == null ? "" : uri).apply(); }
+
+    private void migrateSnoozeDefaultOnce() {
+        if (prefs.getBoolean(KEY_SNOOZE_DEFAULT_MIGRATED, false)) return;
+        SharedPreferences.Editor editor = prefs.edit().putBoolean(KEY_SNOOZE_DEFAULT_MIGRATED, true);
+        if (!prefs.contains("snooze_minutes") || prefs.getInt("snooze_minutes", 10) == 10) {
+            editor.putInt("snooze_minutes", 5);
+        }
+        editor.apply();
+    }
 
     private static int clamp(int value, int min, int max) { return Math.max(min, Math.min(max, value)); }
 }

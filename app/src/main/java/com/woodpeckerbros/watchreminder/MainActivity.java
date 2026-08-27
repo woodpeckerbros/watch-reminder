@@ -50,6 +50,7 @@ import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Switch;
@@ -157,6 +158,8 @@ public class MainActivity extends Activity {
     private ScrollView activeScrollView;
     private View smartAlarmSettingsSavedView;
     private ScrollView smartAlarmSettingsSavedScroll;
+    private RingtoneChoiceListener smartAlarmRingtoneListener;
+    private String smartAlarmRingtoneSelectedUri = "";
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
     private boolean permissionRequestInFlight;
@@ -1315,32 +1318,34 @@ public class MainActivity extends Activity {
         vibrationSpinner.setAdapter(spinnerAdapter(translated(vibrationLabels)));
         vibrationSpinner.setSelection(indexOf(vibrationValues, smart.vibrationStyle()));
         feedbackCard.addView(vibrationSpinner, matchParams());
-        String[] strengthLabels = translated(new String[]{"עוצמה עדינה", "עוצמה בינונית", "עוצמה חזקה"});
-        Spinner strengthSpinner = new Spinner(this);
-        strengthSpinner.setAdapter(spinnerAdapter(strengthLabels));
-        strengthSpinner.setSelection(smart.vibrationStrength() - 1);
-        feedbackCard.addView(strengthSpinner, matchParams());
+        LevelControl vibrationStrength = levelControl("עוצמת רטט", 2, smart.vibrationStrength() - 1);
+        feedbackCard.addView(vibrationStrength.view, matchParams());
 
-        final int[] initialVibrationSelections = {0};
+        final boolean[] initialVibrationSelection = {true};
         android.widget.AdapterView.OnItemSelectedListener vibrationPreviewListener = new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                if (initialVibrationSelections[0] < 2) {
-                    initialVibrationSelections[0]++;
+                if (initialVibrationSelection[0]) {
+                    initialVibrationSelection[0] = false;
                     return;
                 }
                 if (vibrationSwitch.isChecked()) {
                     previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
-                            strengthSpinner.getSelectedItemPosition() + 1, false, 0, selectedSoundUri[0]);
+                            vibrationStrength.slider.getProgress() + 1, false, 0, selectedSoundUri[0]);
                 }
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
         };
         vibrationSpinner.setOnItemSelectedListener(vibrationPreviewListener);
-        strengthSpinner.setOnItemSelectedListener(vibrationPreviewListener);
+        vibrationStrength.slider.setOnSeekBarChangeListener(levelPreviewListener(vibrationStrength, progress -> {
+            if (vibrationSwitch.isChecked()) {
+                previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                        progress + 1, false, 0, selectedSoundUri[0]);
+            }
+        }));
         vibrationSwitch.setOnClickListener(v -> {
             if (vibrationSwitch.isChecked()) {
                 previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
-                        strengthSpinner.getSelectedItemPosition() + 1, false, 0, selectedSoundUri[0]);
+                        vibrationStrength.slider.getProgress() + 1, false, 0, selectedSoundUri[0]);
             } else {
                 stopSmartAlarmPreview();
             }
@@ -1352,29 +1357,29 @@ public class MainActivity extends Activity {
         feedbackCard.addView(soundSwitch);
         TextView ringtoneValue = text(ringtoneTitle(selectedSoundUri[0]), 11, COLOR_CARD_MUTED);
         feedbackCard.addView(ringtoneValue);
-        final NumberPicker[] volumePickerRef = {null};
+        final LevelControl[] volumeControlRef = {null};
         Button chooseRingtone = pillButton("בחירת צלצול", COLOR_SURFACE_2);
         chooseRingtone.setOnClickListener(v -> showSmartAlarmRingtoneScreen(selectedSoundUri[0],
-                volumePickerRef[0] == null ? smart.soundVolumePercent() : volumePickerRef[0].getValue() * 10,
+                volumeControlRef[0] == null ? smart.soundVolumePercent() : volumeControlRef[0].slider.getProgress() * 10,
                 (uri, title) -> {
             selectedSoundUri[0] = uri;
             ringtoneValue.setText(title);
         }));
         feedbackCard.addView(chooseRingtone);
-        NumberPicker volumePicker = numberPicker(1, 10, Math.max(1, smart.soundVolumePercent() / 10));
-        volumePickerRef[0] = volumePicker;
-        feedbackCard.addView(pickerColumn("עוצמת צלצול", volumePicker));
-        volumePicker.setOnValueChangedListener((picker, oldValue, newValue) -> {
+        LevelControl soundVolume = levelControl("עוצמת צלצול", 10, smart.soundVolumePercent() / 10);
+        volumeControlRef[0] = soundVolume;
+        feedbackCard.addView(soundVolume.view, matchParams());
+        soundVolume.slider.setOnSeekBarChangeListener(levelPreviewListener(soundVolume, progress -> {
             if (soundSwitch.isChecked()) {
                 previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
-                        strengthSpinner.getSelectedItemPosition() + 1, true, newValue * 10, selectedSoundUri[0]);
+                        vibrationStrength.slider.getProgress() + 1, true, progress * 10, selectedSoundUri[0]);
             }
-        });
+        }));
         soundSwitch.setOnClickListener(v -> {
             if (soundSwitch.isChecked()) {
                 previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
-                        strengthSpinner.getSelectedItemPosition() + 1, true,
-                        volumePicker.getValue() * 10, selectedSoundUri[0]);
+                        vibrationStrength.slider.getProgress() + 1, true,
+                        soundVolume.slider.getProgress() * 10, selectedSoundUri[0]);
             } else {
                 stopSmartAlarmPreview();
             }
@@ -1393,7 +1398,7 @@ public class MainActivity extends Activity {
             smart.save(enabledSwitch.isChecked(), hourPicker.getValue(), minutePicker.getValue(),
                     selectedDaysMask[0], windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
-                    strengthSpinner.getSelectedItemPosition() + 1, soundSwitch.isChecked(), volumePicker.getValue() * 10,
+                    vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(), soundVolume.slider.getProgress() * 10,
                     selectedSoundUri[0], durationPicker.getValue());
             stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this);
@@ -4986,6 +4991,18 @@ public class MainActivity extends Activity {
         void onChoice(String uri, String title);
     }
 
+    private static final class RingtoneChoice {
+        final String uri;
+        final String title;
+        final String group;
+
+        RingtoneChoice(String uri, String title, String group) {
+            this.uri = uri;
+            this.title = title;
+            this.group = group;
+        }
+    }
+
     private void showSmartAlarmRingtoneScreen(String currentUri, int volumePercent,
                                               RingtoneChoiceListener listener) {
         stopSmartAlarmPreview();
@@ -4993,10 +5010,10 @@ public class MainActivity extends Activity {
         smartAlarmSettingsSavedScroll = activeScrollView;
         currentScreen = "smart_alarm_ringtone";
         final String[] selectedUri = {currentUri == null ? "" : currentUri};
-        ArrayList<String> titles = new ArrayList<>();
-        ArrayList<String> uris = new ArrayList<>();
-        titles.add(UiText.t(this, "צלצול ברירת מחדל"));
-        uris.add("");
+        smartAlarmRingtoneSelectedUri = selectedUri[0];
+        smartAlarmRingtoneListener = listener;
+        ArrayList<RingtoneChoice> choices = new ArrayList<>();
+        choices.add(new RingtoneChoice("", UiText.t(this, "צלצול ברירת מחדל"), "ברירת מחדל"));
 
         LinearLayout content = baseContent();
         addTitle(content, "בחירת צלצול", "לחיצה משמיעה דוגמה");
@@ -5007,18 +5024,8 @@ public class MainActivity extends Activity {
         content.addView(list);
 
         LinearLayout actions = actionRow();
-        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
-        save.setOnClickListener(v -> {
-            stopSmartAlarmPreview();
-            listener.onChoice(selectedUri[0], ringtoneTitle(selectedUri[0]));
-            restoreSmartAlarmSettingsView();
-        });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> {
-            stopSmartAlarmPreview();
-            restoreSmartAlarmSettingsView();
-        });
-        actions.addView(save);
+        back.setOnClickListener(v -> finishSmartAlarmRingtoneSelection());
         actions.addView(back);
         content.addView(actions);
         content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(16)));
@@ -5035,8 +5042,8 @@ public class MainActivity extends Activity {
                     Uri uri = manager.getRingtoneUri(position);
                     String ringtoneTitle = cursor.getString(RingtoneManager.TITLE_COLUMN_INDEX);
                     if (uri != null && ringtoneTitle != null && !ringtoneTitle.trim().isEmpty()) {
-                        titles.add(ringtoneTitle);
-                        uris.add(uri.toString());
+                        choices.add(new RingtoneChoice(uri.toString(), ringtoneTitle,
+                                ringtoneGroup(ringtoneTitle)));
                     }
                 }
             } catch (Exception exception) {
@@ -5044,30 +5051,48 @@ public class MainActivity extends Activity {
             } finally {
                 if (cursor != null) cursor.close();
             }
+            choices.sort((left, right) -> {
+                int groupCompare = Integer.compare(ringtoneGroupOrder(left.group), ringtoneGroupOrder(right.group));
+                return groupCompare != 0 ? groupCompare : left.title.compareToIgnoreCase(right.title);
+            });
             mainHandler.post(() -> {
                 if (!"smart_alarm_ringtone".equals(currentScreen)) return;
-                list.removeAllViews();
-                for (int index = 0; index < titles.size(); index++) {
-                    addRingtoneChoice(list, selectedUri, uris.get(index), titles.get(index),
-                            volumePercent, titles, uris);
-                }
-                AppTextStyle.apply(list);
+                renderRingtoneChoices(list, selectedUri, volumePercent, choices);
             });
         }, "wr-ringtone-list").start();
     }
 
-    private void addRingtoneChoice(LinearLayout list, String[] selectedUri, String uri, String name,
-                                   int volumePercent, ArrayList<String> titles, ArrayList<String> uris) {
+    private void renderRingtoneChoices(LinearLayout list, String[] selectedUri, int volumePercent,
+                                       ArrayList<RingtoneChoice> choices) {
+        list.removeAllViews();
+        String previousGroup = null;
+        for (RingtoneChoice choice : choices) {
+            if (!choice.group.equals(previousGroup)) {
+                TextView groupTitle = text(choice.group, 14, COLOR_LUXURY_GOLD);
+                AppFont.bold(groupTitle);
+                groupTitle.setPadding(dp(8), dp(12), dp(8), dp(4));
+                list.addView(groupTitle, matchParams());
+                previousGroup = choice.group;
+            }
+            addRingtoneChoice(list, selectedUri, choice, volumePercent, choices);
+        }
+        AppTextStyle.apply(list);
+    }
+
+    private void addRingtoneChoice(LinearLayout list, String[] selectedUri, RingtoneChoice choice,
+                                   int volumePercent, ArrayList<RingtoneChoice> choices) {
+        String uri = choice.uri;
+        String name = choice.title;
         boolean selected = selectedUri[0].equals(uri);
         LinearLayout option = new LinearLayout(this);
         option.setGravity(Gravity.CENTER_VERTICAL);
-        option.setPadding(dp(18), 0, dp(14), 0);
+        option.setPadding(dp(15), 0, dp(11), 0);
         GradientDrawable optionBackground = new GradientDrawable();
         optionBackground.setColor(selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
-        optionBackground.setCornerRadius(dp(30));
+        optionBackground.setCornerRadius(dp(24));
         optionBackground.setStroke(dp(selected ? 2 : 1), selected ? COLOR_LUXURY_GOLD : 0x55FFFFFF);
         option.setBackground(optionBackground);
-        TextView optionTitle = text(name, 16, COLOR_TEXT);
+        TextView optionTitle = text(name, 14, COLOR_TEXT);
         optionTitle.setGravity(AppLanguage.isRtl(this) ? Gravity.RIGHT : Gravity.LEFT);
         option.addView(optionTitle, new LinearLayout.LayoutParams(0, -2, 1f));
         android.widget.RadioButton radio = new android.widget.RadioButton(this);
@@ -5079,21 +5104,33 @@ public class MainActivity extends Activity {
                     new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
                     new int[]{COLOR_LUXURY_GOLD, COLOR_MUTED}));
         }
-        option.addView(radio, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(64));
-        params.setMargins(0, dp(4), 0, dp(4));
+        option.addView(radio, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(52));
+        params.setMargins(dp(4), dp(3), dp(4), dp(3));
         option.setLayoutParams(params);
         option.setOnClickListener(v -> {
             selectedUri[0] = uri;
+            smartAlarmRingtoneSelectedUri = uri;
             previewSmartAlarm(SmartAlarmStore.VIBRATION_NORMAL, 2, true, volumePercent, uri);
-            list.removeAllViews();
-            for (int index = 0; index < titles.size(); index++) {
-                addRingtoneChoice(list, selectedUri, uris.get(index), titles.get(index),
-                        volumePercent, titles, uris);
-            }
-            AppTextStyle.apply(list);
+            renderRingtoneChoices(list, selectedUri, volumePercent, choices);
         });
         list.addView(option);
+    }
+
+    private String ringtoneGroup(String title) {
+        String normalized = title == null ? "" : title.toLowerCase(Locale.US).replace("_", "");
+        String natureWords = "rain forest wind breeze cloud snow lake night sky star sunrise sunset dawn cicada firefl morning pond";
+        for (String word : natureWords.split(" ")) if (normalized.contains(word)) return "טבע ורגוע";
+        String classicWords = "alarm beep classic marimba telephone oxygen buzzer bell clock trinket";
+        for (String word : classicWords.split(" ")) if (normalized.contains(word)) return "קלאסי";
+        return "מנגינות";
+    }
+
+    private int ringtoneGroupOrder(String group) {
+        if ("ברירת מחדל".equals(group)) return 0;
+        if ("קלאסי".equals(group)) return 1;
+        if ("מנגינות".equals(group)) return 2;
+        return 3;
     }
 
     private void restoreSmartAlarmSettingsView() {
@@ -5106,6 +5143,17 @@ public class MainActivity extends Activity {
         smartAlarmSettingsSavedView = null;
         smartAlarmSettingsSavedScroll = null;
         currentScreen = "smart_alarm_settings";
+    }
+
+    private void finishSmartAlarmRingtoneSelection() {
+        stopSmartAlarmPreview();
+        if (smartAlarmRingtoneListener != null) {
+            smartAlarmRingtoneListener.onChoice(
+                    smartAlarmRingtoneSelectedUri,
+                    ringtoneTitle(smartAlarmRingtoneSelectedUri));
+        }
+        smartAlarmRingtoneListener = null;
+        restoreSmartAlarmSettingsView();
     }
 
     private void previewSmartAlarm(String vibrationStyle, int vibrationStrength, boolean sound,
@@ -5287,8 +5335,7 @@ public class MainActivity extends Activity {
 
     private boolean navigateBack() {
         if ("smart_alarm_ringtone".equals(currentScreen)) {
-            stopSmartAlarmPreview();
-            restoreSmartAlarmSettingsView();
+            finishSmartAlarmRingtoneSelection();
             return true;
         }
         if ("license_text".equals(currentScreen)) {
@@ -5597,6 +5644,88 @@ public class MainActivity extends Activity {
         view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
         AppTextStyle.apply(view);
         return view;
+    }
+
+    private interface LevelChangeListener { void onChanged(int progress); }
+
+    private static final class LevelControl {
+        final LinearLayout view;
+        final SeekBar slider;
+        final TextView value;
+        final int max;
+
+        LevelControl(LinearLayout view, SeekBar slider, TextView value, int max) {
+            this.view = view;
+            this.slider = slider;
+            this.value = value;
+            this.max = max;
+        }
+    }
+
+    private LevelControl levelControl(String label, int max, int progress) {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(10), dp(8), dp(10), dp(8));
+        root.setBackground(rounded(COLOR_SURFACE_2, dp(24), 0x55FFFFFF));
+        TextView title = text(label, 12, COLOR_CARD_TEXT);
+        root.addView(title);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        Button minus = levelButton("−");
+        SeekBar slider = new SeekBar(this);
+        slider.setMax(max);
+        slider.setProgress(Math.max(0, Math.min(max, progress)));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            slider.setProgressTintList(android.content.res.ColorStateList.valueOf(COLOR_LUXURY_GOLD));
+            slider.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0x66FFFFFF));
+            slider.setThumbTintList(android.content.res.ColorStateList.valueOf(COLOR_LUXURY_GOLD));
+        }
+        Button plus = levelButton("+");
+        row.addView(minus);
+        row.addView(slider, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        row.addView(plus);
+        root.addView(row, new LinearLayout.LayoutParams(-1, dp(48)));
+        TextView value = text(levelPercent(max, slider.getProgress()), 11, COLOR_CARD_TEXT);
+        root.addView(value);
+
+        minus.setOnClickListener(v -> slider.setProgress(Math.max(0, slider.getProgress() - 1)));
+        plus.setOnClickListener(v -> slider.setProgress(Math.min(max, slider.getProgress() + 1)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.setMargins(0, dp(6), 0, dp(6));
+        root.setLayoutParams(params);
+        return new LevelControl(root, slider, value, max);
+    }
+
+    private Button levelButton(String label) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setTextColor(COLOR_TEXT);
+        button.setTextSize(25);
+        button.setAllCaps(false);
+        button.setPadding(0, 0, 0, 0);
+        button.setBackground(rounded(COLOR_SURFACE, dp(20), 0x55FFFFFF));
+        button.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(44)));
+        AppTextStyle.apply(button);
+        return button;
+    }
+
+    private SeekBar.OnSeekBarChangeListener levelPreviewListener(LevelControl control,
+                                                                 LevelChangeListener listener) {
+        return new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                control.value.setText(levelPercent(control.max, progress));
+                listener.onChanged(progress);
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+            @Override public void onStopTrackingTouch(SeekBar seekBar) { }
+        };
+    }
+
+    private String levelPercent(int max, int progress) {
+        int percent = max == 2 ? Math.round((progress + 1) * 100f / 3f) : Math.round(progress * 100f / max);
+        return percent + "%";
     }
 
     private TextView shadowedText(String value, int sp, int color) {
