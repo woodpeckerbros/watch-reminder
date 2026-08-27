@@ -112,6 +112,7 @@ public class UiText {
         put("רטט", "Vibration");
         put("צלצול", "Sound");
         put("בחירת צלצול", "Choose Sound");
+        put("לחיצה משמיעה דוגמה", "Tap to hear a preview");
         put("צלצול ברירת מחדל", "Default sound");
         put("עוצמת צלצול", "Sound volume");
         put("אורך התראה בשניות", "Alert length, seconds");

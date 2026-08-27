@@ -21,7 +21,7 @@ public final class SmartAlarmStore {
     public int hour() { return prefs.getInt("hour", 6); }
     public int minute() { return prefs.getInt("minute", 30); }
     public int windowMinutes() { return prefs.getInt("window_minutes", 30); }
-    public int snoozeMinutes() { return prefs.getInt("snooze_minutes", 10); }
+    public int snoozeMinutes() { return prefs.getInt("snooze_minutes", 5); }
     public int daysMask() { return prefs.getInt("days_mask", DEFAULT_DAYS_MASK); }
     public int snoozeCount() { return prefs.getInt("snooze_count", 3); }
     public boolean vibrationEnabled() { return prefs.getBoolean("vibration_enabled", true); }

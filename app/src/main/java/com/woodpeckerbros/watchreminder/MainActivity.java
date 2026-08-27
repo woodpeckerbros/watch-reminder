@@ -63,6 +63,7 @@ import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
 import com.kosherjava.zmanim.hebrewcalendar.JewishDate;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.io.BufferedReader;
 import java.io.File;
@@ -96,7 +97,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_CREATE_BACKUP_FILE = 30;
     private static final int REQUEST_OPEN_BACKUP_FILE = 31;
     private static final int REQUEST_PICK_RINGTONE = 32;
-    private static final int REQUEST_PICK_SMART_ALARM_RINGTONE = 33;
+    private AlertFeedback smartAlarmPreview;
     private static final int COLOR_BG = 0xFF0B2133;
     private static final int COLOR_SURFACE = 0xFF142A3A;
     private static final int COLOR_SURFACE_2 = 0xFF1A3042;
@@ -154,6 +155,8 @@ public class MainActivity extends Activity {
     private EditText descriptionInput;
     private EditText annualCounterInput;
     private ScrollView activeScrollView;
+    private View smartAlarmSettingsSavedView;
+    private ScrollView smartAlarmSettingsSavedScroll;
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
     private boolean permissionRequestInFlight;
@@ -516,13 +519,8 @@ public class MainActivity extends Activity {
         if (resultCode != RESULT_OK || data == null) {
             return;
         }
-        if (requestCode == REQUEST_PICK_RINGTONE || requestCode == REQUEST_PICK_SMART_ALARM_RINGTONE) {
+        if (requestCode == REQUEST_PICK_RINGTONE) {
             Uri picked = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-            if (requestCode == REQUEST_PICK_SMART_ALARM_RINGTONE) {
-                new SmartAlarmStore(this).setSoundUri(picked == null ? "" : picked.toString());
-                showSmartAlarmSettings();
-                return;
-            }
             new ReminderSettings(this).setAlertSoundUri(picked == null ? "" : picked.toString());
             showSettings();
             return;
@@ -1230,8 +1228,10 @@ public class MainActivity extends Activity {
     }
 
     private void showSmartAlarmSettings() {
+        stopSmartAlarmPreview();
         currentScreen = "smart_alarm_settings";
         SmartAlarmStore smart = new SmartAlarmStore(this);
+        final String[] selectedSoundUri = {smart.soundUri()};
         LinearLayout content = baseContent();
         addTitle(content, "שעון מעורר חכם", "");
 
@@ -1321,17 +1321,64 @@ public class MainActivity extends Activity {
         strengthSpinner.setSelection(smart.vibrationStrength() - 1);
         feedbackCard.addView(strengthSpinner, matchParams());
 
+        final int[] initialVibrationSelections = {0};
+        android.widget.AdapterView.OnItemSelectedListener vibrationPreviewListener = new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (initialVibrationSelections[0] < 2) {
+                    initialVibrationSelections[0]++;
+                    return;
+                }
+                if (vibrationSwitch.isChecked()) {
+                    previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                            strengthSpinner.getSelectedItemPosition() + 1, false, 0, selectedSoundUri[0]);
+                }
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        };
+        vibrationSpinner.setOnItemSelectedListener(vibrationPreviewListener);
+        strengthSpinner.setOnItemSelectedListener(vibrationPreviewListener);
+        vibrationSwitch.setOnClickListener(v -> {
+            if (vibrationSwitch.isChecked()) {
+                previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                        strengthSpinner.getSelectedItemPosition() + 1, false, 0, selectedSoundUri[0]);
+            } else {
+                stopSmartAlarmPreview();
+            }
+        });
+
         Switch soundSwitch = new Switch(this);
         setSwitchText(soundSwitch, "צלצול");
         soundSwitch.setChecked(smart.soundEnabled());
         feedbackCard.addView(soundSwitch);
-        TextView ringtoneValue = text(ringtoneTitle(smart.soundUri()), 11, COLOR_CARD_MUTED);
+        TextView ringtoneValue = text(ringtoneTitle(selectedSoundUri[0]), 11, COLOR_CARD_MUTED);
         feedbackCard.addView(ringtoneValue);
+        final NumberPicker[] volumePickerRef = {null};
         Button chooseRingtone = pillButton("בחירת צלצול", COLOR_SURFACE_2);
-        chooseRingtone.setOnClickListener(v -> openRingtonePicker(smart.soundUri(), REQUEST_PICK_SMART_ALARM_RINGTONE));
+        chooseRingtone.setOnClickListener(v -> showSmartAlarmRingtoneScreen(selectedSoundUri[0],
+                volumePickerRef[0] == null ? smart.soundVolumePercent() : volumePickerRef[0].getValue() * 10,
+                (uri, title) -> {
+            selectedSoundUri[0] = uri;
+            ringtoneValue.setText(title);
+        }));
         feedbackCard.addView(chooseRingtone);
         NumberPicker volumePicker = numberPicker(1, 10, Math.max(1, smart.soundVolumePercent() / 10));
+        volumePickerRef[0] = volumePicker;
         feedbackCard.addView(pickerColumn("עוצמת צלצול", volumePicker));
+        volumePicker.setOnValueChangedListener((picker, oldValue, newValue) -> {
+            if (soundSwitch.isChecked()) {
+                previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                        strengthSpinner.getSelectedItemPosition() + 1, true, newValue * 10, selectedSoundUri[0]);
+            }
+        });
+        soundSwitch.setOnClickListener(v -> {
+            if (soundSwitch.isChecked()) {
+                previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                        strengthSpinner.getSelectedItemPosition() + 1, true,
+                        volumePicker.getValue() * 10, selectedSoundUri[0]);
+            } else {
+                stopSmartAlarmPreview();
+            }
+        });
         NumberPicker durationPicker = numberPicker(5, 120, smart.alertDurationSeconds());
         feedbackCard.addView(pickerColumn("משך ההתראה בשניות", durationPicker));
         content.addView(feedbackCard, cardParams());
@@ -1347,13 +1394,14 @@ public class MainActivity extends Activity {
                     selectedDaysMask[0], windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
                     strengthSpinner.getSelectedItemPosition() + 1, soundSwitch.isChecked(), volumePicker.getValue() * 10,
-                    smart.soundUri(), durationPicker.getValue());
+                    selectedSoundUri[0], durationPicker.getValue());
+            stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this);
             Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();
             showList();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> showList());
+        back.setOnClickListener(v -> { stopSmartAlarmPreview(); showList(); });
         actions.addView(save);
         actions.addView(back);
         content.addView(actions);
@@ -4934,6 +4982,146 @@ public class MainActivity extends Activity {
         openRingtonePicker(currentUriText, REQUEST_PICK_RINGTONE);
     }
 
+    private interface RingtoneChoiceListener {
+        void onChoice(String uri, String title);
+    }
+
+    private void showSmartAlarmRingtoneScreen(String currentUri, int volumePercent,
+                                              RingtoneChoiceListener listener) {
+        stopSmartAlarmPreview();
+        smartAlarmSettingsSavedView = ((ViewGroup) findViewById(android.R.id.content)).getChildAt(0);
+        smartAlarmSettingsSavedScroll = activeScrollView;
+        currentScreen = "smart_alarm_ringtone";
+        final String[] selectedUri = {currentUri == null ? "" : currentUri};
+        ArrayList<String> titles = new ArrayList<>();
+        ArrayList<String> uris = new ArrayList<>();
+        titles.add(UiText.t(this, "צלצול ברירת מחדל"));
+        uris.add("");
+
+        LinearLayout content = baseContent();
+        addTitle(content, "בחירת צלצול", "לחיצה משמיעה דוגמה");
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        ProgressBar loading = new ProgressBar(this);
+        list.addView(loading, new LinearLayout.LayoutParams(-1, dp(72)));
+        content.addView(list);
+
+        LinearLayout actions = actionRow();
+        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
+        save.setOnClickListener(v -> {
+            stopSmartAlarmPreview();
+            listener.onChoice(selectedUri[0], ringtoneTitle(selectedUri[0]));
+            restoreSmartAlarmSettingsView();
+        });
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> {
+            stopSmartAlarmPreview();
+            restoreSmartAlarmSettingsView();
+        });
+        actions.addView(save);
+        actions.addView(back);
+        content.addView(actions);
+        content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(16)));
+        setScrollableContent(content);
+
+        new Thread(() -> {
+            RingtoneManager manager = new RingtoneManager(getApplicationContext());
+            manager.setType(RingtoneManager.TYPE_ALARM | RingtoneManager.TYPE_NOTIFICATION);
+            android.database.Cursor cursor = null;
+            try {
+                cursor = manager.getCursor();
+                while (cursor.moveToNext()) {
+                    int position = cursor.getPosition();
+                    Uri uri = manager.getRingtoneUri(position);
+                    String ringtoneTitle = cursor.getString(RingtoneManager.TITLE_COLUMN_INDEX);
+                    if (uri != null && ringtoneTitle != null && !ringtoneTitle.trim().isEmpty()) {
+                        titles.add(ringtoneTitle);
+                        uris.add(uri.toString());
+                    }
+                }
+            } catch (Exception exception) {
+                AppLog.e(this, "smart alarm ringtone list failed", exception);
+            } finally {
+                if (cursor != null) cursor.close();
+            }
+            mainHandler.post(() -> {
+                if (!"smart_alarm_ringtone".equals(currentScreen)) return;
+                list.removeAllViews();
+                for (int index = 0; index < titles.size(); index++) {
+                    addRingtoneChoice(list, selectedUri, uris.get(index), titles.get(index),
+                            volumePercent, titles, uris);
+                }
+                AppTextStyle.apply(list);
+            });
+        }, "wr-ringtone-list").start();
+    }
+
+    private void addRingtoneChoice(LinearLayout list, String[] selectedUri, String uri, String name,
+                                   int volumePercent, ArrayList<String> titles, ArrayList<String> uris) {
+        boolean selected = selectedUri[0].equals(uri);
+        LinearLayout option = new LinearLayout(this);
+        option.setGravity(Gravity.CENTER_VERTICAL);
+        option.setPadding(dp(18), 0, dp(14), 0);
+        GradientDrawable optionBackground = new GradientDrawable();
+        optionBackground.setColor(selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
+        optionBackground.setCornerRadius(dp(30));
+        optionBackground.setStroke(dp(selected ? 2 : 1), selected ? COLOR_LUXURY_GOLD : 0x55FFFFFF);
+        option.setBackground(optionBackground);
+        TextView optionTitle = text(name, 16, COLOR_TEXT);
+        optionTitle.setGravity(AppLanguage.isRtl(this) ? Gravity.RIGHT : Gravity.LEFT);
+        option.addView(optionTitle, new LinearLayout.LayoutParams(0, -2, 1f));
+        android.widget.RadioButton radio = new android.widget.RadioButton(this);
+        radio.setChecked(selected);
+        radio.setClickable(false);
+        radio.setFocusable(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            radio.setButtonTintList(new android.content.res.ColorStateList(
+                    new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+                    new int[]{COLOR_LUXURY_GOLD, COLOR_MUTED}));
+        }
+        option.addView(radio, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(64));
+        params.setMargins(0, dp(4), 0, dp(4));
+        option.setLayoutParams(params);
+        option.setOnClickListener(v -> {
+            selectedUri[0] = uri;
+            previewSmartAlarm(SmartAlarmStore.VIBRATION_NORMAL, 2, true, volumePercent, uri);
+            list.removeAllViews();
+            for (int index = 0; index < titles.size(); index++) {
+                addRingtoneChoice(list, selectedUri, uris.get(index), titles.get(index),
+                        volumePercent, titles, uris);
+            }
+            AppTextStyle.apply(list);
+        });
+        list.addView(option);
+    }
+
+    private void restoreSmartAlarmSettingsView() {
+        if (smartAlarmSettingsSavedView == null) {
+            showSmartAlarmSettings();
+            return;
+        }
+        setContentView(smartAlarmSettingsSavedView);
+        activeScrollView = smartAlarmSettingsSavedScroll;
+        smartAlarmSettingsSavedView = null;
+        smartAlarmSettingsSavedScroll = null;
+        currentScreen = "smart_alarm_settings";
+    }
+
+    private void previewSmartAlarm(String vibrationStyle, int vibrationStrength, boolean sound,
+                                   int volumePercent, String soundUri) {
+        stopSmartAlarmPreview();
+        smartAlarmPreview = AlertFeedback.preview(this, !sound, vibrationStyle, vibrationStrength,
+                sound, volumePercent, soundUri);
+    }
+
+    private void stopSmartAlarmPreview() {
+        if (smartAlarmPreview != null) {
+            smartAlarmPreview.stop();
+            smartAlarmPreview = null;
+        }
+    }
+
     private void openRingtonePicker(String currentUriText, int requestCode) {
         stopVibrationPreview();
         Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
@@ -5098,6 +5286,11 @@ public class MainActivity extends Activity {
     }
 
     private boolean navigateBack() {
+        if ("smart_alarm_ringtone".equals(currentScreen)) {
+            stopSmartAlarmPreview();
+            restoreSmartAlarmSettingsView();
+            return true;
+        }
         if ("license_text".equals(currentScreen)) {
             showAboutAndLicenses();
             return true;

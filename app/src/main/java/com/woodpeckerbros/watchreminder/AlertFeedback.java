@@ -41,6 +41,15 @@ public class AlertFeedback {
         return feedback;
     }
 
+    public static AlertFeedback preview(Context context, boolean vibrationEnabled, String vibrationStyle,
+                                        int vibrationStrength, boolean soundEnabled, int volumePercent,
+                                        String soundUri) {
+        AlertFeedback feedback = new AlertFeedback(context);
+        feedback.startConfigured(4_000, vibrationEnabled, vibrationStyle, vibrationStrength,
+                soundEnabled, volumePercent, soundUri);
+        return feedback;
+    }
+
     public void stop() {
         handler.removeCallbacksAndMessages(null);
         stopSound();
