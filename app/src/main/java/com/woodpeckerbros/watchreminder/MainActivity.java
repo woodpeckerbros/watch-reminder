@@ -5665,14 +5665,15 @@ public class MainActivity extends Activity {
     private LevelControl levelControl(String label, int max, int progress) {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(10), dp(8), dp(10), dp(8));
-        root.setBackground(rounded(COLOR_SURFACE_2, dp(24), 0x55FFFFFF));
+        root.setPadding(0, dp(4), 0, dp(4));
         TextView title = text(label, 12, COLOR_CARD_TEXT);
         root.addView(title);
 
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        row.setPadding(dp(5), dp(3), dp(5), dp(3));
+        row.setBackground(rounded(COLOR_SURFACE_2, dp(26), 0x55FFFFFF));
         Button minus = levelButton("−");
         SeekBar slider = new SeekBar(this);
         slider.setMax(max);
@@ -5682,9 +5683,9 @@ public class MainActivity extends Activity {
         slider.setPadding(dp(8), 0, dp(8), 0);
         Button plus = levelButton("+");
         row.addView(minus);
-        row.addView(slider, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        row.addView(slider, new LinearLayout.LayoutParams(0, dp(40), 1f));
         row.addView(plus);
-        root.addView(row, new LinearLayout.LayoutParams(-1, dp(48)));
+        root.addView(row, new LinearLayout.LayoutParams(-1, dp(52)));
         TextView value = text(levelPercent(max, slider.getProgress()), 11, COLOR_CARD_TEXT);
         root.addView(value);
 
@@ -5698,7 +5699,7 @@ public class MainActivity extends Activity {
 
     private LinearLayout.LayoutParams wideLevelParams() {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.setMargins(-dp(2), dp(6), -dp(2), dp(6));
+        params.setMargins(dp(2), dp(6), dp(2), dp(6));
         return params;
     }
 
@@ -5732,7 +5733,7 @@ public class MainActivity extends Activity {
         button.setAllCaps(false);
         button.setPadding(0, 0, 0, 0);
         button.setBackground(rounded(COLOR_SURFACE, dp(20), 0x55FFFFFF));
-        button.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(44)));
+        button.setLayoutParams(new LinearLayout.LayoutParams(dp(38), dp(42)));
         AppTextStyle.apply(button);
         return button;
     }
