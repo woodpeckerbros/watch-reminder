@@ -1367,9 +1367,9 @@ public class MainActivity extends Activity {
         LinearLayout titleRow = new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER);
         titleRow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
-        TextView englishTitle = exactText("Language", 17, COLOR_TEXT, View.TEXT_DIRECTION_LTR);
-        TextView titleSeparator = exactText(" · ", 17, COLOR_TEXT, View.TEXT_DIRECTION_LTR);
-        TextView hebrewTitle = exactText("שפה", 17, COLOR_TEXT, View.TEXT_DIRECTION_RTL);
+        TextView englishTitle = outlinedExactText("Language", 17, COLOR_TEXT, View.TEXT_DIRECTION_LTR);
+        TextView titleSeparator = outlinedExactText(" · ", 17, COLOR_TEXT, View.TEXT_DIRECTION_LTR);
+        TextView hebrewTitle = outlinedExactText("שפה", 17, COLOR_TEXT, View.TEXT_DIRECTION_RTL);
         AppFont.bold(englishTitle);
         AppFont.bold(titleSeparator);
         AppFont.bold(hebrewTitle);
@@ -5239,18 +5239,6 @@ public class MainActivity extends Activity {
         view.setTextColor(color);
         view.setGravity(Gravity.CENTER);
         view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
-        AppTextStyle.apply(view);
-        return view;
-    }
-
-    private TextView exactText(String value, int sp, int color, int textDirection) {
-        TextView view = new TextView(this);
-        AppFont.apply(view);
-        view.setText(value);
-        view.setTextSize(sp);
-        view.setTextColor(color);
-        view.setGravity(Gravity.CENTER);
-        view.setTextDirection(textDirection);
         AppTextStyle.apply(view);
         return view;
     }
