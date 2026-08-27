@@ -5294,7 +5294,7 @@ public class MainActivity extends Activity {
                 float originalWidth = paint.getStrokeWidth();
                 int originalColor = paint.getColor();
                 paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(dp(2));
+                paint.setStrokeWidth(1f);
                 paint.setColor(outlineColor);
                 setTextColor(outlineColor);
                 super.onDraw(canvas);
