@@ -1,5 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmScheduler;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,6 +25,7 @@ public class BootReceiver extends BroadcastReceiver {
         JewishDayScheduler.schedule(context);
         TekufaScheduler.schedule(context);
         IntermittentFastingScheduler.schedule(context);
+        SmartAlarmScheduler.reschedule(context);
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.requestAll(context);
         ReminderReceiver.dispatchNextQueued(context);

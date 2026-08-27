@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".smartwake.SmartWakeDebugReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.woodpeckerbros.watchreminder.DEBUG_SMART_WAKE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

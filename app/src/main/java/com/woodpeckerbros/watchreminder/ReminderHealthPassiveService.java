@@ -3,6 +3,7 @@ package com.woodpeckerbros.watchreminder;
 import androidx.health.services.client.PassiveListenerService;
 import androidx.health.services.client.data.UserActivityInfo;
 import androidx.health.services.client.data.UserActivityState;
+import com.woodpeckerbros.watchreminder.smartwake.SmartWakeMonitoringService;
 
 public class ReminderHealthPassiveService extends PassiveListenerService {
     @Override
@@ -15,6 +16,7 @@ public class ReminderHealthPassiveService extends PassiveListenerService {
         } else {
             stateStore.markAvailable();
         }
+        SmartWakeMonitoringService.updateActivity(this, asleep);
         ReminderAlertQueueStore queueStore = new ReminderAlertQueueStore(this);
         if (shouldDispatchAfterUserActivity(asleep, queueStore.hasDeferredAlerts())) {
             AppLog.d(this, "HealthPassive awake with deferred alerts, dispatching");

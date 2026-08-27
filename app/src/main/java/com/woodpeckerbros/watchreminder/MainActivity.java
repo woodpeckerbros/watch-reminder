@@ -55,6 +55,7 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmSettingsActivity;
 
 import com.kosherjava.zmanim.hebrewcalendar.HebrewDateFormatter;
 import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
@@ -602,6 +603,9 @@ public class MainActivity extends Activity {
         AppFont.bold(shortcutsTitle);
         shortcutsTitle.setPadding(0, dp(12), 0, dp(2));
         content.addView(shortcutsTitle);
+        Button smartAlarmButton = pillButton("Smart Alarm", COLOR_SURFACE_2);
+        smartAlarmButton.setOnClickListener(v -> startActivity(new Intent(this, SmartAlarmSettingsActivity.class)));
+        content.addView(smartAlarmButton, matchParams());
         if (jewishMode) {
             LinearLayout jewishActions = actionRow();
             Button zmanimButton = pillButton("זמני היום", COLOR_EMERALD_DEEP);

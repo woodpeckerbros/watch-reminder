@@ -13,6 +13,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
@@ -40,6 +41,24 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps user-created reminder alarms reliable on Wear OS by periodically checking and dispatching due reminders when exact alarm delivery is delayed." />
+        </service>
+
+        <service
+            android:name=".smartwake.SmartWakeMonitoringService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Monitors heart rate and wrist movement only during the user-configured smart alarm wake window." />
+        </service>
+
+        <service
+            android:name=".smartwake.SmartAlarmRingingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Plays user-configured alarm sound and vibration when a Smart Alarm fires." />
         </service>
 
         <service
@@ -166,6 +185,10 @@
             android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
+        <activity android:name=".smartwake.SmartAlarmSettingsActivity" android:exported="false" android:theme="@style/AppTheme" />
+        <activity android:name=".smartwake.SmartAlarmAlertActivity" android:excludeFromRecents="true" android:exported="false"
+            android:showWhenLocked="true" android:taskAffinity="" android:theme="@style/AppTheme" />
+
         <activity
             android:name=".DafYomiAlertActivity"
             android:excludeFromRecents="true"
@@ -219,6 +242,9 @@
         <receiver
             android:name=".ReminderReceiver"
             android:exported="false" />
+
+        <receiver android:name=".smartwake.SmartWakeWindowReceiver" android:exported="false" />
+        <receiver android:name=".smartwake.SmartAlarmReceiver" android:exported="false" />
 
         <receiver
             android:name=".AutoSnoozeReceiver"
