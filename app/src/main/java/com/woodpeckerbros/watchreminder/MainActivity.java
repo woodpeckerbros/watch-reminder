@@ -1319,7 +1319,7 @@ public class MainActivity extends Activity {
         vibrationSpinner.setSelection(indexOf(vibrationValues, smart.vibrationStyle()));
         feedbackCard.addView(vibrationSpinner, matchParams());
         LevelControl vibrationStrength = levelControl("עוצמת רטט", 2, smart.vibrationStrength() - 1);
-        feedbackCard.addView(vibrationStrength.view, matchParams());
+        feedbackCard.addView(vibrationStrength.view, wideLevelParams());
 
         final boolean[] initialVibrationSelection = {true};
         android.widget.AdapterView.OnItemSelectedListener vibrationPreviewListener = new android.widget.AdapterView.OnItemSelectedListener() {
@@ -1368,7 +1368,7 @@ public class MainActivity extends Activity {
         feedbackCard.addView(chooseRingtone);
         LevelControl soundVolume = levelControl("עוצמת צלצול", 10, smart.soundVolumePercent() / 10);
         volumeControlRef[0] = soundVolume;
-        feedbackCard.addView(soundVolume.view, matchParams());
+        feedbackCard.addView(soundVolume.view, wideLevelParams());
         soundVolume.slider.setOnSeekBarChangeListener(levelPreviewListener(soundVolume, progress -> {
             if (soundSwitch.isChecked()) {
                 previewSmartAlarm(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
@@ -5677,11 +5677,9 @@ public class MainActivity extends Activity {
         SeekBar slider = new SeekBar(this);
         slider.setMax(max);
         slider.setProgress(Math.max(0, Math.min(max, progress)));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            slider.setProgressTintList(android.content.res.ColorStateList.valueOf(COLOR_LUXURY_GOLD));
-            slider.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0x66FFFFFF));
-            slider.setThumbTintList(android.content.res.ColorStateList.valueOf(COLOR_LUXURY_GOLD));
-        }
+        slider.setProgressDrawable(levelProgressDrawable());
+        slider.setThumb(new ColorDrawable(Color.TRANSPARENT));
+        slider.setPadding(dp(8), 0, dp(8), 0);
         Button plus = levelButton("+");
         row.addView(minus);
         row.addView(slider, new LinearLayout.LayoutParams(0, dp(44), 1f));
@@ -5696,6 +5694,34 @@ public class MainActivity extends Activity {
         params.setMargins(0, dp(6), 0, dp(6));
         root.setLayoutParams(params);
         return new LevelControl(root, slider, value, max);
+    }
+
+    private LinearLayout.LayoutParams wideLevelParams() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.setMargins(-dp(2), dp(6), -dp(2), dp(6));
+        return params;
+    }
+
+    private android.graphics.drawable.Drawable levelProgressDrawable() {
+        GradientDrawable track = new GradientDrawable();
+        track.setColor(0xFF4A4D4F);
+        track.setCornerRadius(dp(4));
+        track.setSize(1, dp(7));
+        GradientDrawable fill = new GradientDrawable();
+        fill.setColor(0xFFFFD981);
+        fill.setCornerRadius(dp(4));
+        fill.setSize(1, dp(7));
+        android.graphics.drawable.ClipDrawable clipped = new android.graphics.drawable.ClipDrawable(
+                fill, Gravity.LEFT, android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        android.graphics.drawable.LayerDrawable layers = new android.graphics.drawable.LayerDrawable(
+                new android.graphics.drawable.Drawable[]{track, clipped});
+        layers.setId(0, android.R.id.background);
+        layers.setId(1, android.R.id.progress);
+        layers.setLayerGravity(0, Gravity.CENTER_VERTICAL);
+        layers.setLayerGravity(1, Gravity.CENTER_VERTICAL);
+        layers.setLayerHeight(0, dp(7));
+        layers.setLayerHeight(1, dp(7));
+        return layers;
     }
 
     private Button levelButton(String label) {
