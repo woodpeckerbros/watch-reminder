@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 public final class SmartAlarmStore {
     private static final String PREFS = "smart_alarm";
     private static final String KEY_SNOOZE_DEFAULT_MIGRATED = "snooze_default_5_migrated";
+    private static final String KEY_VIBRATION_LEVELS_MIGRATED = "vibration_10_levels_migrated";
     public static final int ALL_DAYS_MASK = 0xFE;
     public static final int DEFAULT_DAYS_MASK = ALL_DAYS_MASK & ~(1 << java.util.Calendar.SATURDAY);
     public static final String VIBRATION_GENTLE = "gentle";
@@ -17,6 +18,7 @@ public final class SmartAlarmStore {
     public SmartAlarmStore(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         migrateSnoozeDefaultOnce();
+        migrateVibrationLevelsOnce();
     }
 
     public boolean enabled() { return prefs.getBoolean("enabled", false); }
@@ -28,7 +30,7 @@ public final class SmartAlarmStore {
     public int snoozeCount() { return prefs.getInt("snooze_count", 3); }
     public boolean vibrationEnabled() { return prefs.getBoolean("vibration_enabled", true); }
     public String vibrationStyle() { return prefs.getString("vibration_style", VIBRATION_NORMAL); }
-    public int vibrationStrength() { return clamp(prefs.getInt("vibration_strength", 2), 1, 3); }
+    public int vibrationStrength() { return clamp(prefs.getInt("vibration_strength", 6), 1, 10); }
     public boolean soundEnabled() { return prefs.getBoolean("sound_enabled", true); }
     public int soundVolumePercent() { return clamp(prefs.getInt("sound_volume_percent", 80), 0, 100); }
     public String soundUri() { return prefs.getString("sound_uri", ""); }
@@ -57,6 +59,14 @@ public final class SmartAlarmStore {
             editor.putInt("snooze_minutes", 5);
         }
         editor.apply();
+    }
+
+    private void migrateVibrationLevelsOnce() {
+        if (prefs.getBoolean(KEY_VIBRATION_LEVELS_MIGRATED, false)) return;
+        int oldStrength = clamp(prefs.getInt("vibration_strength", 2), 1, 3);
+        int migratedStrength = oldStrength == 1 ? 3 : oldStrength == 2 ? 6 : 10;
+        prefs.edit().putInt("vibration_strength", migratedStrength)
+                .putBoolean(KEY_VIBRATION_LEVELS_MIGRATED, true).apply();
     }
 
     private static int clamp(int value, int min, int max) { return Math.max(min, Math.min(max, value)); }

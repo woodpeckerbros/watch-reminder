@@ -57,7 +57,7 @@ public class AlertFeedback {
     }
 
     private void startInternal(ReminderSettings settings) {
-        startConfigured(settings.alertDurationMs(), settings.vibrationEnabled(), settings.vibrationStyle(), 3,
+        startConfigured(settings.alertDurationMs(), settings.vibrationEnabled(), settings.vibrationStyle(), 10,
                 settings.alertSoundEnabled(), settings.alertVolumePercent(), settings.alertSoundUri());
     }
 
@@ -124,7 +124,8 @@ public class AlertFeedback {
             return;
         }
         long[] pattern = ReminderSettings.vibrationPattern(style, durationMs);
-        int amplitude = strength <= 1 ? 80 : strength == 2 ? 160 : 255;
+        int normalizedStrength = Math.max(1, Math.min(10, strength));
+        int amplitude = Math.round(normalizedStrength * 255f / 10f);
         int[] amplitudes = new int[pattern.length];
         for (int index = 0; index < amplitudes.length; index++) amplitudes[index] = index % 2 == 1 ? amplitude : 0;
         VibrationEffect effect = VibrationEffect.createWaveform(pattern, amplitudes, -1);

@@ -1318,7 +1318,7 @@ public class MainActivity extends Activity {
         vibrationSpinner.setAdapter(spinnerAdapter(translated(vibrationLabels)));
         vibrationSpinner.setSelection(indexOf(vibrationValues, smart.vibrationStyle()));
         feedbackCard.addView(vibrationSpinner, matchParams());
-        LevelControl vibrationStrength = levelControl("עוצמת רטט", 2, smart.vibrationStrength() - 1);
+        LevelControl vibrationStrength = levelControl("עוצמת רטט", 9, smart.vibrationStrength() - 1);
         feedbackCard.addView(vibrationStrength.view, wideLevelParams());
 
         final boolean[] initialVibrationSelection = {true};
@@ -5751,7 +5751,7 @@ public class MainActivity extends Activity {
     }
 
     private String levelPercent(int max, int progress) {
-        int percent = max == 2 ? Math.round((progress + 1) * 100f / 3f) : Math.round(progress * 100f / max);
+        int percent = max == 9 ? (progress + 1) * 10 : Math.round(progress * 100f / max);
         return percent + "%";
     }
 
