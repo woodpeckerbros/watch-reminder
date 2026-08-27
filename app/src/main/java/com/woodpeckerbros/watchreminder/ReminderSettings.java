@@ -31,6 +31,7 @@ public class ReminderSettings {
     private static final String KEY_VIBRATION_STYLE = "vibration_style";
     private static final String KEY_VIBRATION_DURATION_MS = "vibration_duration_ms";
     private static final String KEY_VIBRATION_ENABLED = "vibration_enabled";
+    private static final String KEY_VIBRATION_STRENGTH = "vibration_strength";
     private static final String KEY_ALERT_SOUND_ENABLED = "alert_sound_enabled";
     private static final String KEY_ALERT_SOUND_URI = "alert_sound_uri";
     private static final String KEY_ALERT_VOLUME_PERCENT = "alert_volume_percent";
@@ -141,6 +142,14 @@ public class ReminderSettings {
 
     public void setVibrationEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_VIBRATION_ENABLED, enabled).apply();
+    }
+
+    public int vibrationStrength() {
+        return clamp(prefs.getInt(KEY_VIBRATION_STRENGTH, 10), 1, 10);
+    }
+
+    public void setVibrationStrength(int strength) {
+        prefs.edit().putInt(KEY_VIBRATION_STRENGTH, clamp(strength, 1, 10)).apply();
     }
 
     public boolean alertSoundEnabled() {

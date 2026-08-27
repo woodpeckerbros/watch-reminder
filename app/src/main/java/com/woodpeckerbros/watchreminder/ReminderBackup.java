@@ -65,6 +65,7 @@ public class ReminderBackup {
                             .put("vibrationDurationMs", settings.vibrationDurationMs())
                             .put("alertDurationMs", settings.alertDurationMs())
                             .put("vibrationEnabled", settings.vibrationEnabled())
+                            .put("vibrationStrength", settings.vibrationStrength())
                             .put("alertSoundEnabled", settings.alertSoundEnabled())
                             .put("alertSoundUri", settings.alertSoundUri())
                             .put("alertVolumePercent", settings.alertVolumePercent())
@@ -438,6 +439,7 @@ public class ReminderBackup {
         settings.setVibrationStyle(json.optString("vibrationStyle", settings.vibrationStyle()));
         settings.setAlertDurationMs(json.optInt("alertDurationMs", json.optInt("vibrationDurationMs", settings.alertDurationMs())));
         settings.setVibrationEnabled(json.optBoolean("vibrationEnabled", settings.vibrationEnabled()));
+        settings.setVibrationStrength(json.optInt("vibrationStrength", settings.vibrationStrength()));
         settings.setAlertSoundEnabled(json.optBoolean("alertSoundEnabled", settings.alertSoundEnabled()));
         settings.setAlertSoundUri(json.optString("alertSoundUri", settings.alertSoundUri()));
         settings.setAlertVolumePercent(json.optInt("alertVolumePercent", settings.alertVolumePercent()));

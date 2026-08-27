@@ -160,6 +160,7 @@ public class MainActivity extends Activity {
     private ScrollView smartAlarmSettingsSavedScroll;
     private RingtoneChoiceListener smartAlarmRingtoneListener;
     private String smartAlarmRingtoneSelectedUri = "";
+    private String ringtoneReturnScreen = "smart_alarm_settings";
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
     private boolean permissionRequestInFlight;
@@ -1999,15 +2000,19 @@ public class MainActivity extends Activity {
         soundSwitch.setOnClickListener(v -> settings.setAlertSoundEnabled(soundSwitch.isChecked()));
         vibrationCard.addView(soundSwitch);
 
-        TextView ringtoneValue = text(ringtoneTitle(settings.alertSoundUri()), 11, COLOR_MUTED);
+        final String[] selectedSoundUri = {settings.alertSoundUri()};
+        TextView ringtoneValue = text(ringtoneTitle(selectedSoundUri[0]), 11, COLOR_MUTED);
         ringtoneValue.setPadding(0, dp(3), 0, dp(5));
         vibrationCard.addView(ringtoneValue);
         Button chooseRingtone = pillButton("בחירת צלצול", COLOR_SURFACE_2);
-        chooseRingtone.setOnClickListener(v -> openRingtonePicker(settings.alertSoundUri()));
+        LevelControl soundVolume = levelControl("עוצמת צלצול", 10, settings.alertVolumePercent() / 10);
+        chooseRingtone.setOnClickListener(v -> showSmartAlarmRingtoneScreen(selectedSoundUri[0],
+                soundVolume.slider.getProgress() * 10, (uri, title) -> {
+                    selectedSoundUri[0] = uri;
+                    ringtoneValue.setText(title);
+                }));
         vibrationCard.addView(chooseRingtone);
-
-        NumberPicker volumePicker = numberPicker(1, 10, settings.alertVolumeLevel());
-        vibrationCard.addView(pickerColumn("עוצמת צלצול", volumePicker));
+        vibrationCard.addView(soundVolume.view, wideLevelParams());
 
         Switch vibrationSwitch = new Switch(this);
         setSwitchText(vibrationSwitch, "רטט");
@@ -2027,6 +2032,9 @@ public class MainActivity extends Activity {
         vibrationSpinner.setSelection(indexOf(vibrationValues, settings.vibrationStyle()));
         vibrationCard.addView(vibrationSpinner, matchParams());
 
+        LevelControl vibrationStrength = levelControl("עוצמת רטט", 9, settings.vibrationStrength() - 1);
+        vibrationCard.addView(vibrationStrength.view, wideLevelParams());
+
         NumberPicker alertDuration = numberPicker(1, 10, Math.max(1, Math.round(settings.alertDurationMs() / 1000f)));
         vibrationCard.addView(pickerColumn("אורך התראה בשניות", alertDuration));
         final boolean[] vibrationSelectionReady = {false};
@@ -2038,7 +2046,8 @@ public class MainActivity extends Activity {
                     return;
                 }
                 if (vibrationSwitch.isChecked()) {
-                    previewVibration(vibrationValues[position], alertDuration.getValue() * 1000);
+                    previewVibration(vibrationValues[position], alertDuration.getValue() * 1000,
+                            vibrationStrength.slider.getProgress() + 1);
                 }
             }
 
@@ -2049,32 +2058,50 @@ public class MainActivity extends Activity {
         vibrationSwitch.setOnClickListener(v -> {
             settings.setVibrationEnabled(vibrationSwitch.isChecked());
             if (vibrationSwitch.isChecked()) {
-                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], alertDuration.getValue() * 1000);
+                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                        alertDuration.getValue() * 1000, vibrationStrength.slider.getProgress() + 1);
             } else {
                 stopVibrationPreview();
             }
         });
         alertDuration.setOnValueChangedListener((picker, oldValue, newValue) -> {
             if (vibrationSwitch.isChecked()) {
-                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], newValue * 1000);
+                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()], newValue * 1000,
+                        vibrationStrength.slider.getProgress() + 1);
             }
         });
+        vibrationStrength.slider.setOnSeekBarChangeListener(levelPreviewListener(vibrationStrength, progress -> {
+            if (vibrationSwitch.isChecked()) {
+                previewVibration(vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                        alertDuration.getValue() * 1000, progress + 1);
+            }
+        }));
+        soundVolume.slider.setOnSeekBarChangeListener(levelPreviewListener(soundVolume, progress -> {
+            if (soundSwitch.isChecked()) {
+                previewSmartAlarm(ReminderSettings.VIBRATION_NORMAL, 10, true,
+                        progress * 10, selectedSoundUri[0]);
+            }
+        }));
         content.addView(vibrationCard, cardParams());
 
         LinearLayout actions = actionRow();
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
         save.setOnClickListener(v -> {
             stopVibrationPreview();
+            stopSmartAlarmPreview();
             settings.setAlertSoundEnabled(soundSwitch.isChecked());
-            settings.setAlertVolumeLevel(volumePicker.getValue());
+            settings.setAlertSoundUri(selectedSoundUri[0]);
+            settings.setAlertVolumePercent(soundVolume.slider.getProgress() * 10);
             settings.setVibrationEnabled(vibrationSwitch.isChecked());
             settings.setVibrationStyle(vibrationValues[vibrationSpinner.getSelectedItemPosition()]);
+            settings.setVibrationStrength(vibrationStrength.slider.getProgress() + 1);
             settings.setAlertDurationMs(alertDuration.getValue() * 1000);
             showSettings();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
         back.setOnClickListener(v -> {
             stopVibrationPreview();
+            stopSmartAlarmPreview();
             showSettings();
         });
         actions.addView(save);
@@ -4967,6 +4994,10 @@ public class MainActivity extends Activity {
     }
 
     private void previewVibration(String style, int durationMs) {
+        previewVibration(style, durationMs, 10);
+    }
+
+    private void previewVibration(String style, int durationMs, int strength) {
         stopVibrationPreview();
         if (ReminderSettings.VIBRATION_OFF.equals(style)) {
             return;
@@ -4979,7 +5010,13 @@ public class MainActivity extends Activity {
             vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         }
         if (vibrator != null) {
-            vibrator.vibrate(VibrationEffect.createWaveform(ReminderSettings.vibrationPattern(style, durationMs), -1));
+            long[] pattern = ReminderSettings.vibrationPattern(style, durationMs);
+            int amplitude = Math.round(Math.max(1, Math.min(10, strength)) * 255f / 10f);
+            int[] amplitudes = new int[pattern.length];
+            for (int index = 0; index < amplitudes.length; index++) {
+                amplitudes[index] = index % 2 == 1 ? amplitude : 0;
+            }
+            vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitudes, -1));
         }
     }
 
@@ -5006,6 +5043,7 @@ public class MainActivity extends Activity {
     private void showSmartAlarmRingtoneScreen(String currentUri, int volumePercent,
                                               RingtoneChoiceListener listener) {
         stopSmartAlarmPreview();
+        ringtoneReturnScreen = currentScreen;
         smartAlarmSettingsSavedView = ((ViewGroup) findViewById(android.R.id.content)).getChildAt(0);
         smartAlarmSettingsSavedScroll = activeScrollView;
         currentScreen = "smart_alarm_ringtone";
@@ -5142,7 +5180,7 @@ public class MainActivity extends Activity {
         activeScrollView = smartAlarmSettingsSavedScroll;
         smartAlarmSettingsSavedView = null;
         smartAlarmSettingsSavedScroll = null;
-        currentScreen = "smart_alarm_settings";
+        currentScreen = ringtoneReturnScreen;
     }
 
     private void finishSmartAlarmRingtoneSelection() {
@@ -5357,6 +5395,7 @@ public class MainActivity extends Activity {
                 || "backup_export".equals(currentScreen)
                 || "backup_import".equals(currentScreen)) {
             stopVibrationPreview();
+            stopSmartAlarmPreview();
             if ("settings".equals(currentScreen) || "backup_export".equals(currentScreen) || "backup_import".equals(currentScreen)) {
                 showList();
             } else {

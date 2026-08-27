@@ -57,7 +57,8 @@ public class AlertFeedback {
     }
 
     private void startInternal(ReminderSettings settings) {
-        startConfigured(settings.alertDurationMs(), settings.vibrationEnabled(), settings.vibrationStyle(), 10,
+        startConfigured(settings.alertDurationMs(), settings.vibrationEnabled(), settings.vibrationStyle(),
+                settings.vibrationStrength(),
                 settings.alertSoundEnabled(), settings.alertVolumePercent(), settings.alertSoundUri());
     }
 
