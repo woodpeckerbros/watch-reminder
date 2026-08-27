@@ -1,5 +1,8 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmScheduler;
+import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmStore;
+
 import android.content.Context;
 
 import org.json.JSONArray;
@@ -42,6 +45,14 @@ public class ReminderPatchApplier {
             } else if ("updateSettings".equals(action)) {
                 applySettings(context, operation);
                 applied++;
+            } else if ("replaceSmartAlarms".equals(action)) {
+                JSONArray smartAlarms = operation.optJSONArray("smartAlarms");
+                if (smartAlarms != null) {
+                    SmartAlarmScheduler.cancel(context);
+                    SmartAlarmStore.restoreJson(context, smartAlarms);
+                    SmartAlarmScheduler.reschedule(context);
+                    applied++;
+                }
             }
         }
         ReminderScheduler.scheduleWatchdog(context);

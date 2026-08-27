@@ -60,6 +60,10 @@ class LocalReminderDocument {
         return root(context).optJSONArray("reminders");
     }
 
+    static JSONArray smartAlarms(Context context) {
+        return root(context).optJSONArray("smartAlarms");
+    }
+
     static void saveRoot(Context context, JSONObject root) {
         try {
             root.put("type", "watch-reminder-backup");
@@ -81,6 +85,7 @@ class LocalReminderDocument {
                     .put("version", 1)
                     .put("exportedAt", System.currentTimeMillis())
                     .put("reminders", new JSONArray())
+                    .put("smartAlarms", new JSONArray())
                     .put("settings", new JSONObject()
                             .put("serviceEnabled", false)
                             .put("checkIntervalSeconds", 300)

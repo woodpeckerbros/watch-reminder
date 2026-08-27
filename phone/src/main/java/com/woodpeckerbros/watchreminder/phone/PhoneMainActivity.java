@@ -129,7 +129,10 @@ public class PhoneMainActivity extends Activity {
         add.setOnClickListener(v -> showEditor(null, -1));
         Button settings = button("הגדרות", SOFT, TEXT);
         settings.setOnClickListener(v -> showSettings());
+        Button smartAlarms = button("שעונים חכמים", SOFT, TEXT);
+        smartAlarms.setOnClickListener(v -> showSmartAlarms());
         actions2.addView(add);
+        actions2.addView(smartAlarms);
         actions2.addView(settings);
         content.addView(actions2);
 
@@ -185,6 +188,123 @@ public class PhoneMainActivity extends Activity {
                 content.addView(card, wideParams());
             }
         }
+        setScroll(content);
+    }
+
+    private void showSmartAlarms() {
+        screen = "smart_alarms";
+        LinearLayout content = base();
+        addHeader(content, "שעונים מעוררים חכמים", "ניהול השעונים החכמים שמסונכרנים עם השעון");
+        JSONArray alarms = smartAlarms();
+        if (alarms.length() == 0) {
+            LinearLayout empty = card();
+            empty.addView(text("אין שעונים מעוררים חכמים", 17, TEXT));
+            empty.addView(text("סנכרן מהשעון או הוסף שעון חדש", 14, MUTED));
+            content.addView(empty, wideParams());
+        }
+        for (int index = 0; index < alarms.length(); index++) {
+            JSONObject alarm = alarms.optJSONObject(index);
+            if (alarm == null) continue;
+            final int alarmIndex = index;
+            LinearLayout alarmCard = card();
+            alarmCard.setOnClickListener(v -> showSmartAlarmEditor(alarm, alarmIndex));
+            alarmCard.setOnLongClickListener(v -> {
+                showSmartAlarmActions(alarm, alarmIndex);
+                return true;
+            });
+            TextView time = text(String.format(Locale.US, "%02d:%02d", alarm.optInt("hour", 6), alarm.optInt("minute", 30)),
+                    24, alarm.optBoolean("enabled", true) ? COPPER : MUTED);
+            time.setTypeface(Typeface.DEFAULT_BOLD);
+            alarmCard.addView(time);
+            alarmCard.addView(text(smartAlarmDays(alarm.optInt("daysMask", 126)), 13, MUTED));
+            alarmCard.addView(text(alarm.optBoolean("enabled", true) ? "פעיל" : "כבוי", 13, TEXT));
+            content.addView(alarmCard, wideParams());
+        }
+        LinearLayout actions = row();
+        Button add = button("הוספת שעון מעורר", ACCENT);
+        add.setOnClickListener(v -> showSmartAlarmEditor(null, -1));
+        Button back = button("חזרה", SOFT, TEXT);
+        back.setOnClickListener(v -> showMain());
+        actions.addView(add); actions.addView(back); content.addView(actions);
+        setScroll(content);
+    }
+
+    private void showSmartAlarmEditor(JSONObject source, int index) {
+        screen = "smart_alarm_editor";
+        JSONObject alarm = source == null ? newSmartAlarm() : copy(source);
+        LinearLayout content = base();
+        addHeader(content, source == null ? "שעון חכם חדש" : "עריכת שעון חכם",
+                "הנתונים יישמרו בטלפון עד שליחה לשעון");
+        LinearLayout stateCard = card();
+        Switch enabled = switchView("פעיל", alarm.optBoolean("enabled", true));
+        stateCard.addView(enabled); content.addView(stateCard, wideParams());
+
+        TimePicker time = new TimePicker(this);
+        time.setIs24HourView(true); time.setHour(alarm.optInt("hour", 6)); time.setMinute(alarm.optInt("minute", 30));
+        content.addView(labeled("שעת השכמה", time), wideParams());
+
+        LinearLayout daysCard = card();
+        daysCard.addView(text("ימי פעילות", 15, TEXT));
+        CheckBox[] days = new CheckBox[7];
+        String[] dayLabels = {"ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"};
+        int initialMask = alarm.optInt("daysMask", 126);
+        for (int day = 0; day < 7; day++) {
+            days[day] = new CheckBox(this); days[day].setText(t(dayLabels[day])); days[day].setTextColor(TEXT);
+            days[day].setChecked((initialMask & (1 << (Calendar.SUNDAY + day))) != 0); daysCard.addView(days[day]);
+        }
+        content.addView(daysCard, wideParams());
+
+        NumberPicker window = numberPicker(5, 60, alarm.optInt("windowMinutes", 30));
+        content.addView(labeled("חלון חכם בדקות", window), wideParams());
+        LinearLayout snooze = card();
+        snooze.addView(text("נודניק", 15, TEXT));
+        NumberPicker snoozeMinutes = numberPicker(1, 30, alarm.optInt("snoozeMinutes", 5));
+        NumberPicker snoozeCount = numberPicker(0, 10, alarm.optInt("snoozeCount", 3));
+        snooze.addView(labeled("כל כמה דקות", snoozeMinutes));
+        snooze.addView(labeled("מספר פעמים", snoozeCount));
+        content.addView(snooze, wideParams());
+
+        LinearLayout feedback = card();
+        feedback.addView(text("רטט וצלצול", 15, TEXT));
+        Switch vibrationEnabled = switchView("רטט", alarm.optBoolean("vibrationEnabled", true));
+        Spinner vibrationStyle = spinner(new String[]{"רגיל", "עדין", "חזק", "ארוך"});
+        String[] vibrationValues = {"normal", "gentle", "strong", "long"};
+        String currentStyle = alarm.optString("vibrationStyle", "normal");
+        int styleIndex = 0; for (int i = 0; i < vibrationValues.length; i++) if (vibrationValues[i].equals(currentStyle)) styleIndex = i;
+        vibrationStyle.setSelection(styleIndex);
+        NumberPicker vibrationStrength = numberPicker(1, 10, alarm.optInt("vibrationStrength", 6));
+        Switch soundEnabled = switchView("צלצול", alarm.optBoolean("soundEnabled", true));
+        NumberPicker soundVolume = numberPicker(0, 10, alarm.optInt("soundVolumePercent", 80) / 10);
+        NumberPicker duration = numberPicker(5, 120, alarm.optInt("alertDurationSeconds", 30));
+        feedback.addView(vibrationEnabled); feedback.addView(labeled("סוג רטט", vibrationStyle));
+        feedback.addView(labeled("עוצמת רטט", vibrationStrength)); feedback.addView(soundEnabled);
+        feedback.addView(labeled("עוצמת צלצול", soundVolume));
+        feedback.addView(labeled("משך ההתראה בשניות", duration));
+        content.addView(feedback, wideParams());
+
+        LinearLayout actions = row();
+        Button save = button("שמירה", ACCENT);
+        save.setOnClickListener(v -> {
+            try {
+                int daysMask = 0;
+                for (int day = 0; day < days.length; day++) if (days[day].isChecked()) daysMask |= 1 << (Calendar.SUNDAY + day);
+                if (enabled.isChecked() && daysMask == 0) {
+                    Toast.makeText(this, t("צריך לבחור לפחות יום אחד"), Toast.LENGTH_LONG).show(); return;
+                }
+                alarm.put("enabled", enabled.isChecked()).put("hour", time.getHour()).put("minute", time.getMinute())
+                        .put("daysMask", daysMask).put("windowMinutes", numberValue(window))
+                        .put("snoozeMinutes", numberValue(snoozeMinutes)).put("snoozeCount", numberValue(snoozeCount))
+                        .put("vibrationEnabled", vibrationEnabled.isChecked())
+                        .put("vibrationStyle", vibrationValues[vibrationStyle.getSelectedItemPosition()])
+                        .put("vibrationStrength", numberValue(vibrationStrength)).put("soundEnabled", soundEnabled.isChecked())
+                        .put("soundVolumePercent", numberValue(soundVolume) * 10)
+                        .put("soundUri", alarm.optString("soundUri", ""))
+                        .put("alertDurationSeconds", numberValue(duration));
+                saveSmartAlarm(alarm, index); showSmartAlarms();
+            } catch (Exception error) { Toast.makeText(this, t("לא הצלחתי לשמור"), Toast.LENGTH_LONG).show(); }
+        });
+        Button cancel = button("ביטול", SOFT, TEXT); cancel.setOnClickListener(v -> showSmartAlarms());
+        actions.addView(save); actions.addView(cancel); content.addView(actions);
         setScroll(content);
     }
 
@@ -655,6 +775,68 @@ public class PhoneMainActivity extends Activity {
     private JSONArray reminders() {
         JSONArray array = LocalReminderDocument.reminders(this);
         return array == null ? new JSONArray() : array;
+    }
+
+    private JSONArray smartAlarms() {
+        JSONArray array = LocalReminderDocument.smartAlarms(this);
+        return array == null ? new JSONArray() : array;
+    }
+
+    private JSONObject newSmartAlarm() {
+        JSONObject alarm = new JSONObject();
+        int highestId = 0;
+        JSONArray existing = smartAlarms();
+        for (int index = 0; index < existing.length(); index++) {
+            JSONObject item = existing.optJSONObject(index);
+            if (item != null) highestId = Math.max(highestId, item.optInt("id", 0));
+        }
+        try {
+            alarm.put("id", highestId + 1).put("enabled", true).put("hour", 6).put("minute", 30)
+                    .put("daysMask", 126).put("windowMinutes", 30).put("snoozeMinutes", 5).put("snoozeCount", 3)
+                    .put("vibrationEnabled", true).put("vibrationStyle", "normal").put("vibrationStrength", 6)
+                    .put("soundEnabled", true).put("soundVolumePercent", 80).put("soundUri", "")
+                    .put("alertDurationSeconds", 30);
+        } catch (Exception ignored) { }
+        return alarm;
+    }
+
+    private void saveSmartAlarm(JSONObject alarm, int index) throws Exception {
+        JSONObject root = LocalReminderDocument.root(this);
+        JSONArray alarms = root.optJSONArray("smartAlarms");
+        if (alarms == null) alarms = new JSONArray();
+        if (index >= 0 && index < alarms.length()) alarms.put(index, alarm); else alarms.put(alarm);
+        root.put("smartAlarms", alarms);
+        LocalReminderDocument.saveRoot(this, root);
+        PendingPatchStore.replaceSmartAlarms(this, alarms);
+    }
+
+    private void deleteSmartAlarm(int index) {
+        try {
+            JSONObject root = LocalReminderDocument.root(this);
+            JSONArray source = root.optJSONArray("smartAlarms");
+            JSONArray next = new JSONArray();
+            for (int i = 0; source != null && i < source.length(); i++) if (i != index) next.put(source.opt(i));
+            root.put("smartAlarms", next); LocalReminderDocument.saveRoot(this, root);
+            PendingPatchStore.replaceSmartAlarms(this, next); showSmartAlarms();
+        } catch (Exception ignored) { }
+    }
+
+    private void showSmartAlarmActions(JSONObject alarm, int index) {
+        String title = String.format(Locale.US, "%02d:%02d", alarm.optInt("hour", 6), alarm.optInt("minute", 30));
+        new AlertDialog.Builder(this).setTitle(title)
+                .setItems(PhoneUiText.t(this, new String[]{"עריכה", "מחיקה"}), (dialog, which) -> {
+                    if (which == 0) showSmartAlarmEditor(alarm, index);
+                    if (which == 1) deleteSmartAlarm(index);
+                }).show();
+    }
+
+    private String smartAlarmDays(int mask) {
+        String[] labels = PhoneUiText.isEnglish(this)
+                ? new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+                : new String[]{"א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"};
+        ArrayList<String> selected = new ArrayList<>();
+        for (int day = 0; day < 7; day++) if ((mask & (1 << (Calendar.SUNDAY + day))) != 0) selected.add(labels[day]);
+        return android.text.TextUtils.join(" · ", selected);
     }
 
     private void saveReminder(JSONObject reminder, int index) throws Exception {

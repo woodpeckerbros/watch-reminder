@@ -46,6 +46,13 @@ class PendingPatchStore {
         }
     }
 
+    static void replaceSmartAlarms(Context context, JSONArray smartAlarms) {
+        try {
+            put(context, new JSONObject().put("action", "replaceSmartAlarms")
+                    .put("smartAlarms", smartAlarms));
+        } catch (Exception ignored) { }
+    }
+
     static boolean hasPending(Context context) {
         return operations(context).length() > 0;
     }
@@ -94,6 +101,9 @@ class PendingPatchStore {
 
     private static boolean replaces(JSONObject existing, String action, String reminderId) {
         if ("updateSettings".equals(action) && "updateSettings".equals(existing.optString("action"))) {
+            return true;
+        }
+        if ("replaceSmartAlarms".equals(action) && "replaceSmartAlarms".equals(existing.optString("action"))) {
             return true;
         }
         JSONObject existingReminder = existing.optJSONObject("reminder");
