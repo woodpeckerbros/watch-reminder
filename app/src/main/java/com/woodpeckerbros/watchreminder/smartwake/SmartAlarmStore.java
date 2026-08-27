@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 public final class SmartAlarmStore {
     private static final String PREFS = "smart_alarm";
     public static final int ALL_DAYS_MASK = 0xFE;
+    public static final int DEFAULT_DAYS_MASK = ALL_DAYS_MASK & ~(1 << java.util.Calendar.SATURDAY);
     public static final String VIBRATION_GENTLE = "gentle";
     public static final String VIBRATION_NORMAL = "normal";
     public static final String VIBRATION_STRONG = "strong";
@@ -21,7 +22,7 @@ public final class SmartAlarmStore {
     public int minute() { return prefs.getInt("minute", 30); }
     public int windowMinutes() { return prefs.getInt("window_minutes", 30); }
     public int snoozeMinutes() { return prefs.getInt("snooze_minutes", 10); }
-    public int daysMask() { return prefs.getInt("days_mask", ALL_DAYS_MASK); }
+    public int daysMask() { return prefs.getInt("days_mask", DEFAULT_DAYS_MASK); }
     public int snoozeCount() { return prefs.getInt("snooze_count", 3); }
     public boolean vibrationEnabled() { return prefs.getBoolean("vibration_enabled", true); }
     public String vibrationStyle() { return prefs.getString("vibration_style", VIBRATION_NORMAL); }
