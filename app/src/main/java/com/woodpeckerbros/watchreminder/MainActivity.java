@@ -1367,9 +1367,9 @@ public class MainActivity extends Activity {
         LinearLayout titleRow = new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER);
         titleRow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
-        TextView englishTitle = text("Language", 19, COLOR_TEXT);
-        TextView titleSeparator = text(" · ", 19, COLOR_TEXT);
-        TextView hebrewTitle = text("שפה", 19, COLOR_TEXT);
+        TextView englishTitle = exactText("Language", 17, COLOR_TEXT, View.TEXT_DIRECTION_LTR);
+        TextView titleSeparator = exactText(" · ", 17, COLOR_TEXT, View.TEXT_DIRECTION_LTR);
+        TextView hebrewTitle = exactText("שפה", 17, COLOR_TEXT, View.TEXT_DIRECTION_RTL);
         AppFont.bold(englishTitle);
         AppFont.bold(titleSeparator);
         AppFont.bold(hebrewTitle);
@@ -1377,13 +1377,20 @@ public class MainActivity extends Activity {
         titleRow.addView(titleSeparator);
         titleRow.addView(hebrewTitle);
         content.addView(titleRow, matchParams());
-        TextView hint = outlinedText(
-                "אפשר לשנות את השפה גם בהגדרות\nYou can change this later in Settings",
+        TextView englishHint = outlinedExactText(
+                "You can change this later in Settings",
                 12,
-                COLOR_BG);
-        hint.setGravity(Gravity.CENTER);
-        hint.setPadding(0, dp(10), 0, dp(18));
-        content.addView(hint, matchParams());
+                COLOR_BG,
+                View.TEXT_DIRECTION_LTR);
+        englishHint.setPadding(0, dp(10), 0, 0);
+        content.addView(englishHint, matchParams());
+        TextView hebrewHint = outlinedExactText(
+                "אפשר לשנות את השפה גם בהגדרות",
+                12,
+                COLOR_BG,
+                View.TEXT_DIRECTION_RTL);
+        hebrewHint.setPadding(0, 0, 0, dp(18));
+        content.addView(hebrewHint, matchParams());
         Button english = pillButton("English", COLOR_SURFACE_2);
         english.setOnClickListener(v -> {
             new ReminderSettings(this).setLanguage(ReminderSettings.LANGUAGE_ENGLISH);
@@ -5236,6 +5243,18 @@ public class MainActivity extends Activity {
         return view;
     }
 
+    private TextView exactText(String value, int sp, int color, int textDirection) {
+        TextView view = new TextView(this);
+        AppFont.apply(view);
+        view.setText(value);
+        view.setTextSize(sp);
+        view.setTextColor(color);
+        view.setGravity(Gravity.CENTER);
+        view.setTextDirection(textDirection);
+        AppTextStyle.apply(view);
+        return view;
+    }
+
     private TextView shadowedText(String value, int sp, int color) {
         TextView view = text(value, sp, color);
         AppTextStyle.apply(view);
@@ -5261,6 +5280,11 @@ public class MainActivity extends Activity {
     }
 
     private TextView outlinedText(String value, int size, int fillColor) {
+        return outlinedExactText(UiText.t(this, value), size, fillColor,
+                AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+    }
+
+    private TextView outlinedExactText(String value, int size, int fillColor, int textDirection) {
         int outlineColor = contrastingTextColor(fillColor);
         TextView view = new TextView(this) {
             @Override
@@ -5270,11 +5294,13 @@ public class MainActivity extends Activity {
                 float originalWidth = paint.getStrokeWidth();
                 int originalColor = paint.getColor();
                 paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(1f);
+                paint.setStrokeWidth(dp(2));
                 paint.setColor(outlineColor);
+                setTextColor(outlineColor);
                 super.onDraw(canvas);
                 paint.setStyle(Paint.Style.FILL);
                 paint.setColor(fillColor);
+                setTextColor(fillColor);
                 super.onDraw(canvas);
                 paint.setStyle(originalStyle);
                 paint.setStrokeWidth(originalWidth);
@@ -5282,11 +5308,12 @@ public class MainActivity extends Activity {
             }
         };
         AppFont.apply(view);
-        view.setText(UiText.t(this, value));
+        view.setText(value);
         view.setTextColor(fillColor);
         view.setTextSize(size);
         view.setGravity(Gravity.CENTER);
-        view.setTextDirection(AppLanguage.isRtl(this) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        view.setTextDirection(textDirection);
+        view.setShadowLayer(0, 0, 0, Color.TRANSPARENT);
         return view;
     }
 
