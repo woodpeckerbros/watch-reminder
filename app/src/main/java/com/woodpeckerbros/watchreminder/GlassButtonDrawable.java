@@ -4,11 +4,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 
-/** Translucent, dimensional glass pill used by the main application UI. */
+/** Warm matte terracotta pill with a subtle textile grain and soft inset depth. */
 final class GlassButtonDrawable extends Drawable {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int tint;
@@ -25,29 +26,47 @@ final class GlassButtonDrawable extends Drawable {
         float down = pressed ? 2f : 0f;
         box.offset(0, down);
         RectF face = new RectF(box.left, box.top, box.right, box.bottom - 4);
-        int top = blend(tint, Color.WHITE, 0.78f);
-        int middle = blend(tint, Color.WHITE, 0.62f);
-        int bottom = blend(tint, Color.BLACK, 0.10f);
+        int terracotta = blend(tint, 0xFF9B7465, 0.84f);
+        int top = blend(terracotta, 0xFFFFD2BF, 0.28f);
+        int middle = terracotta;
+        int bottom = blend(terracotta, 0xFF4C302B, 0.24f);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(new LinearGradient(0, face.top, 0, face.bottom,
-                new int[]{withAlpha(top, 100), withAlpha(middle, 62), withAlpha(bottom, 74)},
-                new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
-        paint.setShadowLayer(7, 2, 4, 0xA8000000);
+                new int[]{top, middle, bottom},
+                new float[]{0f, 0.54f, 1f}, Shader.TileMode.CLAMP));
+        paint.setShadowLayer(6, 1.5f, 3.5f, 0x99000000);
         canvas.drawRoundRect(face, radius, radius, paint);
         paint.clearShadowLayer();
         paint.setShader(null);
 
+        // Fine crossed fibers give a restrained woven/matte surface without visual noise.
+        Path clip = new Path();
+        clip.addRoundRect(face, radius, radius, Path.Direction.CW);
+        canvas.save();
+        canvas.clipPath(clip);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(0.55f);
+        paint.setColor(0x12FFF2E8);
+        for (float x = face.left - face.height(); x < face.right; x += 5f) {
+            canvas.drawLine(x, face.bottom, x + face.height(), face.top, paint);
+        }
+        paint.setColor(0x0E2B1715);
+        for (float x = face.left; x < face.right + face.height(); x += 7f) {
+            canvas.drawLine(x, face.top, x - face.height(), face.bottom, paint);
+        }
+        canvas.restore();
+
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(1.25f);
-        paint.setColor(0x8AF7DFD4);
+        paint.setColor(0xA8FFE1D2);
         canvas.drawRoundRect(new RectF(face.left + 1, face.top + 1, face.right - 1, face.bottom - 1), radius, radius, paint);
-        paint.setStrokeWidth(1f);
-        paint.setColor(0x5AFFFFFF);
-        canvas.drawArc(new RectF(face.left + 4, face.top + 3, face.right - 4, face.bottom - 5), 195, 150, false, paint);
-        // The reference has a deliberately uneven dark rim: strongest on the right and bottom.
-        paint.setStrokeWidth(1.35f);
-        paint.setColor(0x78000000);
-        canvas.drawArc(new RectF(face.left + 1.5f, face.top + 1.5f, face.right - 1.5f, face.bottom - 1.5f), 5, 150, false, paint);
+        paint.setStrokeWidth(1.1f);
+        paint.setColor(0x70FFFFFF);
+        canvas.drawArc(new RectF(face.left + 3, face.top + 2, face.right - 3, face.bottom - 4), 195, 150, false, paint);
+        // Soft inset shadow along the lower half creates depth without a glossy plastic look.
+        paint.setStrokeWidth(2.1f);
+        paint.setColor(0x57241210);
+        canvas.drawArc(new RectF(face.left + 2, face.top + 2, face.right - 2, face.bottom - 2), 5, 170, false, paint);
     }
 
     @Override protected boolean onStateChange(int[] states) {
@@ -64,8 +83,5 @@ final class GlassButtonDrawable extends Drawable {
     @Override public void setColorFilter(android.graphics.ColorFilter filter) { paint.setColorFilter(filter); }
     @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
 
-    private static int withAlpha(int color, int alpha) { return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color)); }
-    private static int lighten(int color, float n) { return Color.rgb(Math.min(255, Math.round(Color.red(color) * n)), Math.min(255, Math.round(Color.green(color) * n)), Math.min(255, Math.round(Color.blue(color) * n))); }
-    private static int darken(int color, float n) { return Color.rgb(Math.round(Color.red(color) * n), Math.round(Color.green(color) * n), Math.round(Color.blue(color) * n)); }
     private static int blend(int a, int b, float t) { return Color.rgb(Math.round(Color.red(a) * (1 - t) + Color.red(b) * t), Math.round(Color.green(a) * (1 - t) + Color.green(b) * t), Math.round(Color.blue(a) * (1 - t) + Color.blue(b) * t)); }
 }

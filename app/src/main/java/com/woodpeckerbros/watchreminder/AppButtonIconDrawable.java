@@ -26,7 +26,15 @@ final class AppButtonIconDrawable extends Drawable {
         float x = b.centerX(), y = b.centerY(), s = Math.min(b.width(), b.height()) / 24f;
         c.save(); c.translate(x, y); c.scale(s, s);
         switch (kind) {
-            case ADD: plus(c, -4, 0, 5); c.drawCircle(5, -5, 3, paint); c.drawLine(2, 5, 8, 5, paint); c.drawLine(5, 2, 5, 8, paint); break;
+            case ADD:
+                plus(c, -6, 2, 3.5f);
+                c.drawCircle(4, -5, 3, paint);
+                Path person = new Path();
+                person.moveTo(-1, 8);
+                person.quadTo(0, 1, 4, 1);
+                person.quadTo(8, 1, 9, 8);
+                c.drawPath(person, paint);
+                break;
             case HISTORY: c.drawRoundRect(new RectF(-9,-7,9,8),3,3,paint); c.drawLine(-7,-3,7,-3,paint); c.drawLine(-5,-9,5,-9,paint); c.drawLine(-4,1,4,1,paint); break;
             case LIST: for(int i=-6;i<=6;i+=6){ c.drawCircle(-7,i,1.2f,paint); c.drawLine(-3,i,8,i,paint);} break;
             case ALARM: c.drawCircle(0,2,8,paint); c.drawLine(0,2,0,-3,paint); c.drawLine(0,2,4,4,paint); c.drawArc(new RectF(-10,-10,-2,-3),205,130,false,paint); c.drawArc(new RectF(2,-10,10,-3),205,130,false,paint); break;
