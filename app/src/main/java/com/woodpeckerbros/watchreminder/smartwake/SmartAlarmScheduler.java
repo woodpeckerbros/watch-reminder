@@ -41,6 +41,7 @@ public final class SmartAlarmScheduler {
     }
 
     public static void scheduleSnooze(Context context, int alarmId, long originalTargetAt, int minutes) {
+        cancelAutoSnooze(context, alarmId);
         cancel(context, alarmId);
         long targetAt = System.currentTimeMillis() + minutes * 60_000L;
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
@@ -51,6 +52,27 @@ public final class SmartAlarmScheduler {
     }
 
     public static void scheduleNextAfterHandled(Context context, int alarmId) { reschedule(context, alarmId); }
+
+    public static void scheduleAutoSnooze(Context context, int alarmId, long targetAt, int delaySeconds) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager == null) return;
+        long at = System.currentTimeMillis() + Math.max(5, delaySeconds) * 1000L;
+        PendingIntent pending = autoSnoozeIntent(context, alarmId, targetAt);
+        try {
+            if (ReminderScheduler.canScheduleExactAlarms(context))
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
+            else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
+        } catch (SecurityException error) {
+            AppLog.e(context, "SmartAlarm auto-snooze exact permission missing", error);
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
+        }
+        AppLog.d(context, "SmartAlarm auto-snooze scheduled id=" + alarmId + " at=" + at);
+    }
+
+    public static void cancelAutoSnooze(Context context, int alarmId) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager != null) manager.cancel(autoSnoozeIntent(context, alarmId, 0L));
+    }
 
     public static void cancel(Context context) {
         for (int alarmId : SmartAlarmStore.ids(context)) cancel(context, alarmId);
@@ -65,6 +87,7 @@ public final class SmartAlarmScheduler {
         if (manager == null) return;
         manager.cancel(windowIntent(context, alarmId, 0));
         manager.cancel(deadlineIntent(context, alarmId, 0));
+        manager.cancel(autoSnoozeIntent(context, alarmId, 0));
     }
 
     public static void cancelDeadline(Context context, int alarmId) {
@@ -119,6 +142,12 @@ public final class SmartAlarmScheduler {
     private static PendingIntent alertIntent(Context context, int alarmId, long targetAt) {
         Intent source = alarmIntent(context, SmartAlarmAlertActivity.class, alarmId, targetAt);
         return PendingIntent.getActivity(context, requestCode(alarmId, 3), source, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static PendingIntent autoSnoozeIntent(Context context, int alarmId, long targetAt) {
+        Intent intent = alarmIntent(context, SmartAlarmAutoSnoozeReceiver.class, alarmId, targetAt);
+        return PendingIntent.getBroadcast(context, requestCode(alarmId, 4), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private static Intent alarmIntent(Context context, Class<?> type, int alarmId, long targetAt) {

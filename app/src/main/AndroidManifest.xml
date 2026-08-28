@@ -248,6 +248,7 @@
 
         <receiver android:name=".smartwake.SmartWakeWindowReceiver" android:exported="false" />
         <receiver android:name=".smartwake.SmartAlarmReceiver" android:exported="false" />
+        <receiver android:name=".smartwake.SmartAlarmAutoSnoozeReceiver" android:exported="false" />
 
         <receiver
             android:name=".AutoSnoozeReceiver"

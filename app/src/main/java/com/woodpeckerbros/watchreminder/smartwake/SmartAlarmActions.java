@@ -42,6 +42,7 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
 
         SmartAlarmRingingService.stop(context);
+        SmartAlarmScheduler.cancelAutoSnooze(context, alarmId);
         cancelNotification(context, alarmId);
         if (ACTION_SNOOZE.equals(intent.getAction())) {
             SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);

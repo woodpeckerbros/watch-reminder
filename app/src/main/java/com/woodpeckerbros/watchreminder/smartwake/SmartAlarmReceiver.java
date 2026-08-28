@@ -7,7 +7,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.PowerManager;
+import android.os.Build;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
@@ -31,6 +31,12 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         if (!"deadline".equals(reason)) SmartAlarmScheduler.cancelDeadline(context, alarmId);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            for (NotificationChannel existing : manager.getNotificationChannels()) {
+                if (existing.getId().startsWith("smart_alarm_alert") && !CHANNEL.equals(existing.getId()))
+                    manager.deleteNotificationChannel(existing.getId());
+            }
+        }
         NotificationChannel channel = new NotificationChannel(CHANNEL, "Smart Alarm", NotificationManager.IMPORTANCE_HIGH);
         channel.setSound(null, null); channel.enableVibration(false); channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
@@ -45,23 +51,14 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .setContentText("זמן להתעורר").setCategory(Notification.CATEGORY_ALARM)
                 .setPriority(Notification.PRIORITY_MAX).setContentIntent(pending)
                 .setFullScreenIntent(pending, true).setSound(null).setVibrate(new long[]{0})
-                .setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true)
+                .setDefaults(0).setOnlyAlertOnce(true).setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
                 .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt)).build();
         manager.notify(0x534d5704 + alarmId, notification);
+        SmartAlarmScheduler.scheduleAutoSnooze(context, alarmId, targetAt,
+                new SmartAlarmStore(context, alarmId).alertDurationSeconds());
         SmartAlarmRingingService.start(context, alarmId, targetAt);
-        PowerManager power = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        if (power != null && !power.isInteractive()) {
-            PowerManager.WakeLock wakeLock = power.newWakeLock(
-                    PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
-                    "WatchReminder:SmartAlarmScreen");
-            wakeLock.acquire(10_000L);
-        }
-        try {
-            context.startActivity(activity);
-        } catch (RuntimeException error) {
-            AppLog.w(context, "SmartAlarm direct activity launch blocked; full-screen notification remains available: " + error.getClass().getSimpleName());
-        }
         AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason);
     }
 }

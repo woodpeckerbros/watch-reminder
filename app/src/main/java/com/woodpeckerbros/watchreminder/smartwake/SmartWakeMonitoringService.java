@@ -80,6 +80,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         ContextCompat.startForegroundService(context, intent);
     }
     public static void stop(Context context, int alarmId) {
+        if (!active) return;
         context.startService(new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_STOP)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId));
     }
