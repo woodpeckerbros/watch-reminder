@@ -4127,18 +4127,20 @@ public class MainActivity extends Activity {
         Button editorHelp = new Button(this);
         AppFont.bold(editorHelp);
         editorHelp.setText("?");
-        editorHelp.setTextSize(16);
+        editorHelp.setTextSize(21);
         editorHelp.setTextColor(COLOR_LUXURY_GOLD);
+        editorHelp.setShadowLayer(dp(2), 0f, dp(1), 0xCC000000);
         editorHelp.setAllCaps(false);
         editorHelp.setPadding(0, 0, 0, 0);
         editorHelp.setMinWidth(0);
         editorHelp.setMinHeight(0);
         editorHelp.setContentDescription(getString(R.string.ui_editor_help_button));
         editorHelp.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        editorHelp.setBackground(new GlassButtonDrawable(COLOR_SURFACE_2, dp(20)));
-        FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(40), dp(40));
+        editorHelp.setBackgroundColor(Color.TRANSPARENT);
+        editorHelp.setStateListAnimator(null);
+        FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(28), dp(28));
         helpParams.gravity = Gravity.TOP | Gravity.LEFT;
-        helpParams.setMargins(-dp(6), dp(6), 0, 0);
+        helpParams.setMargins(0, dp(8), 0, 0);
         editorHeader.addView(editorHelp, helpParams);
         content.addView(editorHeader, matchParams());
 
