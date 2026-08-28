@@ -50,6 +50,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private final Map<Integer, MonitorSession> sessions = new ConcurrentHashMap<>();
     private MeasureClient measureClient;
     private float gravityX, gravityY, gravityZ;
+    private long lastHeartRateLogAt;
 
     private final MeasureCallback heartRateCallback = new MeasureCallback() {
         @Override public void onAvailabilityChanged(DeltaDataType<?, ?> type, Availability availability) {
@@ -60,8 +61,12 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             for (SampleDataPoint<Double> point : points) {
                 for (MonitorSession session : sessions.values()) session.detector.addHeartRate(point.getValue());
             }
-            if (!points.isEmpty()) AppLog.d(SmartWakeMonitoringService.this,
-                    "SmartWake live HR samples=" + points.size() + " bpm=" + points.get(points.size() - 1).getValue());
+            long now = System.currentTimeMillis();
+            if (!points.isEmpty() && now - lastHeartRateLogAt >= 60_000L) {
+                lastHeartRateLogAt = now;
+                AppLog.d(SmartWakeMonitoringService.this,
+                        "SmartWake live HR samples=" + points.size() + " bpm=" + points.get(points.size() - 1).getValue());
+            }
         }
         @Override public void onRegistrationFailed(Throwable throwable) {
             AppLog.e(SmartWakeMonitoringService.this, "SmartWake HR registration failed", throwable);
@@ -124,8 +129,10 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         if (sensorManager == null) return;
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-        if (accelerometer != null) sensorManager.registerListener(this, accelerometer, 100_000);
-        if (gyroscope != null) sensorManager.registerListener(this, gyroscope, 200_000);
+        // Preserve the exact sampling rate and every sample used by the detector, while allowing
+        // the sensor hub to deliver samples in batches and wake the CPU much less often.
+        if (accelerometer != null) sensorManager.registerListener(this, accelerometer, 100_000, 5_000_000);
+        if (gyroscope != null) sensorManager.registerListener(this, gyroscope, 200_000, 5_000_000);
     }
 
     private void registerHeartRate() {

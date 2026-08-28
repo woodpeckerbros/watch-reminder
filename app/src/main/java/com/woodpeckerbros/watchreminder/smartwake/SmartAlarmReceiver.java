@@ -7,12 +7,13 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.PowerManager;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
-    private static final String CHANNEL = "smart_alarm_alert_v1";
+    private static final String CHANNEL = "smart_alarm_alert_v2";
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
@@ -31,20 +32,31 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
         NotificationChannel channel = new NotificationChannel(CHANNEL, "Smart Alarm", NotificationManager.IMPORTANCE_HIGH);
-        channel.setSound(null, null); channel.enableVibration(false); manager.createNotificationChannel(channel);
+        channel.setSound(null, null); channel.enableVibration(false); channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        manager.createNotificationChannel(channel);
         Intent activity = new Intent(context, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt).putExtra("reason", reason)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pending = PendingIntent.getActivity(context, 0x534d5703 + alarmId, activity,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new Notification.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification).setContentTitle("Smart Alarm")
                 .setContentText("זמן להתעורר").setCategory(Notification.CATEGORY_ALARM)
                 .setPriority(Notification.PRIORITY_MAX).setContentIntent(pending)
-                .setFullScreenIntent(pending, true).setSound(null).setVibrate(new long[]{0}).setAutoCancel(true).build();
+                .setFullScreenIntent(pending, true).setSound(null).setVibrate(new long[]{0})
+                .setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true)
+                .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
+                .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt)).build();
         manager.notify(0x534d5704 + alarmId, notification);
-        SmartAlarmRingingService.start(context, alarmId);
+        SmartAlarmRingingService.start(context, alarmId, targetAt);
+        PowerManager power = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        if (power != null && !power.isInteractive()) {
+            PowerManager.WakeLock wakeLock = power.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                    "WatchReminder:SmartAlarmScreen");
+            wakeLock.acquire(10_000L);
+        }
         try {
             context.startActivity(activity);
         } catch (RuntimeException error) {

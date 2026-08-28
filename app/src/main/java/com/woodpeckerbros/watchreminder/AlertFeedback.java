@@ -129,20 +129,37 @@ public class AlertFeedback {
         int amplitude = Math.round(normalizedStrength * 255f / 10f);
         int[] amplitudes = new int[pattern.length];
         for (int index = 0; index < amplitudes.length; index++) amplitudes[index] = index % 2 == 1 ? amplitude : 0;
-        VibrationEffect effect = VibrationEffect.createWaveform(pattern, amplitudes, -1);
+        AudioAttributes alarmAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 VibratorManager manager = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
                 if (manager != null) {
-                    manager.getDefaultVibrator().vibrate(effect);
+                    Vibrator vibrator = manager.getDefaultVibrator();
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        VibrationEffect effect = vibrator.hasAmplitudeControl()
+                                ? VibrationEffect.createWaveform(pattern, amplitudes, -1)
+                                : VibrationEffect.createWaveform(pattern, -1);
+                        vibrator.vibrate(effect, alarmAttributes);
+                    } else {
+                        AppLog.w(context, "alert vibration unavailable: no default vibrator");
+                    }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception error) {
+                AppLog.e(context, "alert vibration failed", error);
             }
             return;
         }
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-        if (vibrator != null) {
-            vibrator.vibrate(effect);
+        if (vibrator != null && vibrator.hasVibrator()) {
+            VibrationEffect effect = vibrator.hasAmplitudeControl()
+                    ? VibrationEffect.createWaveform(pattern, amplitudes, -1)
+                    : VibrationEffect.createWaveform(pattern, -1);
+            vibrator.vibrate(effect, alarmAttributes);
+        } else {
+            AppLog.w(context, "alert vibration unavailable: no vibrator");
         }
     }
 

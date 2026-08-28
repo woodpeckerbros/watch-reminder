@@ -5,6 +5,8 @@ import android.app.NotificationManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -26,6 +28,8 @@ public final class SmartAlarmAlertActivity extends Activity {
     private long targetAt;
     private int alarmId = 1;
     private SmartAlarmStore settings;
+    private boolean explicitlyHandled;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -36,6 +40,10 @@ public final class SmartAlarmAlertActivity extends Activity {
         alarmId = getIntent().getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
         settings = new SmartAlarmStore(this, alarmId);
         setContentView(content());
+        handler.postDelayed(() -> {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            finishAndRemoveTask();
+        }, settings.alertDurationSeconds() * 1000L + 1_500L);
     }
 
     private View content() {
@@ -89,6 +97,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     }
 
     private void dismissAlarm() {
+        explicitlyHandled = true;
         new SmartAlarmStateStore(this, alarmId).dismiss(targetAt);
         stopFeedback();
         SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId);
@@ -96,6 +105,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     }
 
     private void snooze() {
+        explicitlyHandled = true;
         stopFeedback();
         SmartAlarmScheduler.scheduleSnooze(this, alarmId, targetAt, settings.snoozeMinutes());
         close();
@@ -137,5 +147,12 @@ public final class SmartAlarmAlertActivity extends Activity {
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private void stopFeedback() { SmartAlarmRingingService.stop(this); }
     @Override public void onBackPressed() { }
-    @Override protected void onDestroy() { stopFeedback(); super.onDestroy(); }
+    @Override protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Activity destruction (for example when the user opens the app) is not an alarm action.
+        // The foreground ringing service owns feedback until an explicit action or auto-snooze.
+        if (explicitlyHandled) stopFeedback();
+        super.onDestroy();
+    }
 }
