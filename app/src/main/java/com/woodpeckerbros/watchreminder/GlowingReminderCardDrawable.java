@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
 import android.graphics.Canvas;
+import android.graphics.BlurMaskFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
@@ -18,8 +19,18 @@ final class GlowingReminderCardDrawable extends Drawable {
         this.prominent = prominent;
     }
     @Override public void draw(Canvas canvas) {
-        RectF b = new RectF(getBounds());
-        b.inset(prominent ? 8 : 5, prominent ? 8 : 5);
+        RectF bounds = new RectF(getBounds());
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(3.5f);
+        paint.setColor(prominent ? 0xD8FFB184 : 0x6CFFB184);
+        paint.setMaskFilter(new BlurMaskFilter(8f, BlurMaskFilter.Blur.NORMAL));
+        RectF halo = new RectF(bounds);
+        halo.inset(prominent ? 10f : 8f, prominent ? 10f : 8f);
+        canvas.drawRoundRect(halo, radius + 3f, radius + 3f, paint);
+        paint.setMaskFilter(null);
+        RectF b = new RectF(bounds);
+        b.inset(prominent ? 11 : 9, prominent ? 11 : 9);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(new LinearGradient(0,b.top,0,b.bottom,
                 prominent ? 0xC9655548 : 0xB94A4B45,
@@ -37,5 +48,6 @@ final class GlowingReminderCardDrawable extends Drawable {
             RectF inner=new RectF(b); inner.inset(3,3); canvas.drawRoundRect(inner,radius-2,radius-2,paint);
         }
     }
+
     @Override public void setAlpha(int a){paint.setAlpha(a);} @Override public void setColorFilter(android.graphics.ColorFilter f){paint.setColorFilter(f);} @Override public int getOpacity(){return android.graphics.PixelFormat.TRANSLUCENT;}
 }
