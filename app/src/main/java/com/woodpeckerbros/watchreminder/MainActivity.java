@@ -5890,7 +5890,7 @@ public class MainActivity extends Activity {
     }
 
     private Button pillButton(String value, int color) {
-        Button button = new Button(this);
+        Button button = new IconButton(this);
         AppFont.apply(button);
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
@@ -5913,15 +5913,17 @@ public class MainActivity extends Activity {
         String translatedValue = UiText.t(this, value);
         if ("בוצע".equals(value) || "דחה".equals(value)
                 || "Done".equalsIgnoreCase(translatedValue) || "Snooze".equalsIgnoreCase(translatedValue)) {
-            button.setCompoundDrawables(null, null, null, null);
+            if (button instanceof IconButton) ((IconButton) button).setAppIcon(null, 0);
             return;
         }
         AppButtonIconDrawable.Kind kind = buttonIconKind(value);
         if (kind == null) return;
         AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, 0xFFFFD3BD, dp(2));
         icon.setBounds(0, 0, dp(16), dp(16));
-        button.setCompoundDrawablePadding(dp(4));
-        button.setCompoundDrawables(icon, null, null, null);
+        button.setCompoundDrawables(null, null, null, null);
+        if (button instanceof IconButton) {
+            ((IconButton) button).setAppIcon(icon, dp(4));
+        }
     }
 
     private AppButtonIconDrawable.Kind buttonIconKind(String value) {
