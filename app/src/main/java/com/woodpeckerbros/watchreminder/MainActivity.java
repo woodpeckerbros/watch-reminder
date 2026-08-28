@@ -738,6 +738,8 @@ public class MainActivity extends Activity {
 
     private LinearLayout homeNextReminderCard(HomeReminderItem item) {
         LinearLayout card = card(false);
+        card.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        card.setBackground(new GlowingReminderCardDrawable(dp(18)));
         card.setPadding(dp(16), dp(13), dp(16), dp(13));
         card.setOnClickListener(v -> showEditor(item.reminder));
         card.setOnLongClickListener(v -> {
@@ -4132,7 +4134,8 @@ public class MainActivity extends Activity {
         editorHelp.setMinWidth(0);
         editorHelp.setMinHeight(0);
         editorHelp.setContentDescription(getString(R.string.ui_editor_help_button));
-        editorHelp.setBackgroundColor(Color.TRANSPARENT);
+        editorHelp.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        editorHelp.setBackground(new GlassButtonDrawable(COLOR_SURFACE_2, dp(20)));
         FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(40), dp(40));
         helpParams.gravity = Gravity.TOP | Gravity.LEFT;
         helpParams.setMargins(-dp(6), dp(6), 0, 0);
@@ -4474,10 +4477,10 @@ public class MainActivity extends Activity {
         daysSection.setVisibility((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? View.VISIBLE : View.GONE);
         periodicSection.setVisibility(selectedPeriodic ? View.VISIBLE : View.GONE);
         annualSection.setVisibility(selectedAnnual ? View.VISIBLE : View.GONE);
-        recurringButton.setBackground(rounded((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
-        oneTimeButton.setBackground(rounded(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
-        periodicButton.setBackground(rounded(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
-        annualButton.setBackground(rounded(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
+        recurringButton.setBackground(new GlassButtonDrawable((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        oneTimeButton.setBackground(new GlassButtonDrawable(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        periodicButton.setBackground(new GlassButtonDrawable(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        annualButton.setBackground(new GlassButtonDrawable(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
     }
 
     private void updateZmanimSections(View timeCard, Spinner zmanimSpinner, NumberPicker offsetPicker, TextView location) {
@@ -5852,7 +5855,8 @@ public class MainActivity extends Activity {
         button.setTextSize(25);
         button.setAllCaps(false);
         button.setPadding(0, 0, 0, 0);
-        button.setBackground(rounded(COLOR_SURFACE, dp(20), 0x55FFFFFF));
+        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        button.setBackground(new GlassButtonDrawable(COLOR_SURFACE, dp(20)));
         button.setLayoutParams(new LinearLayout.LayoutParams(dp(38), dp(42)));
         AppTextStyle.apply(button);
         return button;
@@ -5887,16 +5891,47 @@ public class MainActivity extends Activity {
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
-        button.setBackground(rounded(color, dp(18), color == COLOR_SURFACE_2 ? 0x66E2C89C : 0));
+        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        button.setBackground(new GlassButtonDrawable(color, dp(18)));
         button.setAllCaps(false);
         button.setMinHeight(dp(38));
         button.setGravity(Gravity.CENTER);
         button.setPadding(dp(8), 0, dp(8), 0);
+        applyButtonIcon(button, value);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(100), dp(40));
         params.setMargins(dp(4), dp(4), dp(4), dp(4));
         button.setLayoutParams(params);
         AppTextStyle.apply(button);
         return button;
+    }
+
+    private void applyButtonIcon(Button button, String value) {
+        AppButtonIconDrawable.Kind kind = buttonIconKind(value);
+        if (kind == null) return;
+        AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, 0xFFFFD3BD, dp(2));
+        icon.setBounds(0, 0, dp(19), dp(19));
+        button.setCompoundDrawablePadding(dp(5));
+        button.setCompoundDrawablesRelative(icon, null, null, null);
+    }
+
+    private AppButtonIconDrawable.Kind buttonIconKind(String value) {
+        String v = value == null ? "" : value;
+        if (v.contains("תזכורת") && (v.contains("+") || v.contains("הוס") || v.contains("חדש"))) return AppButtonIconDrawable.Kind.ADD;
+        if (v.contains("היסטוריה")) return AppButtonIconDrawable.Kind.HISTORY;
+        if (v.contains("כל התזכורות")) return AppButtonIconDrawable.Kind.LIST;
+        if (v.contains("שעון מעורר")) return AppButtonIconDrawable.Kind.ALARM;
+        if (v.contains("זמני היום")) return AppButtonIconDrawable.Kind.CLOCK;
+        if (v.contains("ברכה")) return AppButtonIconDrawable.Kind.BELL;
+        if (v.contains("הגדרות")) return AppButtonIconDrawable.Kind.SETTINGS;
+        if (v.contains("חזרה") || v.equals("ביטול") || v.equals("Back") || v.equals("Cancel")) return AppButtonIconDrawable.Kind.BACK;
+        if (v.contains("שמירה") || v.equals("Save")) return AppButtonIconDrawable.Kind.SAVE;
+        if (v.contains("מחיק")) return AppButtonIconDrawable.Kind.DELETE;
+        if (v.contains("קובץ") || v.contains("תיקייה")) return AppButtonIconDrawable.Kind.FILE;
+        if (v.contains("טלפון")) return AppButtonIconDrawable.Kind.PHONE;
+        if (v.contains("מיקום") || v.contains("עיר")) return AppButtonIconDrawable.Kind.LOCATION;
+        if (v.contains("צלצול") || v.contains("רטט וצלילים")) return AppButtonIconDrawable.Kind.SOUND;
+        if (v.contains("אודות") || v.contains("רישיונות")) return AppButtonIconDrawable.Kind.INFO;
+        return null;
     }
 
     private TextView outlinedText(String value, int size, int fillColor) {
@@ -6069,8 +6104,7 @@ public class MainActivity extends Activity {
 
     private void styleDayButton(Button button, boolean selected) {
         int color = selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2;
-        int stroke = selected ? 0 : 0x66E2C89C;
-        button.setBackground(rounded(color, dp(18), stroke));
+        button.setBackground(new GlassButtonDrawable(color, dp(18)));
     }
 
     private LinearLayout compactDayRow() {
