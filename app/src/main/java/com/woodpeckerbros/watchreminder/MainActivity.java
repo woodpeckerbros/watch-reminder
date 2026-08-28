@@ -774,7 +774,8 @@ public class MainActivity extends Activity {
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(12), dp(9), dp(12), dp(9));
-        card.setBackground(rounded(COLOR_SURFACE, dp(12), 0x333F594C));
+        card.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        card.setBackground(new GlowingReminderCardDrawable(dp(12), false));
         card.setOnClickListener(v -> showEditor(item.reminder));
         card.setOnLongClickListener(v -> {
             showReminderActions(item.reminder);
@@ -919,6 +920,8 @@ public class MainActivity extends Activity {
             long snoozeAt = NextReminderCalculator.pendingSnoozeAt(reminder.id, snoozeStore);
             boolean next = reminder.id.equals(nextReminderId);
             LinearLayout card = card(next);
+            card.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            card.setBackground(new GlowingReminderCardDrawable(dp(18), next));
             card.setOnClickListener(v -> showEditor(reminder));
             card.setOnLongClickListener(v -> {
                 showReminderActions(reminder);
@@ -5896,6 +5899,7 @@ public class MainActivity extends Activity {
         button.setMinHeight(dp(38));
         button.setGravity(Gravity.CENTER);
         button.setPadding(dp(8), 0, dp(8), 0);
+        applyButtonIcon(button, value);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(100), dp(40));
         params.setMargins(dp(4), dp(4), dp(4), dp(4));
         button.setLayoutParams(params);
@@ -5907,29 +5911,32 @@ public class MainActivity extends Activity {
         AppButtonIconDrawable.Kind kind = buttonIconKind(value);
         if (kind == null) return;
         AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, 0xFFFFD3BD, dp(2));
-        icon.setBounds(0, 0, dp(19), dp(19));
-        button.setCompoundDrawablePadding(dp(5));
+        icon.setBounds(0, 0, dp(16), dp(16));
+        button.setCompoundDrawablePadding(dp(4));
         button.setCompoundDrawablesRelative(icon, null, null, null);
     }
 
     private AppButtonIconDrawable.Kind buttonIconKind(String value) {
         String v = value == null ? "" : value;
-        if (v.contains("תזכורת") && (v.contains("+") || v.contains("הוס") || v.contains("חדש"))) return AppButtonIconDrawable.Kind.ADD;
+        if ((v.contains("תזכורת") || v.contains("שעון מעורר")) && (v.contains("+") || v.contains("הוס") || v.contains("חדש"))) return AppButtonIconDrawable.Kind.ADD;
+        if (v.equals("הוספה")) return AppButtonIconDrawable.Kind.ADD;
         if (v.contains("היסטוריה")) return AppButtonIconDrawable.Kind.HISTORY;
         if (v.contains("כל התזכורות")) return AppButtonIconDrawable.Kind.LIST;
         if (v.contains("שעון מעורר")) return AppButtonIconDrawable.Kind.ALARM;
-        if (v.contains("זמני היום")) return AppButtonIconDrawable.Kind.CLOCK;
+        if (v.contains("זמני") || v.contains("זמן ") || v.contains("דקות") || v.equals("שעה") || v.equals("שעתיים") || v.contains("דחייה")) return AppButtonIconDrawable.Kind.CLOCK;
         if (v.contains("ברכה")) return AppButtonIconDrawable.Kind.BELL;
         if (v.contains("הגדרות")) return AppButtonIconDrawable.Kind.SETTINGS;
-        if (v.contains("חזרה") || v.equals("ביטול") || v.equals("Back") || v.equals("Cancel")) return AppButtonIconDrawable.Kind.BACK;
-        if (v.contains("שמירה") || v.equals("Save")) return AppButtonIconDrawable.Kind.SAVE;
-        if (v.contains("מחיק")) return AppButtonIconDrawable.Kind.DELETE;
-        if (v.contains("קובץ") || v.contains("תיקייה")) return AppButtonIconDrawable.Kind.FILE;
-        if (v.contains("טלפון")) return AppButtonIconDrawable.Kind.PHONE;
+        if (v.contains("חזרה") || v.equals("ביטול") || v.equals("Back") || v.equals("Cancel") || v.equals("Not now")) return AppButtonIconDrawable.Kind.BACK;
+        if (v.contains("שמירה") || v.equals("Save") || v.contains("הושלם") || v.contains("למדתי") || v.contains("סיימתי")) return AppButtonIconDrawable.Kind.SAVE;
+        if (v.contains("מחיק") || v.contains("ניקוי")) return AppButtonIconDrawable.Kind.DELETE;
+        if (v.contains("קובץ") || v.contains("תיקייה") || v.contains("לוח") || v.contains("העתקה")) return AppButtonIconDrawable.Kind.FILE;
+        if (v.contains("טלפון") || v.contains("שליחה")) return AppButtonIconDrawable.Kind.PHONE;
         if (v.contains("מיקום") || v.contains("עיר")) return AppButtonIconDrawable.Kind.LOCATION;
         if (v.contains("צלצול") || v.contains("רטט וצלילים")) return AppButtonIconDrawable.Kind.SOUND;
+        if (v.contains("עריכה")) return AppButtonIconDrawable.Kind.FILE;
+        if (v.contains("צום") || v.contains("אוכל")) return AppButtonIconDrawable.Kind.CLOCK;
         if (v.contains("אודות") || v.contains("רישיונות")) return AppButtonIconDrawable.Kind.INFO;
-        return null;
+        return AppButtonIconDrawable.Kind.INFO;
     }
 
     private TextView outlinedText(String value, int size, int fillColor) {
