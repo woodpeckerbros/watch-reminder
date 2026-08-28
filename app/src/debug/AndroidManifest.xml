@@ -2,6 +2,10 @@
     xmlns:tools="http://schemas.android.com/tools">
     <application>
         <activity
+            android:name=".ReminderAlertActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
             android:name=".smartwake.SmartAlarmAlertActivity"
             android:exported="true"
             tools:replace="android:exported" />
@@ -10,6 +14,13 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.woodpeckerbros.watchreminder.DEBUG_SMART_WAKE" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".ReminderDebugReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.woodpeckerbros.watchreminder.DEBUG_REMINDER_ALERT" />
             </intent-filter>
         </receiver>
     </application>

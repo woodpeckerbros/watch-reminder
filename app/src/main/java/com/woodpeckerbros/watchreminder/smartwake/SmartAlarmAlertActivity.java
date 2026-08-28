@@ -70,6 +70,10 @@ public final class SmartAlarmAlertActivity extends Activity {
         boolean english = AppLanguage.isEnglish(this);
         body.addView(label(english ? "Time to wake up" : "זמן להתעורר", 24, Color.WHITE));
         body.addView(label(english ? "Smart Alarm" : "שעון מעורר חכם", 15, 0xFFFFD27A));
+        RingingAlarmClockView alarmClock = new RingingAlarmClockView(this);
+        LinearLayout.LayoutParams alarmClockParams = new LinearLayout.LayoutParams(dp(64), dp(62));
+        alarmClockParams.setMargins(0, dp(2), 0, dp(1));
+        body.addView(alarmClock, alarmClockParams);
 
         int used = new SmartAlarmStateStore(this, alarmId).snoozeUsed();
         int remaining = Math.max(0, settings.snoozeCount() - used);
@@ -139,8 +143,11 @@ public final class SmartAlarmAlertActivity extends Activity {
         shape.setCornerRadius(dp(24));
         shape.setStroke(dp(1), 0x99FFFFFF);
         button.setBackground(shape);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(184), dp(48));
-        params.setMargins(0, dp(8), 0, 0);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(46)
+        );
+        params.setMargins(dp(2), dp(7), dp(2), 0);
         button.setLayoutParams(params);
         return button;
     }
