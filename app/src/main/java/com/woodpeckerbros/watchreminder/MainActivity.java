@@ -638,7 +638,6 @@ public class MainActivity extends Activity {
             content.addView(fastingButton, matchParams());
         }
         Button settingsButton = pillButton("הגדרות", COLOR_SURFACE_2);
-        settingsButton.setTextColor(COLOR_MUTED);
         settingsButton.setOnClickListener(v -> showSettings());
         content.addView(settingsButton, matchParams());
         View bottomSafeArea = new View(this);
@@ -4479,10 +4478,10 @@ public class MainActivity extends Activity {
         daysSection.setVisibility((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? View.VISIBLE : View.GONE);
         periodicSection.setVisibility(selectedPeriodic ? View.VISIBLE : View.GONE);
         annualSection.setVisibility(selectedAnnual ? View.VISIBLE : View.GONE);
-        recurringButton.setBackground(new GlassButtonDrawable((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
-        oneTimeButton.setBackground(new GlassButtonDrawable(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
-        periodicButton.setBackground(new GlassButtonDrawable(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
-        annualButton.setBackground(new GlassButtonDrawable(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        recurringButton.setBackground(rounded((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
+        oneTimeButton.setBackground(rounded(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
+        periodicButton.setBackground(rounded(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
+        annualButton.setBackground(rounded(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
     }
 
     private void updateZmanimSections(View timeCard, Spinner zmanimSpinner, NumberPicker offsetPicker, TextView location) {
@@ -5857,8 +5856,7 @@ public class MainActivity extends Activity {
         button.setTextSize(25);
         button.setAllCaps(false);
         button.setPadding(0, 0, 0, 0);
-        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        button.setBackground(new GlassButtonDrawable(COLOR_SURFACE, dp(20)));
+        button.setBackground(rounded(COLOR_SURFACE, dp(20), 0x55FFFFFF));
         button.setLayoutParams(new LinearLayout.LayoutParams(dp(38), dp(42)));
         AppTextStyle.apply(button);
         return button;
@@ -5893,13 +5891,11 @@ public class MainActivity extends Activity {
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
-        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        button.setBackground(new GlassButtonDrawable(color, dp(18)));
+        button.setBackground(rounded(color, dp(18), color == COLOR_SURFACE_2 ? 0x66E2C89C : 0));
         button.setAllCaps(false);
         button.setMinHeight(dp(38));
         button.setGravity(Gravity.CENTER);
         button.setPadding(dp(8), 0, dp(8), 0);
-        applyButtonIcon(button, value);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(100), dp(40));
         params.setMargins(dp(4), dp(4), dp(4), dp(4));
         button.setLayoutParams(params);
@@ -6106,7 +6102,8 @@ public class MainActivity extends Activity {
 
     private void styleDayButton(Button button, boolean selected) {
         int color = selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2;
-        button.setBackground(new GlassButtonDrawable(color, dp(18)));
+        int stroke = selected ? 0 : 0x66E2C89C;
+        button.setBackground(rounded(color, dp(18), stroke));
     }
 
     private LinearLayout compactDayRow() {
