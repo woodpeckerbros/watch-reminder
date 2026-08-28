@@ -36,6 +36,7 @@ public class ReminderAlertActivity extends Activity {
     private static final int COLOR_MUTED = 0xFFB8B7AE;
     private static final int COLOR_ACCENT = 0xFFC77B58;
     private static final int COLOR_ACCENT_DARK = 0xFF66745D;
+    private static final int COLOR_ACTION_GREEN = 0xFF738368;
     private static WeakReference<ReminderAlertActivity> activeActivity;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ScrollView activeScrollView;
@@ -93,23 +94,18 @@ public class ReminderAlertActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(14), dp(18), dp(14), dp(18));
-        content.setBackgroundColor(COLOR_BG);
+        content.setPadding(dp(17), dp(42), dp(17), dp(22));
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(14), dp(9), dp(14), dp(12));
-        card.setBackground(rounded(COLOR_SURFACE, dp(20), 0x33747D63));
+        card.setPadding(dp(9), dp(4), dp(9), dp(12));
 
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.ic_alert_ringing_bell);
-        icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        OrnateBellView icon = new OrnateBellView(this);
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(58), dp(54));
         iconParams.setMargins(0, dp(1), 0, dp(2));
         icon.setLayoutParams(iconParams);
-        TextView name = text(alertReminderName, 21, COLOR_TEXT);
+        TextView name = text(alertReminderName, 24, COLOR_TEXT);
         AppFont.bold(name);
         name.setPadding(0, dp(2), 0, dp(5));
         TextView description = text(reminderDescription, 14, COLOR_MUTED);
@@ -139,11 +135,12 @@ public class ReminderAlertActivity extends Activity {
 
         Button done = actionButton("בוצע", COLOR_ACCENT_DARK);
         done.setTextColor(COLOR_TEXT);
-        done.setBackground(rounded(COLOR_ACCENT_DARK, dp(23), 0xFF9CAA91));
-        LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(dp(160), dp(42));
+        done.setBackground(new DepthButtonDrawable(COLOR_ACTION_GREEN, dp(24)));
+        LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48));
         doneParams.setMargins(dp(3), dp(4), dp(3), dp(3));
         done.setLayoutParams(doneParams);
-        done.setTextSize(16);
+        done.setTextSize(18);
         done.setOnClickListener(v -> {
             stopVibration();
             AppLog.d(this, "alert done occurrence=" + occurrenceId);
@@ -182,7 +179,7 @@ public class ReminderAlertActivity extends Activity {
         secondRow.addView(snoozeButton("שעתיים", occurrenceId, occurrenceIds, reminderId, alertReminderName, 120, snoozeOriginalScheduledAt));
         card.addView(secondRow);
 
-        Button snoozeOneDay = actionButton("דחה ביום", COLOR_SURFACE_2);
+        Button snoozeOneDay = actionButton("דחה ביום", COLOR_ACTION_GREEN);
         LinearLayout.LayoutParams snoozeOneDayParams = new LinearLayout.LayoutParams(dp(158), dp(36));
         snoozeOneDayParams.setMargins(dp(3), dp(5), dp(3), dp(2));
         snoozeOneDay.setLayoutParams(snoozeOneDayParams);
@@ -215,17 +212,21 @@ public class ReminderAlertActivity extends Activity {
         ScrollView scrollView = new ScrollView(this);
         activeScrollView = scrollView;
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(COLOR_BG);
         scrollView.addView(content);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
+        root.addView(new ReminderAlertFrameView(this), new FrameLayout.LayoutParams(-1, -1));
         FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         );
         root.addView(scrollView, scrollParams);
         TopArcClockView.addTo(root);
+        ReminderAlertFrameView rim = new ReminderAlertFrameView(this, false);
+        root.addView(rim, new FrameLayout.LayoutParams(-1, -1));
         AppTextStyle.apply(root);
+        applyGlow(name, 0xAAFFF3D5, dp(2));
+        applyGlow(done, 0xCCFFF4D2, dp(3));
         setContentView(root);
         startVibration(settings);
 
@@ -303,7 +304,7 @@ public class ReminderAlertActivity extends Activity {
     }
 
     private Button snoozeButton(String label, String activeOccurrenceId, List<String> occurrenceIds, String reminderId, String reminderName, int minutes, long originalScheduledAt) {
-        Button button = actionButton(label, COLOR_SURFACE_2);
+        Button button = actionButton(label, COLOR_ACTION_GREEN);
         button.setOnClickListener(v -> snooze(activeOccurrenceId, occurrenceIds, reminderId, reminderName, minutes, originalScheduledAt));
         return button;
     }
@@ -460,13 +461,19 @@ public class ReminderAlertActivity extends Activity {
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
         button.setAllCaps(false);
-        button.setBackground(rounded(color, dp(18), color == COLOR_SURFACE_2 ? COLOR_ACCENT : 0));
+        button.setBackground(new DepthButtonDrawable(color, dp(18)));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(76), dp(36));
         params.setMargins(dp(3), dp(2), dp(3), dp(2));
         button.setLayoutParams(params);
         button.setPadding(0, 0, 0, 0);
         return button;
     }
+
+    private void applyGlow(TextView view, int color, float radius) {
+        view.setShadowLayer(radius, 0, 0, color);
+        view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+    }
+
 
     private NumberPicker numberPicker(int min, int max, int value) {
         NumberPicker picker = new NumberPicker(this);
