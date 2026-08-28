@@ -583,7 +583,7 @@ public class MainActivity extends Activity {
         int homeBackgroundResource = homeIllustrationResource(lastHomeIllustrationPeriod);
 
         LinearLayout primaryActions = actionRow();
-        Button addButton = pillButton("+ תזכורת", COLOR_EMERALD);
+        Button addButton = pillButton("תזכורת", COLOR_EMERALD);
         addButton.setOnClickListener(v -> showEditor(null));
         Button historyButton = pillButton("היסטוריה", COLOR_SURFACE_2);
         historyButton.setOnClickListener(v -> showHistory());
@@ -4481,10 +4481,10 @@ public class MainActivity extends Activity {
         daysSection.setVisibility((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? View.VISIBLE : View.GONE);
         periodicSection.setVisibility(selectedPeriodic ? View.VISIBLE : View.GONE);
         annualSection.setVisibility(selectedAnnual ? View.VISIBLE : View.GONE);
-        recurringButton.setBackground(rounded((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
-        oneTimeButton.setBackground(rounded(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
-        periodicButton.setBackground(rounded(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
-        annualButton.setBackground(rounded(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8), 0));
+        recurringButton.setBackground(new ElegantButtonDrawable((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        oneTimeButton.setBackground(new ElegantButtonDrawable(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        periodicButton.setBackground(new ElegantButtonDrawable(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        annualButton.setBackground(new ElegantButtonDrawable(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
     }
 
     private void updateZmanimSections(View timeCard, Spinner zmanimSpinner, NumberPicker offsetPicker, TextView location) {
@@ -5859,7 +5859,8 @@ public class MainActivity extends Activity {
         button.setTextSize(25);
         button.setAllCaps(false);
         button.setPadding(0, 0, 0, 0);
-        button.setBackground(rounded(COLOR_SURFACE, dp(20), 0x55FFFFFF));
+        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        button.setBackground(new ElegantButtonDrawable(COLOR_SURFACE, dp(20)));
         button.setLayoutParams(new LinearLayout.LayoutParams(dp(38), dp(42)));
         AppTextStyle.apply(button);
         return button;
@@ -5894,7 +5895,8 @@ public class MainActivity extends Activity {
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
-        button.setBackground(rounded(color, dp(18), color == COLOR_SURFACE_2 ? 0x66E2C89C : 0));
+        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        button.setBackground(new ElegantButtonDrawable(color, dp(18)));
         button.setAllCaps(false);
         button.setMinHeight(dp(38));
         button.setGravity(Gravity.CENTER);
@@ -5908,17 +5910,25 @@ public class MainActivity extends Activity {
     }
 
     private void applyButtonIcon(Button button, String value) {
+        String translatedValue = UiText.t(this, value);
+        if ("בוצע".equals(value) || "דחה".equals(value)
+                || "Done".equalsIgnoreCase(translatedValue) || "Snooze".equalsIgnoreCase(translatedValue)) {
+            button.setCompoundDrawables(null, null, null, null);
+            return;
+        }
         AppButtonIconDrawable.Kind kind = buttonIconKind(value);
         if (kind == null) return;
         AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, 0xFFFFD3BD, dp(2));
         icon.setBounds(0, 0, dp(16), dp(16));
         button.setCompoundDrawablePadding(dp(4));
-        button.setCompoundDrawablesRelative(icon, null, null, null);
+        button.setCompoundDrawables(icon, null, null, null);
     }
 
     private AppButtonIconDrawable.Kind buttonIconKind(String value) {
         String v = value == null ? "" : value;
-        if ((v.contains("תזכורת") || v.contains("שעון מעורר")) && (v.contains("+") || v.contains("הוס") || v.contains("חדש"))) return AppButtonIconDrawable.Kind.ADD;
+        if (v.equals("תזכורת")) return AppButtonIconDrawable.Kind.PLUS;
+        if ((v.contains("תזכורת") && (v.contains("+") || v.contains("הוס") || v.contains("חדש")))
+                || (v.contains("שעון מעורר") && (v.contains("הוס") || v.contains("חדש")))) return AppButtonIconDrawable.Kind.ADD;
         if (v.equals("הוספה")) return AppButtonIconDrawable.Kind.ADD;
         if (v.contains("היסטוריה")) return AppButtonIconDrawable.Kind.HISTORY;
         if (v.contains("כל התזכורות")) return AppButtonIconDrawable.Kind.LIST;
@@ -6109,8 +6119,8 @@ public class MainActivity extends Activity {
 
     private void styleDayButton(Button button, boolean selected) {
         int color = selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2;
-        int stroke = selected ? 0 : 0x66E2C89C;
-        button.setBackground(rounded(color, dp(18), stroke));
+        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        button.setBackground(new ElegantButtonDrawable(color, dp(18)));
     }
 
     private LinearLayout compactDayRow() {

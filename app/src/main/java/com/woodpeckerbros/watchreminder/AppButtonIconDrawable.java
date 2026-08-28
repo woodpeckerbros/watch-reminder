@@ -8,7 +8,7 @@ import android.graphics.drawable.Drawable;
 
 /** Small semantic line icons for text buttons; avoids font-dependent emoji rendering. */
 final class AppButtonIconDrawable extends Drawable {
-    enum Kind { ADD, HISTORY, LIST, ALARM, CLOCK, BELL, SETTINGS, BACK, SAVE, DELETE, FILE, PHONE, LOCATION, SOUND, INFO }
+    enum Kind { PLUS, ADD, HISTORY, LIST, ALARM, CLOCK, BELL, SETTINGS, BACK, SAVE, DELETE, FILE, PHONE, LOCATION, SOUND, INFO }
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Kind kind;
 
@@ -26,6 +26,9 @@ final class AppButtonIconDrawable extends Drawable {
         float x = b.centerX(), y = b.centerY(), s = Math.min(b.width(), b.height()) / 24f;
         c.save(); c.translate(x, y); c.scale(s, s);
         switch (kind) {
+            case PLUS:
+                plus(c, 0, 0, 7f);
+                break;
             case ADD:
                 plus(c, -6, 2, 3.5f);
                 c.drawCircle(4, -5, 3, paint);
