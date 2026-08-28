@@ -29,10 +29,10 @@ final class GlassButtonDrawable extends Drawable {
         canvas.clipOutPath(facePath);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(null);
-        paint.setColor(0xA8000000);
+        paint.setColor(0x24000000);
         RectF shadow = new RectF(face);
-        shadow.offset(2.5f, 5f);
-        paint.setShadowLayer(7, 1.5f, 3f, 0xB8000000);
+        shadow.offset(0f, 2.5f);
+        paint.setShadowLayer(9f, 0f, 2.5f, 0x72000000);
         canvas.drawRoundRect(shadow, radius, radius, paint);
         paint.clearShadowLayer();
         canvas.restore();
