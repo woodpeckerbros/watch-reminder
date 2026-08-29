@@ -1613,6 +1613,7 @@ public class MainActivity extends Activity {
         backupCard.addView(backupHint);
         LinearLayout backupActions = actionRow();
         Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
+        backupToPhone.setText(AppLanguage.isEnglish(this) ? "Back Up\nto Phone" : "גיבוי\nלטלפון");
         backupToPhone.setOnClickListener(v -> sendBackupToPhone());
         Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
         restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
@@ -5950,6 +5951,8 @@ public class MainActivity extends Activity {
 
     private AppButtonIconDrawable.Kind buttonIconKind(String value) {
         String v = value == null ? "" : value;
+        if (v.equals("גיבוי לטלפון")) return AppButtonIconDrawable.Kind.PHONE_IN;
+        if (v.equals("שחזור מהטלפון")) return AppButtonIconDrawable.Kind.PHONE_OUT;
         if (v.equals("תזכורת")) return AppButtonIconDrawable.Kind.PLUS;
         if ((v.contains("תזכורת") && (v.contains("+") || v.contains("הוס") || v.contains("חדש")))
                 || (v.contains("שעון מעורר") && (v.contains("הוס") || v.contains("חדש")))) return AppButtonIconDrawable.Kind.ADD;

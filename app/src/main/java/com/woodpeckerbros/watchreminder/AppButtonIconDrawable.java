@@ -8,7 +8,7 @@ import android.graphics.drawable.Drawable;
 
 /** Small semantic line icons for text buttons; avoids font-dependent emoji rendering. */
 final class AppButtonIconDrawable extends Drawable {
-    enum Kind { PLUS, ADD, HISTORY, LIST, ALARM, CLOCK, BELL, SETTINGS, BACK, SAVE, DELETE, FILE, PHONE, LOCATION, SOUND, INFO }
+    enum Kind { PLUS, ADD, HISTORY, LIST, ALARM, CLOCK, BELL, SETTINGS, BACK, SAVE, DELETE, FILE, PHONE, PHONE_IN, PHONE_OUT, LOCATION, SOUND, INFO }
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Kind kind;
 
@@ -61,11 +61,26 @@ final class AppButtonIconDrawable extends Drawable {
             case DELETE: c.drawRoundRect(new RectF(-6,-5,6,9),2,2,paint); c.drawLine(-8,-7,8,-7,paint); c.drawLine(-3,-10,3,-10,paint); break;
             case FILE: c.drawRect(-7,-9,7,9,paint); c.drawLine(-3,-3,4,-3,paint); c.drawLine(-3,2,4,2,paint); break;
             case PHONE: c.drawRoundRect(new RectF(-6,-10,6,10),2,2,paint); c.drawCircle(0,7,1,paint); break;
+            case PHONE_IN:
+                phoneWithArrow(c, true);
+                break;
+            case PHONE_OUT:
+                phoneWithArrow(c, false);
+                break;
             case LOCATION: Path p=new Path(); p.moveTo(0,10); p.cubicTo(-12,-1,-7,-10,0,-10); p.cubicTo(7,-10,12,-1,0,10); c.drawPath(p,paint); c.drawCircle(0,-3,2.5f,paint); break;
             case SOUND: c.drawRect(-9,-3,-5,3,paint); c.drawLine(-5,-3,1,-8,paint); c.drawLine(1,-8,1,8,paint); c.drawLine(1,8,-5,3,paint); c.drawArc(new RectF(-1,-7,10,7),285,150,false,paint); break;
             case INFO: c.drawCircle(0,0,9,paint); c.drawCircle(0,-5,0.8f,paint); c.drawLine(0,-1,0,6,paint); break;
         }
         c.restore();
+    }
+    private void phoneWithArrow(Canvas c, boolean intoPhone) {
+        c.drawRoundRect(new RectF(0,-10,9,10),2,2,paint);
+        c.drawCircle(4.5f,7,1,paint);
+        c.drawLine(-10,0,-2,0,paint);
+        float arrowTip = intoPhone ? -2 : -10;
+        float arrowBase = intoPhone ? -6 : -6;
+        c.drawLine(arrowTip,0,arrowBase,-4,paint);
+        c.drawLine(arrowTip,0,arrowBase,4,paint);
     }
     private void plus(Canvas c,float x,float y,float r){c.drawLine(x-r,y,x+r,y,paint);c.drawLine(x,y-r,x,y+r,paint);}
     @Override public void setAlpha(int a){paint.setAlpha(a);} @Override public void setColorFilter(android.graphics.ColorFilter f){paint.setColorFilter(f);} @Override public int getOpacity(){return android.graphics.PixelFormat.TRANSLUCENT;}
