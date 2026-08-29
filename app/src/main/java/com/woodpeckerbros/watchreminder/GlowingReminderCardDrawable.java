@@ -22,15 +22,22 @@ final class GlowingReminderCardDrawable extends Drawable {
         RectF bounds = new RectF(getBounds());
         paint.setShader(null);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(prominent ? 5.5f : 3.5f);
-        paint.setColor(prominent ? 0xF4FFB184 : 0x6CFFB184);
-        paint.setMaskFilter(new BlurMaskFilter(prominent ? 11f : 8f, BlurMaskFilter.Blur.NORMAL));
+        paint.setStrokeWidth(prominent ? 8f : 3.5f);
+        paint.setColor(prominent ? 0xFFFFB184 : 0x6CFFB184);
+        paint.setMaskFilter(new BlurMaskFilter(prominent ? 15f : 8f, BlurMaskFilter.Blur.NORMAL));
         RectF halo = new RectF(bounds);
-        halo.inset(prominent ? 12f : 8f, prominent ? 12f : 8f);
+        halo.inset(prominent ? 16f : 8f, prominent ? 16f : 8f);
         canvas.drawRoundRect(halo, radius + 3f, radius + 3f, paint);
         paint.setMaskFilter(null);
+        if (prominent) {
+            paint.setStrokeWidth(6f);
+            paint.setColor(0xE8FFD0A6);
+            paint.setMaskFilter(new BlurMaskFilter(6f, BlurMaskFilter.Blur.NORMAL));
+            canvas.drawRoundRect(halo, radius + 3f, radius + 3f, paint);
+            paint.setMaskFilter(null);
+        }
         RectF b = new RectF(bounds);
-        b.inset(prominent ? 13 : 9, prominent ? 13 : 9);
+        b.inset(prominent ? 17 : 9, prominent ? 17 : 9);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(new LinearGradient(0,b.top,0,b.bottom,
                 prominent ? 0xC9655548 : 0xB94A4B45,
