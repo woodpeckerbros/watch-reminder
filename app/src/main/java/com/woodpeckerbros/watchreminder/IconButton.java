@@ -21,12 +21,19 @@ final class IconButton extends Button {
     }
 
     @Override protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        if (appIcon == null || getText() == null) return;
+        if (appIcon == null || getText() == null) {
+            super.onDraw(canvas);
+            return;
+        }
         int iconWidth = appIcon.getBounds().width();
         int iconHeight = appIcon.getBounds().height();
+        float groupShift = (iconWidth + iconGap) / 2f;
+        canvas.save();
+        canvas.translate(groupShift, 0f);
+        super.onDraw(canvas);
+        canvas.restore();
         float textWidth = getPaint().measureText(getText().toString());
-        int right = Math.round(getWidth() / 2f - textWidth / 2f - iconGap);
+        int right = Math.round(getWidth() / 2f + groupShift - textWidth / 2f - iconGap);
         int left = right - iconWidth;
         int top = Math.round((getHeight() - iconHeight) / 2f);
         appIcon.setBounds(left, top, right, top + iconHeight);

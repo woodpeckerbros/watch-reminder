@@ -43,7 +43,15 @@ final class AppButtonIconDrawable extends Drawable {
             case ALARM: c.drawCircle(0,2,8,paint); c.drawLine(0,2,0,-3,paint); c.drawLine(0,2,4,4,paint); c.drawArc(new RectF(-10,-10,-2,-3),205,130,false,paint); c.drawArc(new RectF(2,-10,10,-3),205,130,false,paint); break;
             case CLOCK: c.drawCircle(0,0,9,paint); c.drawLine(0,0,0,-5,paint); c.drawLine(0,0,5,2,paint); break;
             case BELL: Path bell=new Path(); bell.moveTo(-8,6); bell.quadTo(-4,2,-4,-3); bell.quadTo(0,-10,4,-3); bell.quadTo(4,2,8,6); bell.close(); c.drawPath(bell,paint); c.drawCircle(0,8,1.4f,paint); break;
-            case SETTINGS: c.drawCircle(0,0,3,paint); for(int i=0;i<8;i++){double a=i*Math.PI/4;c.drawLine((float)Math.cos(a)*6,(float)Math.sin(a)*6,(float)Math.cos(a)*9,(float)Math.sin(a)*9,paint);} break;
+            case SETTINGS:
+                c.drawCircle(0, 0, 7, paint);
+                c.drawCircle(0, 0, 2.8f, paint);
+                for (int i = 0; i < 4; i++) {
+                    double a = i * Math.PI / 2;
+                    c.drawLine((float) Math.cos(a) * 7, (float) Math.sin(a) * 7,
+                            (float) Math.cos(a) * 9.5f, (float) Math.sin(a) * 9.5f, paint);
+                }
+                break;
             case BACK: c.drawLine(7,-7,-2,0,paint); c.drawLine(-2,0,7,7,paint); c.drawLine(-2,0,10,0,paint); break;
             case SAVE: c.drawRoundRect(new RectF(-8,-9,8,9),2,2,paint); c.drawRect(-4,-9,4,-3,paint); c.drawRect(-4,2,4,8,paint); break;
             case DELETE: c.drawRoundRect(new RectF(-6,-5,6,9),2,2,paint); c.drawLine(-8,-7,8,-7,paint); c.drawLine(-3,-10,3,-10,paint); break;
