@@ -40,8 +40,8 @@ final class GlowingReminderCardDrawable extends Drawable {
         b.inset(prominent ? 17 : 9, prominent ? 17 : 9);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(new LinearGradient(0,b.top,0,b.bottom,
-                prominent ? 0xC9655548 : 0xB94A4B45,
-                prominent ? 0xD7142528 : 0xC4142528, Shader.TileMode.CLAMP));
+                prominent ? 0xA1655548 : 0xB94A4B45,
+                prominent ? 0xAC142528 : 0xC4142528, Shader.TileMode.CLAMP));
         paint.setShadowLayer(prominent ? 15 : 7, 0, 0,
                 prominent ? 0xE8FFB98F : 0x70FFB98F);
         canvas.drawRoundRect(b,radius,radius,paint);
