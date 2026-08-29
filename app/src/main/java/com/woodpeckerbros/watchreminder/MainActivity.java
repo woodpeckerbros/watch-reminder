@@ -1613,9 +1613,11 @@ public class MainActivity extends Activity {
         backupCard.addView(backupHint);
         LinearLayout backupActions = actionRow();
         Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
+        setBackupPhoneButtonSize(backupToPhone);
         backupToPhone.setText(AppLanguage.isEnglish(this) ? "Back Up\nto Phone" : "גיבוי\nלטלפון");
         backupToPhone.setOnClickListener(v -> sendBackupToPhone());
         Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
+        setBackupPhoneButtonSize(restoreFromPhone);
         restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
         backupActions.addView(backupToPhone);
         backupActions.addView(restoreFromPhone);
@@ -5946,7 +5948,16 @@ public class MainActivity extends Activity {
                 || translated.toLowerCase(Locale.ROOT).contains("licenses")
                 || v.equals("קבועה") || v.equals("חד פעמית") || v.equals("מחזורית") || v.equals("שנתית")
                 || translated.equalsIgnoreCase("Fixed") || translated.equalsIgnoreCase("One Time")
-                || translated.equalsIgnoreCase("Repeating") || translated.equalsIgnoreCase("Annual");
+                || translated.equalsIgnoreCase("Repeating") || translated.equalsIgnoreCase("Annual")
+                || v.equals("זהה שם עיר") || translated.equalsIgnoreCase("Identify City")
+                || v.equals("הצג רישיון") || translated.equalsIgnoreCase("View License")
+                || v.equals("בחירת צלצול") || translated.equalsIgnoreCase("Choose Sound");
+    }
+
+    private void setBackupPhoneButtonSize(Button button) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(108), dp(44));
+        params.setMargins(dp(3), dp(4), dp(3), dp(4));
+        button.setLayoutParams(params);
     }
 
     private AppButtonIconDrawable.Kind buttonIconKind(String value) {
