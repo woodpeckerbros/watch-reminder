@@ -4804,15 +4804,15 @@ public class MainActivity extends Activity {
         daysLabel.setPadding(0, dp(10), 0, dp(2));
         content.addView(daysLabel);
 
-        int[] days = {Calendar.WEDNESDAY, Calendar.TUESDAY, Calendar.MONDAY, Calendar.SUNDAY, Calendar.SATURDAY, Calendar.FRIDAY, Calendar.THURSDAY};
+        int[] days = {Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY};
         String[] labels = {
-                getString(R.string.ui_day_wed_short),
-                getString(R.string.ui_day_tue_short),
-                getString(R.string.ui_day_mon_short),
                 getString(R.string.ui_day_sun_short),
-                getString(R.string.ui_day_sat_short),
+                getString(R.string.ui_day_mon_short),
+                getString(R.string.ui_day_tue_short),
+                getString(R.string.ui_day_wed_short),
+                getString(R.string.ui_day_thu_short),
                 getString(R.string.ui_day_fri_short),
-                getString(R.string.ui_day_thu_short)
+                getString(R.string.ui_day_sat_short)
         };
         LinearLayout dayRows = new LinearLayout(this);
         dayRows.setOrientation(LinearLayout.VERTICAL);
@@ -6165,6 +6165,9 @@ public class MainActivity extends Activity {
     private LinearLayout compactDayRow() {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
+        row.setLayoutDirection(AppLanguage.isRtl(this)
+                ? View.LAYOUT_DIRECTION_RTL
+                : View.LAYOUT_DIRECTION_LTR);
         return row;
     }
 
