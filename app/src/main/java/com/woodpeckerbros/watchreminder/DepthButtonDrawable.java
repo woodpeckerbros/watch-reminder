@@ -27,9 +27,7 @@ final class DepthButtonDrawable extends Drawable {
         RectF face = new RectF(bounds.left, bounds.top, bounds.right, bounds.bottom - 4);
         paint.setShader(new LinearGradient(0, face.top, 0, face.bottom,
                 lighten(baseColor, 1.22f), darken(baseColor, 0.76f), Shader.TileMode.CLAMP));
-        paint.setShadowLayer(5, 0, 3, 0x99000000);
         canvas.drawRoundRect(face, radius, radius, paint);
-        paint.clearShadowLayer();
         paint.setShader(null);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(1.2f);

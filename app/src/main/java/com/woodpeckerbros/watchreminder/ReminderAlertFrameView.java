@@ -37,16 +37,24 @@ final class ReminderAlertFrameView extends View {
             ));
             canvas.drawRect(0, 0, getWidth(), getHeight(), paint);
             paint.setShader(null);
+            return;
         }
 
         float inset = dp(3.5f);
+        // Static concentric strokes create a soft rim without a full-screen
+        // software shadow layer on every frame.
         paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(dp(4.5f));
+        paint.setColor(0x24E6C98F);
+        canvas.drawOval(new RectF(inset + dp(1), inset + dp(1),
+                getWidth() - inset - dp(1), getHeight() - inset - dp(1)), paint);
+        paint.setStrokeWidth(dp(2.8f));
+        paint.setColor(0x50E6C98F);
+        canvas.drawOval(new RectF(inset + dp(0.5f), inset + dp(0.5f),
+                getWidth() - inset - dp(0.5f), getHeight() - inset - dp(0.5f)), paint);
         paint.setStrokeWidth(dp(1.7f));
         paint.setColor(0xFFE0C38D);
-        paint.setShadowLayer(dp(2), 0, 0, 0xAAE6C98F);
-        setLayerType(LAYER_TYPE_SOFTWARE, paint);
         canvas.drawOval(new RectF(inset, inset, getWidth() - inset, getHeight() - inset), paint);
-        paint.clearShadowLayer();
 
         // A restrained sparkle near the lower rim, inspired by the reference without obscuring controls.
         paint.setStyle(Paint.Style.FILL);

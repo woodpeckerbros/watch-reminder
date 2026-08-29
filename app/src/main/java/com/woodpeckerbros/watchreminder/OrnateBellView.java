@@ -38,13 +38,17 @@ final class OrnateBellView extends View {
         bell.quadTo(13, 7, 21, 16);
         bell.quadTo(0, 23, -21, 16);
         paint.setStyle(Paint.Style.FILL);
-        paint.setShader(new LinearGradient(-18, -25, 18, 19,
+        LinearGradient bellGradient = new LinearGradient(-18, -25, 18, 19,
                 new int[]{0xFFD9BC76, 0xFF4F8B78, 0xFFB88A45, 0xFF355F55, 0xFFE2C47C},
-                null, Shader.TileMode.CLAMP));
-        paint.setShadowLayer(3, 0, 2, 0x99000000);
-        setLayerType(LAYER_TYPE_SOFTWARE, paint);
+                null, Shader.TileMode.CLAMP);
+        paint.setShader(null);
+        paint.setColor(0x66000000);
+        canvas.save();
+        canvas.translate(0, 2);
         canvas.drawPath(bell, paint);
-        paint.clearShadowLayer();
+        canvas.restore();
+        paint.setShader(bellGradient);
+        canvas.drawPath(bell, paint);
         paint.setShader(null);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(2.1f);

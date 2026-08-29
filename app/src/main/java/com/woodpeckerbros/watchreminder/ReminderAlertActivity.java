@@ -471,7 +471,6 @@ public class ReminderAlertActivity extends Activity {
 
     private void applyGlow(TextView view, int color, float radius) {
         view.setShadowLayer(radius, 0, 0, color);
-        view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
     }
 
 

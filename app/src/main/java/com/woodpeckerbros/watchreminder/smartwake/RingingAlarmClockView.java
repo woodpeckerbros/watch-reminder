@@ -5,10 +5,9 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.os.SystemClock;
 import android.view.View;
 
-/** A lightweight, code-drawn alarm clock that rocks while the alarm screen is visible. */
+/** A lightweight, static code-drawn alarm clock for the alarm screen. */
 final class RingingAlarmClockView extends View {
     private static final int GOLD = 0xFFFFD27A;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -22,8 +21,7 @@ final class RingingAlarmClockView extends View {
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         float scale = Math.min(getWidth() / 64f, getHeight() / 62f);
-        float phase = (SystemClock.uptimeMillis() % 520L) / 520f;
-        float wave = (float) Math.sin(phase * Math.PI * 4);
+        float wave = 0f;
 
         canvas.save();
         canvas.translate(getWidth() / 2f, getHeight() / 2f + 2f * scale);
@@ -63,6 +61,5 @@ final class RingingAlarmClockView extends View {
         canvas.drawCircle(0, 5, 2.2f, paint);
 
         canvas.restore();
-        if (isAttachedToWindow()) postInvalidateOnAnimation();
     }
 }
