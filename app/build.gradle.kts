@@ -22,9 +22,9 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
-    implementation("androidx.wear.watchface:watchface-complications-data-source:1.2.1")
-    implementation("androidx.health:health-services-client:1.1.0-rc01")
-    implementation("com.google.guava:guava:33.4.0-android")
+    implementation("androidx.wear.watchface:watchface-complications-data-source:1.3.0")
+    implementation("androidx.health:health-services-client:1.1.0-rc02")
+    implementation("com.google.guava:guava:33.7.1-android")
     implementation("com.kosherjava:zmanim:2.5.0")
-    implementation("com.google.android.gms:play-services-wearable:18.0.0")
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
 }

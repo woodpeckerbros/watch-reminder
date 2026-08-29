@@ -558,3 +558,11 @@ adb -s DEVICE_SERIAL install -r phone/build/outputs/apk/debug/phone-debug.apk
 - עוצמת ההדגשה הפכה לפרמטר בעיצוב כפתור נבחר. ימי השבוע משתמשים כעת בעוצמה של 55%: מסגרת מעט דקה ושקופה יותר והילה בעלת רדיוס ואטימות נמוכים יותר.
 - מילוי הטרקוטה נשאר כדי שהבחירה תמשיך להיות ברורה, ועיצוב הבחירה המלא של סוגי התזכורת, הצלצולים ושאר האפשרויות לא השתנה.
 - בוצעה בניית Debug, הגרסה הותקנה באמולטור Wear OS וההדגשה המרוככת נבדקה חזותית בבורר ימי השבוע.
+
+## 45. עדכון 2026-08-30 — עדכון תלויות Wear ו־Health
+
+- התלויות נבדקו מול Google Maven, Maven Central והערות השחרור הרשמיות ועודכנו: `watchface-complications-data-source` מ־`1.2.1` ל־`1.3.0`, ‏`health-services-client` מ־`1.1.0-rc01` ל־`1.1.0-rc02`, ‏Guava Android מ־`33.4.0-android` ל־`33.7.1-android`, ו־`play-services-wearable` מ־`18.0.0` ל־`20.0.1` בשני המודולים.
+- Health Services ‏1.1 עדיין בערוץ RC; נבחרה RC02 כי זו הגרסה העדכנית באותו קו API שכבר היה בשימוש. Watchface ‏1.3.0 ו־Guava ‏33.7.1 הן גרסאות יציבות, ו־Wearable ‏20.0.1 כוללת לפי Google תיקון אבטחה.
+- לא שונו Gradle, ‏AGP, גרסאות SDK או package names.
+- `:app:testDebugUnitTest`, ‏`:app:assembleDebug`, ‏`:app:bundleRelease`, ‏`:phone:testDebugUnitTest`, ‏`:phone:assembleDebug` ו־`:phone:bundleRelease` עברו יחד בהצלחה ללא צורך בשינוי API.
+- גרסת השעון הותקנה והופעלה באמולטור Wear OS; התהליך נשאר פעיל ולא נרשמה קריסת `AndroidRuntime`. לא היה מכשיר טלפון מחובר להרצת מודול הטלפון, ולכן הוא אומת בבניות Debug/Release בלבד.

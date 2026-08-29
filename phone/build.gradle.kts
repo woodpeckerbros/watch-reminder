@@ -21,6 +21,6 @@ android {
 }
 
 dependencies {
-    implementation("com.google.android.gms:play-services-wearable:18.0.0")
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation("com.kosherjava:zmanim:2.5.0")
 }
