@@ -1621,7 +1621,7 @@ public class MainActivity extends Activity {
         backupCard.addView(backupActions);
         content.addView(backupCard, cardParams());
 
-        Button licenses = pillButton("ⓘ  אודות ורישיונות", COLOR_SURFACE_2);
+        Button licenses = pillButton("אודות ורישיונות", COLOR_SURFACE_2);
         licenses.setTextSize(12);
         licenses.setOnClickListener(v -> showAboutAndLicenses());
         content.addView(licenses, matchParams());
@@ -3552,6 +3552,7 @@ public class MainActivity extends Activity {
                 continue;
             }
             Button button = pillButton(blessing, COLOR_SURFACE_2);
+            clearButtonIcon(button);
             button.setTextSize(13);
             button.setOnClickListener(v -> createBlessingReminder(blessing));
             content.addView(button, matchParams());
@@ -5911,9 +5912,10 @@ public class MainActivity extends Activity {
 
     private void applyButtonIcon(Button button, String value) {
         String translatedValue = UiText.t(this, value);
-        if ("בוצע".equals(value) || "דחה".equals(value)
+        if (buttonShouldHideIcon(value, translatedValue)
+                || "בוצע".equals(value) || "דחה".equals(value)
                 || "Done".equalsIgnoreCase(translatedValue) || "Snooze".equalsIgnoreCase(translatedValue)) {
-            if (button instanceof IconButton) ((IconButton) button).setAppIcon(null, 0);
+            clearButtonIcon(button);
             return;
         }
         AppButtonIconDrawable.Kind kind = buttonIconKind(value);
@@ -5924,6 +5926,26 @@ public class MainActivity extends Activity {
         if (button instanceof IconButton) {
             ((IconButton) button).setAppIcon(icon, dp(3));
         }
+    }
+
+    private void clearButtonIcon(Button button) {
+        button.setCompoundDrawables(null, null, null, null);
+        if (button instanceof IconButton) ((IconButton) button).setAppIcon(null, 0);
+    }
+
+    private boolean buttonShouldHideIcon(String value, String translatedValue) {
+        String v = value == null ? "" : value;
+        String translated = translatedValue == null ? "" : translatedValue;
+        return v.contains("חזרה") || translated.toLowerCase(Locale.ROOT).contains("back")
+                || v.equals("שמירה") || translated.equalsIgnoreCase("Save")
+                || v.equals("ביטול") || translated.equalsIgnoreCase("Cancel")
+                || v.equals("עריכה") || translated.equalsIgnoreCase("Edit")
+                || v.contains("הוספת שעון מעורר") || translated.toLowerCase(Locale.ROOT).contains("add alarm")
+                || v.contains("אודות") || v.contains("רישיונות")
+                || translated.toLowerCase(Locale.ROOT).contains("licenses")
+                || v.equals("קבועה") || v.equals("חד פעמית") || v.equals("מחזורית") || v.equals("שנתית")
+                || translated.equalsIgnoreCase("Fixed") || translated.equalsIgnoreCase("One Time")
+                || translated.equalsIgnoreCase("Repeating") || translated.equalsIgnoreCase("Annual");
     }
 
     private AppButtonIconDrawable.Kind buttonIconKind(String value) {
@@ -6111,6 +6133,7 @@ public class MainActivity extends Activity {
 
     private Button dayButton(String value, int color) {
         Button button = pillButton(value, color);
+        clearButtonIcon(button);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(38), dp(34));
         params.setMargins(dp(3), dp(2), dp(3), dp(2));
         button.setLayoutParams(params);
