@@ -10,6 +10,7 @@ import android.graphics.drawable.Drawable;
 
 /** Dark translucent card with a warm persistent halo for the nearest reminder. */
 final class GlowingReminderCardDrawable extends Drawable {
+    static final int PROMINENT_BORDER_COLOR = 0xFFFFE1C4;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final float radius;
     private final boolean prominent;
@@ -48,7 +49,7 @@ final class GlowingReminderCardDrawable extends Drawable {
         paint.clearShadowLayer(); paint.setShader(null);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(prominent ? 2.3f : 1.2f);
-        paint.setColor(prominent ? 0xFFFFE1C4 : 0x99FFD0AF);
+        paint.setColor(prominent ? PROMINENT_BORDER_COLOR : 0x99FFD0AF);
         canvas.drawRoundRect(b,radius,radius,paint);
         if (prominent) {
             paint.setStrokeWidth(1f); paint.setColor(0x99FF9E76);

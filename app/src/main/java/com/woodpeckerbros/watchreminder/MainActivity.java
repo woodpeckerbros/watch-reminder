@@ -745,7 +745,7 @@ public class MainActivity extends Activity {
             showReminderActions(item.reminder);
             return true;
         });
-        TextView label = text("התזכורת הבאה", 11, COLOR_LUXURY_GOLD);
+        TextView label = text("התזכורת הבאה", 11, GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR);
         AppFont.bold(label);
         TextView time = text(NextReminderCalculator.formatTime(item.next.scheduledAt), 34, COLOR_TEXT);
         AppFont.bold(time);
