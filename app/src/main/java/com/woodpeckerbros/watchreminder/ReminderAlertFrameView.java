@@ -41,22 +41,21 @@ final class ReminderAlertFrameView extends View {
         }
 
         float inset = dp(1.1f);
-        // Static concentric strokes create a soft rim without a full-screen
-        // software shadow layer on every frame.
+        // Static concentric warm strokes create a sunrise-like fade without a
+        // full-screen software blur or shadow layer on every frame.
         paint.setStyle(Paint.Style.STROKE);
-        // Opaque underlay masks scrolling content directly beneath the edge rim.
-        paint.setStrokeWidth(dp(8f));
-        paint.setColor(0xF0061522);
-        canvas.drawOval(new RectF(inset, inset,
-                getWidth() - inset, getHeight() - inset), paint);
-        paint.setStrokeWidth(dp(4.5f));
-        paint.setColor(0x24E6C98F);
-        canvas.drawOval(new RectF(inset + dp(1), inset + dp(1),
-                getWidth() - inset - dp(1), getHeight() - inset - dp(1)), paint);
-        paint.setStrokeWidth(dp(2.8f));
-        paint.setColor(0x50E6C98F);
-        canvas.drawOval(new RectF(inset + dp(0.5f), inset + dp(0.5f),
-                getWidth() - inset - dp(0.5f), getHeight() - inset - dp(0.5f)), paint);
+        paint.setStrokeWidth(dp(9f));
+        paint.setColor(0x18F4C98E);
+        canvas.drawOval(new RectF(inset + dp(4), inset + dp(4),
+                getWidth() - inset - dp(4), getHeight() - inset - dp(4)), paint);
+        paint.setStrokeWidth(dp(6f));
+        paint.setColor(0x30F1C486);
+        canvas.drawOval(new RectF(inset + dp(2.5f), inset + dp(2.5f),
+                getWidth() - inset - dp(2.5f), getHeight() - inset - dp(2.5f)), paint);
+        paint.setStrokeWidth(dp(3.5f));
+        paint.setColor(0x62EBC58C);
+        canvas.drawOval(new RectF(inset + dp(1.2f), inset + dp(1.2f),
+                getWidth() - inset - dp(1.2f), getHeight() - inset - dp(1.2f)), paint);
         paint.setStrokeWidth(dp(1.7f));
         paint.setColor(0xFFE0C38D);
         canvas.drawOval(new RectF(inset, inset, getWidth() - inset, getHeight() - inset), paint);
