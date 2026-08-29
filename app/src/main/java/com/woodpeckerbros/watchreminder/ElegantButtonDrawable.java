@@ -13,11 +13,17 @@ final class ElegantButtonDrawable extends Drawable {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int baseColor;
     private final float radius;
+    private final boolean selected;
     private boolean pressed;
 
     ElegantButtonDrawable(int baseColor, float radius) {
+        this(baseColor, radius, false);
+    }
+
+    ElegantButtonDrawable(int baseColor, float radius, boolean selected) {
         this.baseColor = baseColor;
         this.radius = radius;
+        this.selected = selected;
     }
 
     @Override public void draw(Canvas canvas) {
@@ -51,6 +57,22 @@ final class ElegantButtonDrawable extends Drawable {
         RectF rim = new RectF(face);
         rim.inset(0.7f, 0.7f);
         canvas.drawRoundRect(rim, radius, radius, paint);
+
+        if (selected) {
+            paint.setShader(null);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(3.2f);
+            paint.setColor(GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR);
+            paint.setShadowLayer(7f, 0f, 0f, 0xE8FFB98F);
+            RectF selectedRim = new RectF(face);
+            selectedRim.inset(1.8f, 1.8f);
+            canvas.drawRoundRect(selectedRim, radius - 1f, radius - 1f, paint);
+            paint.clearShadowLayer();
+            paint.setStrokeWidth(1f);
+            paint.setColor(0xFFFFFFFF);
+            selectedRim.inset(2.2f, 2.2f);
+            canvas.drawRoundRect(selectedRim, radius - 3f, radius - 3f, paint);
+        }
 
     }
 

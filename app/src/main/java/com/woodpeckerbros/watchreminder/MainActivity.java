@@ -4485,10 +4485,10 @@ public class MainActivity extends Activity {
         daysSection.setVisibility((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? View.VISIBLE : View.GONE);
         periodicSection.setVisibility(selectedPeriodic ? View.VISIBLE : View.GONE);
         annualSection.setVisibility(selectedAnnual ? View.VISIBLE : View.GONE);
-        recurringButton.setBackground(new ElegantButtonDrawable((!selectedOneTime && !selectedPeriodic && !selectedAnnual) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
-        oneTimeButton.setBackground(new ElegantButtonDrawable(selectedOneTime ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
-        periodicButton.setBackground(new ElegantButtonDrawable(selectedPeriodic ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
-        annualButton.setBackground(new ElegantButtonDrawable(selectedAnnual ? COLOR_ACCENT_DARK : COLOR_SURFACE_2, dp(8)));
+        styleSelectedButton(recurringButton, !selectedOneTime && !selectedPeriodic && !selectedAnnual, dp(8));
+        styleSelectedButton(oneTimeButton, selectedOneTime, dp(8));
+        styleSelectedButton(periodicButton, selectedPeriodic, dp(8));
+        styleSelectedButton(annualButton, selectedAnnual, dp(8));
     }
 
     private void updateZmanimSections(View timeCard, Spinner zmanimSpinner, NumberPicker offsetPicker, TextView location) {
@@ -4825,6 +4825,7 @@ public class MainActivity extends Activity {
             }
             int day = days[i];
             Button dayButton = dayButton(labels[i], selectedDays.contains(day) ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
+            styleDayButton(dayButton, selectedDays.contains(day));
             dayButton.setOnClickListener(v -> {
                 if (selectedDays.contains(day)) {
                     selectedDays.remove(day);
@@ -5212,11 +5213,14 @@ public class MainActivity extends Activity {
         option.setGravity(Gravity.CENTER_VERTICAL);
         option.setPadding(dp(15), 0, dp(11), 0);
         GradientDrawable optionBackground = new GradientDrawable();
-        optionBackground.setColor(selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2);
+        optionBackground.setColor(selected ? COLOR_ACCENT : COLOR_SURFACE_2);
         optionBackground.setCornerRadius(dp(24));
-        optionBackground.setStroke(dp(selected ? 2 : 1), selected ? COLOR_LUXURY_GOLD : 0x55FFFFFF);
+        optionBackground.setStroke(dp(selected ? 3 : 1), selected
+                ? GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR : 0x55FFFFFF);
         option.setBackground(optionBackground);
-        TextView optionTitle = text(name, 14, COLOR_TEXT);
+        TextView optionTitle = text(name, 14, selected
+                ? GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR : COLOR_TEXT);
+        if (selected) AppFont.bold(optionTitle);
         optionTitle.setGravity(AppLanguage.isRtl(this) ? Gravity.RIGHT : Gravity.LEFT);
         option.addView(optionTitle, new LinearLayout.LayoutParams(0, -2, 1f));
         android.widget.RadioButton radio = new android.widget.RadioButton(this);
@@ -6157,9 +6161,15 @@ public class MainActivity extends Activity {
     }
 
     private void styleDayButton(Button button, boolean selected) {
-        int color = selected ? COLOR_ACCENT_DARK : COLOR_SURFACE_2;
         button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        button.setBackground(new ElegantButtonDrawable(color, dp(18)));
+        styleSelectedButton(button, selected, dp(18));
+    }
+
+    private void styleSelectedButton(Button button, boolean selected, float radius) {
+        int color = selected ? COLOR_ACCENT : COLOR_SURFACE_2;
+        button.setTextColor(selected
+                ? GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR : Color.WHITE);
+        button.setBackground(new ElegantButtonDrawable(color, radius, selected));
     }
 
     private LinearLayout compactDayRow() {
