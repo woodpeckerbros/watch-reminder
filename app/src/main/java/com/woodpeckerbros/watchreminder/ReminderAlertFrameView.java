@@ -40,10 +40,15 @@ final class ReminderAlertFrameView extends View {
             return;
         }
 
-        float inset = dp(3.5f);
+        float inset = dp(1.1f);
         // Static concentric strokes create a soft rim without a full-screen
         // software shadow layer on every frame.
         paint.setStyle(Paint.Style.STROKE);
+        // Opaque underlay masks scrolling content directly beneath the edge rim.
+        paint.setStrokeWidth(dp(8f));
+        paint.setColor(0xF0061522);
+        canvas.drawOval(new RectF(inset, inset,
+                getWidth() - inset, getHeight() - inset), paint);
         paint.setStrokeWidth(dp(4.5f));
         paint.setColor(0x24E6C98F);
         canvas.drawOval(new RectF(inset + dp(1), inset + dp(1),

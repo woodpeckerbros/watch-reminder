@@ -221,7 +221,8 @@ public class ReminderAlertActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT
         );
         root.addView(scrollView, scrollParams);
-        TopArcClockView.addTo(root);
+        TopArcClockView alertClock = TopArcClockView.addTo(root);
+        alertClock.setTranslationY(dp(4));
         ReminderAlertFrameView rim = new ReminderAlertFrameView(this, false);
         root.addView(rim, new FrameLayout.LayoutParams(-1, -1));
         AppTextStyle.apply(root);
