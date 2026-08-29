@@ -44,13 +44,17 @@ final class AppButtonIconDrawable extends Drawable {
             case CLOCK: c.drawCircle(0,0,9,paint); c.drawLine(0,0,0,-5,paint); c.drawLine(0,0,5,2,paint); break;
             case BELL: Path bell=new Path(); bell.moveTo(-8,6); bell.quadTo(-4,2,-4,-3); bell.quadTo(0,-10,4,-3); bell.quadTo(4,2,8,6); bell.close(); c.drawPath(bell,paint); c.drawCircle(0,8,1.4f,paint); break;
             case SETTINGS:
-                c.drawCircle(0, 0, 7, paint);
-                c.drawCircle(0, 0, 2.8f, paint);
-                for (int i = 0; i < 4; i++) {
-                    double a = i * Math.PI / 2;
-                    c.drawLine((float) Math.cos(a) * 7, (float) Math.sin(a) * 7,
-                            (float) Math.cos(a) * 9.5f, (float) Math.sin(a) * 9.5f, paint);
+                Path gear = new Path();
+                for (int i = 0; i < 24; i++) {
+                    double a = -Math.PI / 2 + i * Math.PI * 2 / 24;
+                    float gearRadius = i % 3 == 1 ? 7f : 9.5f;
+                    float gx = (float) Math.cos(a) * gearRadius;
+                    float gy = (float) Math.sin(a) * gearRadius;
+                    if (i == 0) gear.moveTo(gx, gy); else gear.lineTo(gx, gy);
                 }
+                gear.close();
+                c.drawPath(gear, paint);
+                c.drawCircle(0, 0, 3f, paint);
                 break;
             case BACK: c.drawLine(7,-7,-2,0,paint); c.drawLine(-2,0,7,7,paint); c.drawLine(-2,0,10,0,paint); break;
             case SAVE: c.drawRoundRect(new RectF(-8,-9,8,9),2,2,paint); c.drawRect(-4,-9,4,-3,paint); c.drawRect(-4,2,4,8,paint); break;
