@@ -6162,14 +6162,18 @@ public class MainActivity extends Activity {
 
     private void styleDayButton(Button button, boolean selected) {
         button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        styleSelectedButton(button, selected, dp(18));
+        styleSelectedButton(button, selected, dp(18), 0.55f);
     }
 
     private void styleSelectedButton(Button button, boolean selected, float radius) {
+        styleSelectedButton(button, selected, radius, 1f);
+    }
+
+    private void styleSelectedButton(Button button, boolean selected, float radius, float selectionStrength) {
         int color = selected ? COLOR_ACCENT : COLOR_SURFACE_2;
         button.setTextColor(selected
                 ? GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR : Color.WHITE);
-        button.setBackground(new ElegantButtonDrawable(color, radius, selected));
+        button.setBackground(new ElegantButtonDrawable(color, radius, selected, selectionStrength));
     }
 
     private LinearLayout compactDayRow() {

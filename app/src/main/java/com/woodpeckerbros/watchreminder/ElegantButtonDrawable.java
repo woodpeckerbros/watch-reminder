@@ -14,6 +14,7 @@ final class ElegantButtonDrawable extends Drawable {
     private final int baseColor;
     private final float radius;
     private final boolean selected;
+    private final float selectionStrength;
     private boolean pressed;
 
     ElegantButtonDrawable(int baseColor, float radius) {
@@ -21,9 +22,14 @@ final class ElegantButtonDrawable extends Drawable {
     }
 
     ElegantButtonDrawable(int baseColor, float radius, boolean selected) {
+        this(baseColor, radius, selected, 1f);
+    }
+
+    ElegantButtonDrawable(int baseColor, float radius, boolean selected, float selectionStrength) {
         this.baseColor = baseColor;
         this.radius = radius;
         this.selected = selected;
+        this.selectionStrength = Math.max(0f, Math.min(1f, selectionStrength));
     }
 
     @Override public void draw(Canvas canvas) {
@@ -61,15 +67,17 @@ final class ElegantButtonDrawable extends Drawable {
         if (selected) {
             paint.setShader(null);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(3.2f);
-            paint.setColor(GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR);
-            paint.setShadowLayer(7f, 0f, 0f, 0xE8FFB98F);
+            paint.setStrokeWidth(1.4f + 1.8f * selectionStrength);
+            paint.setColor(withAlpha(GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR,
+                    Math.round(180 + 75 * selectionStrength)));
+            paint.setShadowLayer(2f + 5f * selectionStrength, 0f, 0f,
+                    withAlpha(0xFFFFB98F, Math.round(120 + 112 * selectionStrength)));
             RectF selectedRim = new RectF(face);
             selectedRim.inset(1.8f, 1.8f);
             canvas.drawRoundRect(selectedRim, radius - 1f, radius - 1f, paint);
             paint.clearShadowLayer();
             paint.setStrokeWidth(1f);
-            paint.setColor(0xFFFFFFFF);
+            paint.setColor(withAlpha(0xFFFFFFFF, Math.round(125 + 130 * selectionStrength)));
             selectedRim.inset(2.2f, 2.2f);
             canvas.drawRoundRect(selectedRim, radius - 3f, radius - 3f, paint);
         }
@@ -82,6 +90,11 @@ final class ElegantButtonDrawable extends Drawable {
                 Math.round(Color.red(from) * keep + Color.red(to) * amount),
                 Math.round(Color.green(from) * keep + Color.green(to) * amount),
                 Math.round(Color.blue(from) * keep + Color.blue(to) * amount));
+    }
+
+    private static int withAlpha(int color, int alpha) {
+        return Color.argb(Math.max(0, Math.min(255, alpha)),
+                Color.red(color), Color.green(color), Color.blue(color));
     }
 
     @Override protected boolean onStateChange(int[] states) {
