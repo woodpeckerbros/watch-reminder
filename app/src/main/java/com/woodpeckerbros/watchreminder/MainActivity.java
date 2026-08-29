@@ -5919,10 +5919,10 @@ public class MainActivity extends Activity {
         AppButtonIconDrawable.Kind kind = buttonIconKind(value);
         if (kind == null) return;
         AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, 0xFFFFD3BD, dp(2));
-        icon.setBounds(0, 0, dp(16), dp(16));
+        icon.setBounds(0, 0, dp(13), dp(13));
         button.setCompoundDrawables(null, null, null, null);
         if (button instanceof IconButton) {
-            ((IconButton) button).setAppIcon(icon, dp(4));
+            ((IconButton) button).setAppIcon(icon, dp(3));
         }
     }
 
