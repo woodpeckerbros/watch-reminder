@@ -566,3 +566,9 @@ adb -s DEVICE_SERIAL install -r phone/build/outputs/apk/debug/phone-debug.apk
 - לא שונו Gradle, ‏AGP, גרסאות SDK או package names.
 - `:app:testDebugUnitTest`, ‏`:app:assembleDebug`, ‏`:app:bundleRelease`, ‏`:phone:testDebugUnitTest`, ‏`:phone:assembleDebug` ו־`:phone:bundleRelease` עברו יחד בהצלחה ללא צורך בשינוי API.
 - גרסת השעון הותקנה והופעלה באמולטור Wear OS; התהליך נשאר פעיל ולא נרשמה קריסת `AndroidRuntime`. לא היה מכשיר טלפון מחובר להרצת מודול הטלפון, ולכן הוא אומת בבניות Debug/Release בלבד.
+
+## 46. עדכון 2026-08-30 — מעבר שני המודולים ל־compileSdk 37
+
+- `compileSdk` של מודול השעון הועלה מ־35 ל־37 ושל מודול הטלפון מ־36 ל־37. ערכי `targetSdk` נשארו ללא שינוי: 35 בשעון ו־36 בטלפון, ולכן העדכון אינו מפעיל שינויי התנהגות חדשים בזמן ריצה.
+- AGP נשאר ב־9.2.1 ו־Gradle ב־9.4.1; שילוב זה תומך רשמית ב־API 37 ואין צורך לשדרג את שרשרת הבנייה רק עבור `compileSdk 37`.
+- כל בדיקות היחידה ובניות Debug/Release של שני המודולים עברו בהצלחה מול SDK 37.
