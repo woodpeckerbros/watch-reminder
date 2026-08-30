@@ -1370,15 +1370,41 @@ public class MainActivity extends Activity {
         TextView dismissTitle = text("אופן כיבוי השעון", 15, COLOR_CARD_TEXT);
         AppFont.bold(dismissTitle);
         dismissCard.addView(dismissTitle);
-        String[] dismissLabels = {"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה"};
+        String[] dismissLabels = {"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה", "ניעור היד",
+                "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות", "משימה אקראית", "שילוב שתי משימות"};
         String[] dismissValues = {SmartAlarmStore.DISMISS_TAP, SmartAlarmStore.DISMISS_HOLD,
-                SmartAlarmStore.DISMISS_DOUBLE_TAP};
+                SmartAlarmStore.DISMISS_DOUBLE_TAP, SmartAlarmStore.DISMISS_SHAKE,
+                SmartAlarmStore.DISMISS_STEPS, SmartAlarmStore.DISMISS_MATH,
+                SmartAlarmStore.DISMISS_MEMORY, SmartAlarmStore.DISMISS_ALTERNATING,
+                SmartAlarmStore.DISMISS_RANDOM, SmartAlarmStore.DISMISS_COMBINATION};
         Spinner dismissSpinner = new Spinner(this);
         dismissSpinner.setAdapter(spinnerAdapter(translated(dismissLabels)));
         dismissSpinner.setSelection(indexOf(dismissValues, smart.dismissMethod()));
         dismissCard.addView(dismissSpinner, matchParams());
         NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());
         dismissCard.addView(pickerColumn("משך לחיצה ארוכה בשניות", holdSeconds));
+        NumberPicker shakeCount = numberPicker(5, 40, smart.shakeCount());
+        dismissCard.addView(pickerColumn("מספר ניעורים", shakeCount));
+        NumberPicker stepCount = numberPicker(5, 100, smart.stepCount());
+        dismissCard.addView(pickerColumn("מספר צעדים", stepCount));
+        NumberPicker alternatingTaps = numberPicker(4, 30, smart.alternatingTapCount());
+        dismissCard.addView(pickerColumn("מספר לחיצות מתחלפות", alternatingTaps));
+        NumberPicker mathDifficulty = numberPicker(1, 3, smart.mathDifficulty());
+        dismissCard.addView(pickerColumn("רמת חשבון", mathDifficulty));
+        Button mathExample = pillButton("הצגת דוגמת חשבון", COLOR_SURFACE_2);
+        mathExample.setOnClickListener(v -> showMathWakeTaskExample(mathDifficulty.getValue()));
+        dismissCard.addView(mathExample);
+        NumberPicker memoryDifficulty = numberPicker(1, 3, smart.memoryDifficulty());
+        dismissCard.addView(pickerColumn("רמת זיכרון", memoryDifficulty));
+        Button memoryExample = pillButton("הצגת דוגמת זיכרון", COLOR_SURFACE_2);
+        memoryExample.setOnClickListener(v -> showMemoryWakeTaskExample(memoryDifficulty.getValue()));
+        dismissCard.addView(memoryExample);
+        Switch wakeCheckSwitch = new Switch(this);
+        setSwitchText(wakeCheckSwitch, "בדיקת ערנות לאחר הכיבוי");
+        wakeCheckSwitch.setChecked(smart.wakeCheckEnabled());
+        dismissCard.addView(wakeCheckSwitch);
+        NumberPicker wakeCheckDelay = numberPicker(1, 30, smart.wakeCheckDelayMinutes());
+        dismissCard.addView(pickerColumn("בדיקת ערנות אחרי דקות", wakeCheckDelay));
         content.addView(dismissCard, cardParams());
 
         LinearLayout snoozeCard = card();
@@ -1483,6 +1509,27 @@ public class MainActivity extends Activity {
         feedbackCard.addView(pickerColumn("משך ההתראה בשניות", durationPicker));
         content.addView(feedbackCard, cardParams());
 
+        Button tryAlarm = pillButton("נסו את השעון", COLOR_ACCENT_DARK);
+        tryAlarm.setOnClickListener(v -> {
+            stopSmartAlarmPreview();
+            SmartAlarmStore preview = new SmartAlarmStore(this, SmartAlarmStore.PREVIEW_ALARM_ID);
+            preview.savePreview(true, hourPicker.getValue(), minutePicker.getValue(), selectedDaysMask[0],
+                    windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
+                    vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
+                    vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(),
+                    soundVolume.slider.getProgress() * 10, selectedSoundUri[0], durationPicker.getValue(),
+                    backgroundValues[backgroundSpinner.getSelectedItemPosition()],
+                    dismissValues[dismissSpinner.getSelectedItemPosition()], holdSeconds.getValue());
+            preview.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
+                    stepCount.getValue(), alternatingTaps.getValue(), false, wakeCheckDelay.getValue());
+            startActivity(new Intent(this, com.woodpeckerbros.watchreminder.smartwake.SmartAlarmAlertActivity.class)
+                    .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, SmartAlarmStore.PREVIEW_ALARM_ID)
+                    .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, System.currentTimeMillis())
+                    .putExtra("reason", "settings_preview").putExtra("preview_mode", true)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        });
+        content.addView(tryAlarm, matchParams());
+
         LinearLayout actions = actionRow();
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
         save.setOnClickListener(v -> {
@@ -1497,6 +1544,9 @@ public class MainActivity extends Activity {
                     selectedSoundUri[0], durationPicker.getValue(),
                     backgroundValues[backgroundSpinner.getSelectedItemPosition()],
                     dismissValues[dismissSpinner.getSelectedItemPosition()], holdSeconds.getValue());
+            smart.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
+                    stepCount.getValue(), alternatingTaps.getValue(), wakeCheckSwitch.isChecked(),
+                    wakeCheckDelay.getValue());
             stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this, alarmId);
             Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();
@@ -5319,6 +5369,63 @@ public class MainActivity extends Activity {
         stopSmartAlarmPreview();
         smartAlarmPreview = AlertFeedback.preview(this, !sound, vibrationStyle, vibrationStrength,
                 sound, volumePercent, soundUri);
+    }
+
+    private void showMathWakeTaskExample(int level) {
+        int a = level == 1 ? 7 : level == 2 ? 8 : 74;
+        int b = level == 1 ? 4 : level == 2 ? 6 : 29;
+        String operator = level == 2 ? "×" : level == 3 ? "−" : "+";
+        int answer = level == 1 ? a + b : level == 2 ? a * b : a - b;
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER);
+        content.setPadding(dp(18), dp(12), dp(18), dp(8));
+        content.addView(text("רמה " + level + " · " + level + " " + (level == 1 ? "שאלה" : "שאלות"), 13, COLOR_TEXT));
+        TextView question = text(a + " " + operator + " " + b + " = ?", 27, COLOR_TEXT);
+        question.setGravity(Gravity.CENTER); content.addView(question, matchParams());
+        int[] options = {answer - 3, answer, answer + 4, answer + 7};
+        LinearLayout answers = actionRow();
+        for (int option : options) {
+            Button choice = pillButton(String.valueOf(option), COLOR_SURFACE_2);
+            choice.setOnClickListener(v -> Toast.makeText(this,
+                    UiText.t(this, option == answer ? "נכון — כך תתקדמו לשאלה הבאה" : "לא נכון — נסו שוב"),
+                    Toast.LENGTH_SHORT).show());
+            answers.addView(choice);
+        }
+        content.addView(answers);
+        new AlertDialog.Builder(this).setTitle(UiText.t(this, "דוגמת תרגיל חשבון"))
+                .setView(content).setNegativeButton(UiText.t(this, "סגירה"), null).show();
+    }
+
+    private void showMemoryWakeTaskExample(int level) {
+        int length = level == 1 ? 3 : level == 2 ? 5 : 7;
+        int[] colors = {0xFFFF6B6B, 0xFFFFD166, 0xFF4ED6A8, 0xFF6FA8FF};
+        int[] sequence = new int[length];
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < length; i++) sequence[i] = random.nextInt(colors.length);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER);
+        content.setPadding(dp(18), dp(10), dp(18), dp(8));
+        TextView hint = text("רמה " + level + " · רצף של " + length + " צבעים", 13, COLOR_TEXT);
+        hint.setGravity(Gravity.CENTER); content.addView(hint);
+        TextView display = text("●", 48, COLOR_TEXT); display.setGravity(Gravity.CENTER); content.addView(display, matchParams());
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(UiText.t(this, "דוגמת תרגיל זיכרון"))
+                .setView(content).setNegativeButton(UiText.t(this, "סגירה"), null).create();
+        dialog.setOnShowListener(ignored -> {
+            for (int i = 0; i < sequence.length; i++) {
+                int index = i;
+                mainHandler.postDelayed(() -> {
+                    if (dialog.isShowing()) { display.setText("●"); display.setTextColor(colors[sequence[index]]); }
+                }, 300L + i * 650L);
+                mainHandler.postDelayed(() -> { if (dialog.isShowing()) display.setText("·"); }, 700L + i * 650L);
+            }
+            mainHandler.postDelayed(() -> {
+                if (!dialog.isShowing()) return;
+                display.setTextColor(COLOR_TEXT);
+                display.setText(UiText.t(this, "עכשיו יש לחזור על הרצף בעזרת ארבעת כפתורי הצבע"));
+                display.setTextSize(14);
+            }, 500L + sequence.length * 650L);
+        });
+        dialog.show();
     }
 
     private void stopSmartAlarmPreview() {

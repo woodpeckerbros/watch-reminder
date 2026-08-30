@@ -28,6 +28,14 @@ public final class SmartAlarmStore {
     public static final String DISMISS_TAP = "tap";
     public static final String DISMISS_HOLD = "hold";
     public static final String DISMISS_DOUBLE_TAP = "double_tap";
+    public static final String DISMISS_SHAKE = "shake";
+    public static final String DISMISS_STEPS = "steps";
+    public static final String DISMISS_MATH = "math";
+    public static final String DISMISS_MEMORY = "memory";
+    public static final String DISMISS_ALTERNATING = "alternating";
+    public static final String DISMISS_RANDOM = "random";
+    public static final String DISMISS_COMBINATION = "combination";
+    public static final int PREVIEW_ALARM_ID = 0x0F0F0F;
     private final SharedPreferences prefs;
     private final Context context;
     private final int id;
@@ -63,6 +71,13 @@ public final class SmartAlarmStore {
     public String backgroundStyle() { return prefs.getString("background_style", BACKGROUND_SUNRISE); }
     public String dismissMethod() { return prefs.getString("dismiss_method", DISMISS_TAP); }
     public int dismissHoldSeconds() { return clamp(prefs.getInt("dismiss_hold_seconds", 3), 1, 10); }
+    public int mathDifficulty() { return clamp(prefs.getInt("math_difficulty", 1), 1, 3); }
+    public int memoryDifficulty() { return clamp(prefs.getInt("memory_difficulty", 1), 1, 3); }
+    public int shakeCount() { return clamp(prefs.getInt("shake_count", 12), 5, 40); }
+    public int stepCount() { return clamp(prefs.getInt("step_count", 20), 5, 100); }
+    public int alternatingTapCount() { return clamp(prefs.getInt("alternating_tap_count", 10), 4, 30); }
+    public boolean wakeCheckEnabled() { return prefs.getBoolean("wake_check_enabled", false); }
+    public int wakeCheckDelayMinutes() { return clamp(prefs.getInt("wake_check_delay_minutes", 5), 1, 30); }
     public boolean enabledOnDay(int calendarDay) { return (daysMask() & (1 << calendarDay)) != 0; }
 
     public void save(boolean enabled, int hour, int minute, int daysMask, int windowMinutes,
@@ -70,6 +85,27 @@ public final class SmartAlarmStore {
                      String vibrationStyle, int vibrationStrength, boolean soundEnabled,
                      int soundVolumePercent, String soundUri, int alertDurationSeconds, String backgroundStyle,
                      String dismissMethod, int dismissHoldSeconds) {
+        write(enabled, hour, minute, daysMask, windowMinutes, snoozeMinutes, snoozeCount,
+                vibrationEnabled, vibrationStyle, vibrationStrength, soundEnabled, soundVolumePercent,
+                soundUri, alertDurationSeconds, backgroundStyle, dismissMethod, dismissHoldSeconds);
+        register(context, id);
+    }
+
+    public void savePreview(boolean enabled, int hour, int minute, int daysMask, int windowMinutes,
+                            int snoozeMinutes, int snoozeCount, boolean vibrationEnabled,
+                            String vibrationStyle, int vibrationStrength, boolean soundEnabled,
+                            int soundVolumePercent, String soundUri, int alertDurationSeconds,
+                            String backgroundStyle, String dismissMethod, int dismissHoldSeconds) {
+        write(enabled, hour, minute, daysMask, windowMinutes, snoozeMinutes, snoozeCount,
+                vibrationEnabled, vibrationStyle, vibrationStrength, soundEnabled, soundVolumePercent,
+                soundUri, alertDurationSeconds, backgroundStyle, dismissMethod, dismissHoldSeconds);
+    }
+
+    private void write(boolean enabled, int hour, int minute, int daysMask, int windowMinutes,
+                       int snoozeMinutes, int snoozeCount, boolean vibrationEnabled,
+                       String vibrationStyle, int vibrationStrength, boolean soundEnabled,
+                       int soundVolumePercent, String soundUri, int alertDurationSeconds,
+                       String backgroundStyle, String dismissMethod, int dismissHoldSeconds) {
         prefs.edit().putBoolean("enabled", enabled).putInt("hour", hour).putInt("minute", minute)
                 .putInt("days_mask", daysMask).putInt("window_minutes", windowMinutes)
                 .putInt("snooze_minutes", snoozeMinutes).putInt("snooze_count", snoozeCount)
@@ -80,11 +116,19 @@ public final class SmartAlarmStore {
                 .putString("background_style", backgroundStyle == null ? BACKGROUND_SUNRISE : backgroundStyle)
                 .putString("dismiss_method", dismissMethod == null ? DISMISS_TAP : dismissMethod)
                 .putInt("dismiss_hold_seconds", dismissHoldSeconds).apply();
-        register(context, id);
     }
 
     public void setSoundUri(String uri) { prefs.edit().putString("sound_uri", uri == null ? "" : uri).apply(); }
     public void setEnabled(boolean enabled) { prefs.edit().putBoolean("enabled", enabled).apply(); register(context, id); }
+
+    public void saveWakeTasks(int mathDifficulty, int memoryDifficulty, int shakeCount, int stepCount,
+                              int alternatingTapCount, boolean wakeCheckEnabled, int wakeCheckDelayMinutes) {
+        prefs.edit().putInt("math_difficulty", mathDifficulty).putInt("memory_difficulty", memoryDifficulty)
+                .putInt("shake_count", shakeCount).putInt("step_count", stepCount)
+                .putInt("alternating_tap_count", alternatingTapCount)
+                .putBoolean("wake_check_enabled", wakeCheckEnabled)
+                .putInt("wake_check_delay_minutes", wakeCheckDelayMinutes).apply();
+    }
 
     public static ArrayList<Integer> ids(Context context) {
         migrateLegacy(context);
@@ -126,7 +170,12 @@ public final class SmartAlarmStore {
                     .put("soundEnabled", alarm.soundEnabled()).put("soundVolumePercent", alarm.soundVolumePercent())
                     .put("soundUri", alarm.soundUri()).put("alertDurationSeconds", alarm.alertDurationSeconds())
                     .put("backgroundStyle", alarm.backgroundStyle()).put("dismissMethod", alarm.dismissMethod())
-                    .put("dismissHoldSeconds", alarm.dismissHoldSeconds()));
+                    .put("dismissHoldSeconds", alarm.dismissHoldSeconds())
+                    .put("mathDifficulty", alarm.mathDifficulty()).put("memoryDifficulty", alarm.memoryDifficulty())
+                    .put("shakeCount", alarm.shakeCount()).put("stepCount", alarm.stepCount())
+                    .put("alternatingTapCount", alarm.alternatingTapCount())
+                    .put("wakeCheckEnabled", alarm.wakeCheckEnabled())
+                    .put("wakeCheckDelayMinutes", alarm.wakeCheckDelayMinutes()));
         }
         return result;
     }
@@ -149,6 +198,10 @@ public final class SmartAlarmStore {
                     value.optInt("alertDurationSeconds", 30),
                     value.optString("backgroundStyle", BACKGROUND_SUNRISE),
                     value.optString("dismissMethod", DISMISS_TAP), value.optInt("dismissHoldSeconds", 3));
+            alarm.saveWakeTasks(value.optInt("mathDifficulty", 1), value.optInt("memoryDifficulty", 1),
+                    value.optInt("shakeCount", 12), value.optInt("stepCount", 20),
+                    value.optInt("alternatingTapCount", 10), value.optBoolean("wakeCheckEnabled", false),
+                    value.optInt("wakeCheckDelayMinutes", 5));
         }
         context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()
                 .putInt("next_id", highest + 1).apply();

@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -37,6 +38,12 @@ public final class SmartAlarmAlertActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AlertFeedback alertFeedback;
     private long lastDismissTapAt;
+    private LinearLayout alertBody;
+    private WakeTaskController wakeTaskController;
+    private boolean wakeCheckEscalation;
+    private boolean previewMode;
+    private float previewDownX;
+    private float previewDownY;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -46,6 +53,8 @@ public final class SmartAlarmAlertActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         targetAt = getIntent().getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         alarmId = getIntent().getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        wakeCheckEscalation = getIntent().getBooleanExtra("wake_check_escalation", false);
+        previewMode = getIntent().getBooleanExtra("preview_mode", false);
         AppLog.d(this, "SmartAlarm alert activity onCreate id=" + alarmId
                 + " target=" + targetAt + " reason=" + getIntent().getStringExtra("reason"));
         settings = new SmartAlarmStore(this, alarmId);
@@ -74,12 +83,15 @@ public final class SmartAlarmAlertActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         LinearLayout body = new LinearLayout(this);
+        alertBody = body;
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER_HORIZONTAL);
         body.setPadding(dp(24), dp(46), dp(24), dp(18));
         boolean english = AppLanguage.isEnglish(this);
         body.addView(label(english ? "Time to wake up" : "זמן להתעורר", 24, Color.WHITE));
         body.addView(label(english ? "Smart Alarm" : "שעון מעורר חכם", 15, 0xFFFFD27A));
+        if (previewMode) body.addView(label(english ? "Preview · swipe left to right to close"
+                : "תצוגה מקדימה · החליקו משמאל לימין לסגירה", 11, 0xFFFFD27A));
         RingingAlarmClockView alarmClock = new RingingAlarmClockView(this);
         LinearLayout.LayoutParams alarmClockParams = new LinearLayout.LayoutParams(dp(64), dp(62));
         alarmClockParams.setMargins(0, dp(2), 0, dp(1));
@@ -112,6 +124,10 @@ public final class SmartAlarmAlertActivity extends Activity {
                     if (now - lastDismissTapAt <= 650L) dismissAlarm();
                     else lastDismissTapAt = now;
                 });
+            } else if (requiresWakeTask(dismissMethod)) {
+                String selectedMethod = dismissMethod;
+                dismiss.setText(english ? "Start wake-up task" : "התחלת משימת השכמה");
+                dismiss.setOnClickListener(v -> startWakeTask(selectedMethod));
             } else {
                 dismiss.setOnClickListener(v -> dismissAlarm());
             }
@@ -147,15 +163,36 @@ public final class SmartAlarmAlertActivity extends Activity {
     }
 
     private void dismissAlarm() {
+        if (previewMode) { closePreview(); return; }
         explicitlyHandled = true;
         SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
         new SmartAlarmStateStore(this, alarmId).dismiss(targetAt);
         stopFeedback();
+        if (settings.wakeCheckEnabled() && !wakeCheckEscalation) {
+            SmartAlarmWakeCheckReceiver.schedule(this, alarmId, targetAt, settings.wakeCheckDelayMinutes());
+        }
         SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId);
         close();
     }
 
+    private boolean requiresWakeTask(String method) {
+        return SmartAlarmStore.DISMISS_SHAKE.equals(method)
+                || SmartAlarmStore.DISMISS_STEPS.equals(method)
+                || SmartAlarmStore.DISMISS_MATH.equals(method)
+                || SmartAlarmStore.DISMISS_MEMORY.equals(method)
+                || SmartAlarmStore.DISMISS_ALTERNATING.equals(method)
+                || SmartAlarmStore.DISMISS_RANDOM.equals(method)
+                || SmartAlarmStore.DISMISS_COMBINATION.equals(method);
+    }
+
+    private void startWakeTask(String method) {
+        if (wakeTaskController != null) wakeTaskController.stop();
+        wakeTaskController = new WakeTaskController(this, alertBody, settings, this::dismissAlarm);
+        wakeTaskController.start(method);
+    }
+
     private void snooze() {
+        if (previewMode) { closePreview(); return; }
         explicitlyHandled = true;
         SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
         stopFeedback();
@@ -213,6 +250,26 @@ public final class SmartAlarmAlertActivity extends Activity {
     }
     @Override public void onBackPressed() { }
 
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        if (previewMode) {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                previewDownX = event.getX(); previewDownY = event.getY();
+            } else if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                float dx = event.getX() - previewDownX;
+                float dy = Math.abs(event.getY() - previewDownY);
+                if (dx >= dp(80) && dy <= dp(90)) { closePreview(); return true; }
+            }
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
+    private void closePreview() {
+        explicitlyHandled = true;
+        stopFeedback();
+        SmartAlarmStore.delete(this, SmartAlarmStore.PREVIEW_ALARM_ID);
+        finishAndRemoveTask();
+    }
+
     static boolean closeAutoSnoozed(int alarmId, long targetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
         if (activity == null || activity.explicitlyHandled || activity.alarmId != alarmId || activity.targetAt != targetAt)
@@ -229,6 +286,7 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     @Override protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
+        if (wakeTaskController != null) wakeTaskController.stop();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // Activity destruction (for example when the user opens the app) is not an alarm action.
         // Feedback stops itself at the configured timeout unless an explicit action handles it.

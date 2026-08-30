@@ -187,6 +187,8 @@
 
         <activity android:name=".smartwake.SmartAlarmAlertActivity" android:excludeFromRecents="true" android:exported="false"
             android:showWhenLocked="true" android:taskAffinity="" android:theme="@style/AppTheme" />
+        <activity android:name=".smartwake.SmartAlarmWakeCheckActivity" android:excludeFromRecents="true" android:exported="false"
+            android:showWhenLocked="true" android:taskAffinity="" android:theme="@style/AppTheme" />
 
         <receiver
             android:name=".smartwake.SmartAlarmActions"
@@ -249,6 +251,7 @@
         <receiver android:name=".smartwake.SmartWakeWindowReceiver" android:exported="false" />
         <receiver android:name=".smartwake.SmartAlarmReceiver" android:exported="false" />
         <receiver android:name=".smartwake.SmartAlarmAutoSnoozeReceiver" android:exported="false" />
+        <receiver android:name=".smartwake.SmartAlarmWakeCheckReceiver" android:exported="false" />
 
         <receiver
             android:name=".AutoSnoozeReceiver"

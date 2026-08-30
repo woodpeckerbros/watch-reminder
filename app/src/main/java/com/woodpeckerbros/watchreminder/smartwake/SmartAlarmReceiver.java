@@ -30,6 +30,14 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
             AppLog.w(context, "SmartAlarm duplicate/stale fire target=" + targetAt + " reason=" + reason);
             return;
         }
+        deliver(context, alarmId, targetAt, reason);
+    }
+
+    public static void fireWakeCheckEscalation(Context context, int alarmId, long targetAt) {
+        deliver(context, alarmId, targetAt, "wake_check_escalation");
+    }
+
+    private static void deliver(Context context, int alarmId, long targetAt, String reason) {
         if (!"deadline".equals(reason)) SmartAlarmScheduler.cancelDeadline(context, alarmId);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
@@ -45,6 +53,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         Intent activity = new Intent(context, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt).putExtra("reason", reason)
+                .putExtra("wake_check_escalation", "wake_check_escalation".equals(reason))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         Bundle creatorOptions = null;

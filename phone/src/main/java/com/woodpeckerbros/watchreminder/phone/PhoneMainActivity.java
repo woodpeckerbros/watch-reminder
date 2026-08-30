@@ -265,8 +265,11 @@ public class PhoneMainActivity extends Activity {
         }
         backgroundStyle.setSelection(backgroundIndex);
         content.addView(labeled("רקע מסך ההתראה", backgroundStyle), wideParams());
-        String[] dismissValues = {"tap", "hold", "double_tap"};
-        Spinner dismissMethod = spinner(new String[]{"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה"});
+        String[] dismissValues = {"tap", "hold", "double_tap", "shake", "steps", "math", "memory",
+                "alternating", "random", "combination"};
+        Spinner dismissMethod = spinner(new String[]{"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה",
+                "ניעור היד", "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות",
+                "משימה אקראית", "שילוב שתי משימות"});
         String currentDismiss = alarm.optString("dismissMethod", "tap");
         int dismissIndex = 0;
         for (int i = 0; i < dismissValues.length; i++) {
@@ -276,6 +279,26 @@ public class PhoneMainActivity extends Activity {
         content.addView(labeled("אופן כיבוי השעון", dismissMethod), wideParams());
         NumberPicker dismissHoldSeconds = numberPicker(1, 10, alarm.optInt("dismissHoldSeconds", 3));
         content.addView(labeled("משך לחיצה ארוכה בשניות", dismissHoldSeconds), wideParams());
+        NumberPicker shakeCount = numberPicker(5, 40, alarm.optInt("shakeCount", 12));
+        content.addView(labeled("מספר ניעורים", shakeCount), wideParams());
+        NumberPicker stepCount = numberPicker(5, 100, alarm.optInt("stepCount", 20));
+        content.addView(labeled("מספר צעדים", stepCount), wideParams());
+        NumberPicker alternatingTaps = numberPicker(4, 30, alarm.optInt("alternatingTapCount", 10));
+        content.addView(labeled("מספר לחיצות מתחלפות", alternatingTaps), wideParams());
+        NumberPicker mathDifficulty = numberPicker(1, 3, alarm.optInt("mathDifficulty", 1));
+        content.addView(labeled("רמת חשבון", mathDifficulty), wideParams());
+        Button mathExample = button("הצגת דוגמת חשבון", SOFT, TEXT);
+        mathExample.setOnClickListener(v -> showWakeTaskExample(true, numberValue(mathDifficulty)));
+        content.addView(mathExample, wideParams());
+        NumberPicker memoryDifficulty = numberPicker(1, 3, alarm.optInt("memoryDifficulty", 1));
+        content.addView(labeled("רמת זיכרון", memoryDifficulty), wideParams());
+        Button memoryExample = button("הצגת דוגמת זיכרון", SOFT, TEXT);
+        memoryExample.setOnClickListener(v -> showWakeTaskExample(false, numberValue(memoryDifficulty)));
+        content.addView(memoryExample, wideParams());
+        Switch wakeCheckEnabled = switchView("בדיקת ערנות לאחר הכיבוי", alarm.optBoolean("wakeCheckEnabled", false));
+        content.addView(wakeCheckEnabled, wideParams());
+        NumberPicker wakeCheckDelay = numberPicker(1, 30, alarm.optInt("wakeCheckDelayMinutes", 5));
+        content.addView(labeled("בדיקת ערנות אחרי דקות", wakeCheckDelay), wideParams());
         LinearLayout snooze = card();
         snooze.addView(text("נודניק", 15, TEXT));
         NumberPicker snoozeMinutes = numberPicker(1, 30, alarm.optInt("snoozeMinutes", 5));
@@ -322,7 +345,13 @@ public class PhoneMainActivity extends Activity {
                         .put("alertDurationSeconds", numberValue(duration))
                         .put("backgroundStyle", backgroundValues[backgroundStyle.getSelectedItemPosition()])
                         .put("dismissMethod", dismissValues[dismissMethod.getSelectedItemPosition()])
-                        .put("dismissHoldSeconds", numberValue(dismissHoldSeconds));
+                        .put("dismissHoldSeconds", numberValue(dismissHoldSeconds))
+                        .put("mathDifficulty", numberValue(mathDifficulty))
+                        .put("memoryDifficulty", numberValue(memoryDifficulty))
+                        .put("shakeCount", numberValue(shakeCount)).put("stepCount", numberValue(stepCount))
+                        .put("alternatingTapCount", numberValue(alternatingTaps))
+                        .put("wakeCheckEnabled", wakeCheckEnabled.isChecked())
+                        .put("wakeCheckDelayMinutes", numberValue(wakeCheckDelay));
                 saveSmartAlarm(alarm, index); showSmartAlarms();
             } catch (Exception error) { Toast.makeText(this, t("לא הצלחתי לשמור"), Toast.LENGTH_LONG).show(); }
         });
@@ -820,8 +849,29 @@ public class PhoneMainActivity extends Activity {
                     .put("soundEnabled", true).put("soundVolumePercent", 80).put("soundUri", "")
                     .put("alertDurationSeconds", 30).put("backgroundStyle", "sunrise")
                     .put("dismissMethod", "tap").put("dismissHoldSeconds", 3);
+            alarm.put("mathDifficulty", 1).put("memoryDifficulty", 1).put("shakeCount", 12)
+                    .put("stepCount", 20).put("alternatingTapCount", 10)
+                    .put("wakeCheckEnabled", false).put("wakeCheckDelayMinutes", 5);
         } catch (Exception ignored) { }
         return alarm;
+    }
+
+    private void showWakeTaskExample(boolean math, int level) {
+        String message;
+        if (math) {
+            String expression = level == 1 ? "7 + 4 = ?\n8   11   14   17"
+                    : level == 2 ? "8 × 6 = ?\n42   45   48   54"
+                    : "74 − 29 = ?\n41   45   49   52";
+            message = t("רמה") + " " + level + "\n" + expression + "\n\n"
+                    + (level == 1 ? t("שאלה אחת") : level == 2 ? t("שתי שאלות רצופות") : t("שלוש שאלות רצופות"));
+        } else {
+            int length = level == 1 ? 3 : level == 2 ? 5 : 7;
+            message = t("רמה") + " " + level + "\n\n🔴  🟡  🟢  🔵\n\n"
+                    + t("הצבעים מוצגים אחד אחרי השני, ואז חוזרים על הרצף") + "\n"
+                    + t("אורך הרצף") + ": " + length;
+        }
+        new AlertDialog.Builder(this).setTitle(t(math ? "דוגמת תרגיל חשבון" : "דוגמת תרגיל זיכרון"))
+                .setMessage(message).setPositiveButton(t("סגירה"), null).show();
     }
 
     private void saveSmartAlarm(JSONObject alarm, int index) throws Exception {
