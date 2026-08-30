@@ -40,6 +40,7 @@ final class WakeTaskController implements SensorEventListener {
     private int target;
     private long lastMotionAt;
     private float gravity = SensorManager.GRAVITY_EARTH;
+    private boolean stepPeakActive;
 
     WakeTaskController(Activity activity, LinearLayout body, SmartAlarmStore settings, Runnable completed) {
         this.activity = activity;
@@ -51,10 +52,10 @@ final class WakeTaskController implements SensorEventListener {
     void start(String requested) {
         queue.clear();
         if (SmartAlarmStore.DISMISS_COMBINATION.equals(requested)) {
-            List<String> choices = taskChoices();
+            List<String> choices = selectedMultipleTasks();
+            if (choices.size() < 2) choices = taskChoices();
             Collections.shuffle(choices);
-            queue.add(choices.get(0));
-            queue.add(choices.get(1));
+            queue.addAll(choices);
         } else if (SmartAlarmStore.DISMISS_RANDOM.equals(requested)) {
             List<String> choices = taskChoices();
             queue.add(choices.get(random.nextInt(choices.size())));
@@ -74,7 +75,11 @@ final class WakeTaskController implements SensorEventListener {
         body.removeAllViews();
         body.setPadding(dp(18), dp(32), dp(18), dp(8));
         body.addView(title(isEnglish() ? "Wake-up task" : "משימת השכמה", 18));
-        if (!queue.isEmpty()) body.addView(title(isEnglish() ? "First of two tasks" : "משימה ראשונה מתוך שתיים", 12));
+        if (!queue.isEmpty()) {
+            int tasksIncludingCurrent = queue.size() + 1;
+            body.addView(title(isEnglish() ? tasksIncludingCurrent + " tasks remaining"
+                    : "נותרו " + tasksIncludingCurrent + " משימות", 12));
+        }
         if (SmartAlarmStore.DISMISS_SHAKE.equals(method)) startMotion(false);
         else if (SmartAlarmStore.DISMISS_STEPS.equals(method)) startMotion(true);
         else if (SmartAlarmStore.DISMISS_MATH.equals(method)) startMath();
@@ -93,8 +98,20 @@ final class WakeTaskController implements SensorEventListener {
         return values;
     }
 
+    private List<String> selectedMultipleTasks() {
+        int mask = settings.multipleTaskMask();
+        ArrayList<String> values = new ArrayList<>();
+        if ((mask & SmartAlarmStore.TASK_SHAKE) != 0) values.add(SmartAlarmStore.DISMISS_SHAKE);
+        if ((mask & SmartAlarmStore.TASK_STEPS) != 0) values.add(SmartAlarmStore.DISMISS_STEPS);
+        if ((mask & SmartAlarmStore.TASK_MATH) != 0) values.add(SmartAlarmStore.DISMISS_MATH);
+        if ((mask & SmartAlarmStore.TASK_MEMORY) != 0) values.add(SmartAlarmStore.DISMISS_MEMORY);
+        if ((mask & SmartAlarmStore.TASK_ALTERNATING) != 0) values.add(SmartAlarmStore.DISMISS_ALTERNATING);
+        return values;
+    }
+
     private void startMotion(boolean steps) {
         progress = 0;
+        stepPeakActive = false;
         target = steps ? settings.stepCount() : settings.shakeCount();
         TextView instruction = title(steps
                 ? (isEnglish() ? "Walk " + target + " steps" : "לכו " + target + " צעדים")
@@ -102,14 +119,19 @@ final class WakeTaskController implements SensorEventListener {
         TextView counter = title("0 / " + target, 30);
         body.addView(instruction); body.addView(counter);
         sensors = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
-        Sensor sensor = sensors == null ? null : sensors.getDefaultSensor(steps ? Sensor.TYPE_STEP_DETECTOR : Sensor.TYPE_ACCELEROMETER);
-        if (sensor == null && steps && sensors != null) sensor = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        if (sensor == null) {
+        Sensor primary = sensors == null ? null : sensors.getDefaultSensor(steps ? Sensor.TYPE_STEP_DETECTOR : Sensor.TYPE_ACCELEROMETER);
+        Sensor accelerometer = steps && sensors != null ? sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) : null;
+        if (primary == null && accelerometer == null) {
             body.addView(title(isEnglish() ? "Sensor unavailable — tap to continue" : "החיישן לא זמין — לחצו להמשך", 12));
             Button fallback = action(isEnglish() ? "Continue" : "המשך");
             fallback.setOnClickListener(v -> next()); body.addView(fallback); return;
         }
-        sensors.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
+        if (primary != null) sensors.registerListener(this, primary, SensorManager.SENSOR_DELAY_GAME);
+        // Some Wear OS devices expose STEP_DETECTOR but deliver it late or inconsistently.
+        // Keep a calibrated accelerometer detector active as a real-time fallback.
+        if (accelerometer != null && accelerometer != primary) {
+            sensors.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        }
         counter.setTag(Boolean.valueOf(steps));
         body.setTag(counter);
     }
@@ -119,13 +141,20 @@ final class WakeTaskController implements SensorEventListener {
         if (counter == null) return;
         boolean steps = Boolean.TRUE.equals(counter.getTag());
         long now = SystemClock.uptimeMillis();
-        boolean hit = event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR;
+        boolean hit = event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR
+                && now - lastMotionAt >= 260L;
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER && event.values.length >= 3) {
             float magnitude = (float) Math.sqrt(event.values[0] * event.values[0]
                     + event.values[1] * event.values[1] + event.values[2] * event.values[2]);
-            gravity = gravity * .82f + magnitude * .18f;
+            gravity = gravity * .90f + magnitude * .10f;
             float movement = Math.abs(magnitude - gravity);
-            hit = movement > (steps ? 2.8f : 2.1f) && now - lastMotionAt > (steps ? 380L : 220L);
+            if (steps) {
+                if (movement < .55f) stepPeakActive = false;
+                hit = !stepPeakActive && movement > 1.25f && now - lastMotionAt >= 280L;
+                if (hit) stepPeakActive = true;
+            } else {
+                hit = movement > 2.1f && now - lastMotionAt > 220L;
+            }
         }
         if (!hit) return;
         lastMotionAt = now;

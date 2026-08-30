@@ -256,9 +256,10 @@ public class PhoneMainActivity extends Activity {
 
         NumberPicker window = numberPicker(5, 60, alarm.optInt("windowMinutes", 30));
         content.addView(labeled("חלון חכם בדקות", window), wideParams());
-        String[] backgroundValues = {"sunrise", "morning", "dynamic"};
-        Spinner backgroundStyle = spinner(new String[]{"זריחה חזקה", "בוקר מוקדם", "משתנה לפי השעה"});
-        String currentBackground = alarm.optString("backgroundStyle", "sunrise");
+        String[] backgroundValues = {"morning", "noon", "evening", "night", "dynamic"};
+        Spinner backgroundStyle = spinner(new String[]{"בוקר", "צהריים", "ערב", "לילה", "משתנה לפי השעה"});
+        String currentBackground = alarm.optString("backgroundStyle", "morning");
+        if ("sunrise".equals(currentBackground)) currentBackground = "morning";
         int backgroundIndex = 0;
         for (int i = 0; i < backgroundValues.length; i++) {
             if (backgroundValues[i].equals(currentBackground)) backgroundIndex = i;
@@ -269,7 +270,7 @@ public class PhoneMainActivity extends Activity {
                 "alternating", "random", "combination"};
         String[] dismissLabels = {"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה",
                 "ניעור היד", "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות",
-                "משימה אקראית", "שילוב שתי משימות"};
+                "משימה אקראית", "משימות מרובות"};
         String currentDismiss = alarm.optString("dismissMethod", "tap");
         int dismissIndex = 0;
         for (int i = 0; i < dismissValues.length; i++) {
@@ -280,6 +281,18 @@ public class PhoneMainActivity extends Activity {
         dismissCard.addView(text("אופן כיבוי השעון", 15, TEXT));
         Button[] dismissButtons = new Button[dismissLabels.length];
         LinearLayout dismissSettings = new LinearLayout(this); dismissSettings.setOrientation(LinearLayout.VERTICAL);
+        int[] multipleTaskBits = {1, 2, 4, 8, 16};
+        String[] multipleTaskLabels = {"ניעור היד", "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות"};
+        CheckBox[] multipleTasks = new CheckBox[multipleTaskBits.length];
+        LinearLayout multipleTaskOptions = new LinearLayout(this); multipleTaskOptions.setOrientation(LinearLayout.VERTICAL);
+        multipleTaskOptions.addView(text("בחרו את משימות ההשכמה", 13, TEXT));
+        int initialMultipleMask = alarm.optInt("multipleTaskMask", 31);
+        for (int taskIndex = 0; taskIndex < multipleTasks.length; taskIndex++) {
+            CheckBox task = new CheckBox(this); task.setText(t(multipleTaskLabels[taskIndex])); task.setTextColor(TEXT);
+            task.setChecked((initialMultipleMask & multipleTaskBits[taskIndex]) != 0);
+            multipleTasks[taskIndex] = task; multipleTaskOptions.addView(task);
+        }
+        dismissSettings.addView(multipleTaskOptions);
         NumberPicker dismissHoldSeconds = numberPicker(1, 10, alarm.optInt("dismissHoldSeconds", 3));
         View holdOptions = labeled("משך לחיצה ארוכה בשניות", dismissHoldSeconds); dismissSettings.addView(holdOptions);
         NumberPicker shakeCount = numberPicker(5, 40, alarm.optInt("shakeCount", 12));
@@ -294,18 +307,20 @@ public class PhoneMainActivity extends Activity {
         View memoryOptions = labeled("רמת זיכרון", memoryDifficulty); dismissSettings.addView(memoryOptions);
         Runnable updateDismissUi = () -> {
             String method = dismissValues[selectedDismissIndex[0]];
-            boolean multiple = "random".equals(method) || "combination".equals(method);
+            boolean random = "random".equals(method), multiple = "combination".equals(method);
+            multipleTaskOptions.setVisibility(multiple ? View.VISIBLE : View.GONE);
             holdOptions.setVisibility("hold".equals(method) ? View.VISIBLE : View.GONE);
-            shakeOptions.setVisibility("shake".equals(method) || multiple ? View.VISIBLE : View.GONE);
-            stepOptions.setVisibility("steps".equals(method) || multiple ? View.VISIBLE : View.GONE);
-            mathOptions.setVisibility("math".equals(method) || multiple ? View.VISIBLE : View.GONE);
-            memoryOptions.setVisibility("memory".equals(method) || multiple ? View.VISIBLE : View.GONE);
-            alternatingOptions.setVisibility("alternating".equals(method) || multiple ? View.VISIBLE : View.GONE);
+            shakeOptions.setVisibility("shake".equals(method) || random || (multiple && multipleTasks[0].isChecked()) ? View.VISIBLE : View.GONE);
+            stepOptions.setVisibility("steps".equals(method) || random || (multiple && multipleTasks[1].isChecked()) ? View.VISIBLE : View.GONE);
+            mathOptions.setVisibility("math".equals(method) || random || (multiple && multipleTasks[2].isChecked()) ? View.VISIBLE : View.GONE);
+            memoryOptions.setVisibility("memory".equals(method) || random || (multiple && multipleTasks[3].isChecked()) ? View.VISIBLE : View.GONE);
+            alternatingOptions.setVisibility("alternating".equals(method) || random || (multiple && multipleTasks[4].isChecked()) ? View.VISIBLE : View.GONE);
             for (int i = 0; i < dismissButtons.length; i++) {
                 dismissButtons[i].setBackground(round(i == selectedDismissIndex[0] ? ACCENT : SOFT, dp(20), BORDER));
                 dismissButtons[i].setTextColor(i == selectedDismissIndex[0] ? Color.WHITE : TEXT);
             }
         };
+        for (CheckBox task : multipleTasks) task.setOnCheckedChangeListener((button, checked) -> updateDismissUi.run());
         for (int start = 0; start < dismissLabels.length; start += 2) {
             LinearLayout choicesRow = row();
             for (int i = start; i < Math.min(start + 2, dismissLabels.length); i++) {
@@ -360,6 +375,13 @@ public class PhoneMainActivity extends Activity {
                 if (enabled.isChecked() && daysMask == 0) {
                     Toast.makeText(this, t("צריך לבחור לפחות יום אחד"), Toast.LENGTH_LONG).show(); return;
                 }
+                int multipleTaskMask = 0;
+                for (int taskIndex = 0; taskIndex < multipleTasks.length; taskIndex++) {
+                    if (multipleTasks[taskIndex].isChecked()) multipleTaskMask |= multipleTaskBits[taskIndex];
+                }
+                if ("combination".equals(dismissValues[selectedDismissIndex[0]]) && Integer.bitCount(multipleTaskMask) < 2) {
+                    Toast.makeText(this, t("יש לבחור לפחות שתי משימות"), Toast.LENGTH_LONG).show(); return;
+                }
                 alarm.put("enabled", enabled.isChecked()).put("hour", time.getHour()).put("minute", time.getMinute())
                         .put("daysMask", daysMask).put("windowMinutes", numberValue(window))
                         .put("snoozeMinutes", numberValue(snoozeMinutes)).put("snoozeCount", numberValue(snoozeCount))
@@ -376,6 +398,7 @@ public class PhoneMainActivity extends Activity {
                         .put("memoryDifficulty", numberValue(memoryDifficulty))
                         .put("shakeCount", numberValue(shakeCount)).put("stepCount", numberValue(stepCount))
                         .put("alternatingTapCount", numberValue(alternatingTaps))
+                        .put("multipleTaskMask", multipleTaskMask)
                         .put("wakeCheckEnabled", wakeCheckEnabled.isChecked())
                         .put("wakeCheckDelayMinutes", numberValue(wakeCheckDelay));
                 saveSmartAlarm(alarm, index); showSmartAlarms();
@@ -873,7 +896,7 @@ public class PhoneMainActivity extends Activity {
                     .put("daysMask", 126).put("windowMinutes", 30).put("snoozeMinutes", 5).put("snoozeCount", 3)
                     .put("vibrationEnabled", true).put("vibrationStyle", "normal").put("vibrationStrength", 6)
                     .put("soundEnabled", true).put("soundVolumePercent", 80).put("soundUri", "")
-                    .put("alertDurationSeconds", 30).put("backgroundStyle", "sunrise")
+                    .put("alertDurationSeconds", 30).put("backgroundStyle", "morning")
                     .put("dismissMethod", "tap").put("dismissHoldSeconds", 3);
             alarm.put("mathDifficulty", 1).put("memoryDifficulty", 1).put("shakeCount", 12)
                     .put("stepCount", 20).put("alternatingTapCount", 10)

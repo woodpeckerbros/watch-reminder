@@ -183,7 +183,7 @@ public class MainActivity extends Activity {
     private boolean horizontalBackSwipeCandidate;
     private boolean horizontalBackSwipeTracking;
     private boolean horizontalBackSwipeSuppressed;
-    private View horizontalCarouselGestureArea;
+    private final ArrayList<View> horizontalCarouselGestureAreas = new ArrayList<>();
     private String pendingFocusReminderId;
     private boolean pendingFocusNextReminder;
     private boolean pendingBlessingReminder;
@@ -1302,6 +1302,7 @@ public class MainActivity extends Activity {
 
     private void showSmartAlarmEditor(int alarmId, boolean newAlarm) {
         stopSmartAlarmPreview();
+        horizontalCarouselGestureAreas.clear();
         currentScreen = "smart_alarm_editor";
         editingSmartAlarmId = alarmId;
         editingSmartAlarmNew = newAlarm;
@@ -1362,13 +1363,20 @@ public class MainActivity extends Activity {
         TextView backgroundTitle = text("רקע מסך ההתראה", 15, COLOR_CARD_TEXT);
         AppFont.bold(backgroundTitle);
         backgroundCard.addView(backgroundTitle);
-        String[] backgroundLabels = {"זריחה חזקה", "בוקר מוקדם", "משתנה לפי השעה"};
-        String[] backgroundValues = {SmartAlarmStore.BACKGROUND_SUNRISE,
-                SmartAlarmStore.BACKGROUND_MORNING, SmartAlarmStore.BACKGROUND_DYNAMIC};
-        Spinner backgroundSpinner = new Spinner(this);
-        backgroundSpinner.setAdapter(spinnerAdapter(translated(backgroundLabels)));
-        backgroundSpinner.setSelection(indexOf(backgroundValues, smart.backgroundStyle()));
-        backgroundCard.addView(backgroundSpinner, matchParams());
+        String[] backgroundLabels = {"בוקר", "צהריים", "ערב", "לילה", "משתנה לפי השעה"};
+        String[] backgroundValues = {SmartAlarmStore.BACKGROUND_MORNING, SmartAlarmStore.BACKGROUND_NOON,
+                SmartAlarmStore.BACKGROUND_EVENING, SmartAlarmStore.BACKGROUND_NIGHT,
+                SmartAlarmStore.BACKGROUND_DYNAMIC};
+        int[] backgroundImages = {R.drawable.home_horizon_morning, R.drawable.home_horizon_noon,
+                R.drawable.home_horizon_evening, R.drawable.home_horizon_night, 0};
+        String storedBackground = SmartAlarmStore.BACKGROUND_SUNRISE.equals(smart.backgroundStyle())
+                ? SmartAlarmStore.BACKGROUND_MORNING : smart.backgroundStyle();
+        final int[] selectedBackgroundIndex = {indexOf(backgroundValues, storedBackground)};
+        BackgroundCarouselView backgroundSelector = new BackgroundCarouselView(this);
+        backgroundSelector.configure(translated(backgroundLabels), backgroundImages, selectedBackgroundIndex[0], index ->
+                selectedBackgroundIndex[0] = index);
+        horizontalCarouselGestureAreas.add(backgroundSelector);
+        backgroundCard.addView(backgroundSelector, new LinearLayout.LayoutParams(-1, dp(174)));
         content.addView(backgroundCard, cardParams());
 
         LinearLayout dismissCard = card();
@@ -1377,7 +1385,7 @@ public class MainActivity extends Activity {
         AppFont.bold(dismissTitle);
         dismissCard.addView(dismissTitle);
         String[] dismissLabels = {"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה", "ניעור היד",
-                "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות", "משימה אקראית", "שילוב שתי משימות"};
+                "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות", "משימה אקראית", "משימות מרובות"};
         String[] dismissValues = {SmartAlarmStore.DISMISS_TAP, SmartAlarmStore.DISMISS_HOLD,
                 SmartAlarmStore.DISMISS_DOUBLE_TAP, SmartAlarmStore.DISMISS_SHAKE,
                 SmartAlarmStore.DISMISS_STEPS, SmartAlarmStore.DISMISS_MATH,
@@ -1387,18 +1395,34 @@ public class MainActivity extends Activity {
                 ? new String[]{"Dismiss with one tap", "Hold until the ring completes", "Two quick taps",
                 "Shake your wrist several times", "Walk the selected number of steps", "Solve a short equation",
                 "Repeat a visual sequence", "Tap left and right alternately", "A different wake task each time",
-                "Complete two wake tasks in sequence"}
+                "Complete all selected wake-up tasks"}
                 : new String[]{"כיבוי בלחיצה אחת", "החזקה עד להשלמת הטבעת", "שתי לחיצות מהירות",
                 "ניעור היד מספר פעמים", "הליכה במספר הצעדים שנבחר", "פתרון תרגיל חשבון קצר",
                 "שחזור רצף חזותי", "לחיצות ימין ושמאל לסירוגין", "משימת השכמה שונה בכל פעם",
-                "השלמת שתי משימות השכמה ברצף"};
+                "השלמת כל משימות ההשכמה שנבחרו"};
         boolean[] dismissHasSettings = {false, true, false, true, true, true, true, true, true, true};
         final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
         WakeMethodCarouselView dismissSelector = new WakeMethodCarouselView(this);
-        horizontalCarouselGestureArea = dismissSelector;
+        horizontalCarouselGestureAreas.add(dismissSelector);
         dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(190)));
         LinearLayout dismissOptions = new LinearLayout(this);
         dismissOptions.setOrientation(LinearLayout.VERTICAL);
+        final int[] multipleTaskMask = {smart.multipleTaskMask()};
+        LinearLayout multipleTaskOptions = new LinearLayout(this);
+        multipleTaskOptions.setOrientation(LinearLayout.VERTICAL);
+        TextView multipleTaskTitle = text("בחרו את משימות ההשכמה", 13, COLOR_CARD_TEXT);
+        AppFont.bold(multipleTaskTitle); multipleTaskOptions.addView(multipleTaskTitle);
+        int[] taskBits = {SmartAlarmStore.TASK_SHAKE, SmartAlarmStore.TASK_STEPS, SmartAlarmStore.TASK_MATH,
+                SmartAlarmStore.TASK_MEMORY, SmartAlarmStore.TASK_ALTERNATING};
+        String[] taskLabels = {"ניעור היד", "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות"};
+        Switch[] taskSwitches = new Switch[taskBits.length];
+        for (int taskIndex = 0; taskIndex < taskBits.length; taskIndex++) {
+            int bit = taskBits[taskIndex];
+            Switch taskSwitch = new Switch(this); setSwitchText(taskSwitch, taskLabels[taskIndex]);
+            taskSwitch.setChecked((multipleTaskMask[0] & bit) != 0);
+            taskSwitches[taskIndex] = taskSwitch; multipleTaskOptions.addView(taskSwitch);
+        }
+        dismissOptions.addView(multipleTaskOptions);
         NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());
         View holdOptions = pickerColumn("משך לחיצה ארוכה בשניות", holdSeconds); dismissOptions.addView(holdOptions);
         NumberPicker shakeCount = numberPicker(5, 40, smart.shakeCount());
@@ -1413,14 +1437,29 @@ public class MainActivity extends Activity {
         View memoryOptions = pickerColumn("רמת זיכרון", memoryDifficulty); dismissOptions.addView(memoryOptions);
         Runnable updateDismissOptions = () -> {
             String method = dismissValues[dismissMethodIndex[0]];
-            boolean multiple = SmartAlarmStore.DISMISS_RANDOM.equals(method) || SmartAlarmStore.DISMISS_COMBINATION.equals(method);
+            boolean random = SmartAlarmStore.DISMISS_RANDOM.equals(method);
+            boolean multiple = SmartAlarmStore.DISMISS_COMBINATION.equals(method);
+            multipleTaskOptions.setVisibility(multiple ? View.VISIBLE : View.GONE);
             holdOptions.setVisibility(SmartAlarmStore.DISMISS_HOLD.equals(method) ? View.VISIBLE : View.GONE);
-            shakeOptions.setVisibility(SmartAlarmStore.DISMISS_SHAKE.equals(method) || multiple ? View.VISIBLE : View.GONE);
-            stepOptions.setVisibility(SmartAlarmStore.DISMISS_STEPS.equals(method) || multiple ? View.VISIBLE : View.GONE);
-            mathOptions.setVisibility(SmartAlarmStore.DISMISS_MATH.equals(method) || multiple ? View.VISIBLE : View.GONE);
-            memoryOptions.setVisibility(SmartAlarmStore.DISMISS_MEMORY.equals(method) || multiple ? View.VISIBLE : View.GONE);
-            alternatingOptions.setVisibility(SmartAlarmStore.DISMISS_ALTERNATING.equals(method) || multiple ? View.VISIBLE : View.GONE);
+            shakeOptions.setVisibility(SmartAlarmStore.DISMISS_SHAKE.equals(method) || random
+                    || (multiple && (multipleTaskMask[0] & SmartAlarmStore.TASK_SHAKE) != 0) ? View.VISIBLE : View.GONE);
+            stepOptions.setVisibility(SmartAlarmStore.DISMISS_STEPS.equals(method) || random
+                    || (multiple && (multipleTaskMask[0] & SmartAlarmStore.TASK_STEPS) != 0) ? View.VISIBLE : View.GONE);
+            mathOptions.setVisibility(SmartAlarmStore.DISMISS_MATH.equals(method) || random
+                    || (multiple && (multipleTaskMask[0] & SmartAlarmStore.TASK_MATH) != 0) ? View.VISIBLE : View.GONE);
+            memoryOptions.setVisibility(SmartAlarmStore.DISMISS_MEMORY.equals(method) || random
+                    || (multiple && (multipleTaskMask[0] & SmartAlarmStore.TASK_MEMORY) != 0) ? View.VISIBLE : View.GONE);
+            alternatingOptions.setVisibility(SmartAlarmStore.DISMISS_ALTERNATING.equals(method) || random
+                    || (multiple && (multipleTaskMask[0] & SmartAlarmStore.TASK_ALTERNATING) != 0) ? View.VISIBLE : View.GONE);
         };
+        for (Switch taskSwitch : taskSwitches) taskSwitch.setOnCheckedChangeListener((button, checked) -> {
+            int updatedMask = 0;
+            for (int taskIndex = 0; taskIndex < taskSwitches.length; taskIndex++) {
+                if (taskSwitches[taskIndex].isChecked()) updatedMask |= taskBits[taskIndex];
+            }
+            multipleTaskMask[0] = updatedMask;
+            updateDismissOptions.run();
+        });
         dismissSelector.configure(translated(dismissLabels), dismissDescriptions, dismissHasSettings,
                 dismissMethodIndex[0], index -> {
             dismissMethodIndex[0] = index;
@@ -1553,6 +1592,11 @@ public class MainActivity extends Activity {
         Button tryAlarm = pillButton("נסו את השעון", COLOR_ACCENT_DARK);
         clearButtonIcon(tryAlarm);
         tryAlarm.setOnClickListener(v -> {
+            if (SmartAlarmStore.DISMISS_COMBINATION.equals(dismissValues[dismissMethodIndex[0]])
+                    && Integer.bitCount(multipleTaskMask[0]) < 2) {
+                Toast.makeText(this, UiText.t(this, "יש לבחור לפחות שתי משימות"), Toast.LENGTH_SHORT).show();
+                return;
+            }
             stopSmartAlarmPreview();
             SmartAlarmStore preview = new SmartAlarmStore(this, SmartAlarmStore.PREVIEW_ALARM_ID);
             preview.savePreview(true, hourPicker.getValue(), minutePicker.getValue(), selectedDaysMask[0],
@@ -1560,10 +1604,11 @@ public class MainActivity extends Activity {
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(),
                     soundVolume.slider.getProgress() * 10, selectedSoundUri[0], durationPicker.getValue(),
-                    backgroundValues[backgroundSpinner.getSelectedItemPosition()],
+                    backgroundValues[selectedBackgroundIndex[0]],
                     dismissValues[dismissMethodIndex[0]], holdSeconds.getValue());
             preview.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
-                    stepCount.getValue(), alternatingTaps.getValue(), false, wakeCheckDelay.getValue());
+                    stepCount.getValue(), alternatingTaps.getValue(), multipleTaskMask[0],
+                    false, wakeCheckDelay.getValue());
             startActivity(new Intent(this, com.woodpeckerbros.watchreminder.smartwake.SmartAlarmAlertActivity.class)
                     .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, SmartAlarmStore.PREVIEW_ALARM_ID)
                     .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, System.currentTimeMillis())
@@ -1579,15 +1624,20 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, UiText.t(this, "צריך לבחור לפחות יום אחד"), Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (SmartAlarmStore.DISMISS_COMBINATION.equals(dismissValues[dismissMethodIndex[0]])
+                    && Integer.bitCount(multipleTaskMask[0]) < 2) {
+                Toast.makeText(this, UiText.t(this, "יש לבחור לפחות שתי משימות"), Toast.LENGTH_SHORT).show();
+                return;
+            }
             smart.save(enabledSwitch.isChecked(), hourPicker.getValue(), minutePicker.getValue(),
                     selectedDaysMask[0], windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(), soundVolume.slider.getProgress() * 10,
                     selectedSoundUri[0], durationPicker.getValue(),
-                    backgroundValues[backgroundSpinner.getSelectedItemPosition()],
+                    backgroundValues[selectedBackgroundIndex[0]],
                     dismissValues[dismissMethodIndex[0]], holdSeconds.getValue());
             smart.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
-                    stepCount.getValue(), alternatingTaps.getValue(), wakeCheckSwitch.isChecked(),
+                    stepCount.getValue(), alternatingTaps.getValue(), multipleTaskMask[0], wakeCheckSwitch.isChecked(),
                     wakeCheckDelay.getValue());
             stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this, alarmId);
@@ -5565,7 +5615,13 @@ public class MainActivity extends Activity {
 
     private boolean handleHorizontalBackSwipe(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            horizontalBackSwipeSuppressed = isTouchInside(horizontalCarouselGestureArea, event);
+            horizontalBackSwipeSuppressed = false;
+            for (View carousel : horizontalCarouselGestureAreas) {
+                if (isTouchInside(carousel, event)) {
+                    horizontalBackSwipeSuppressed = true;
+                    break;
+                }
+            }
         }
         if (horizontalBackSwipeSuppressed) {
             if (event.getActionMasked() == MotionEvent.ACTION_UP

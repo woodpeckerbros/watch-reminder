@@ -24,6 +24,9 @@ public final class SmartAlarmStore {
     public static final String VIBRATION_LONG = "long";
     public static final String BACKGROUND_SUNRISE = "sunrise";
     public static final String BACKGROUND_MORNING = "morning";
+    public static final String BACKGROUND_NOON = "noon";
+    public static final String BACKGROUND_EVENING = "evening";
+    public static final String BACKGROUND_NIGHT = "night";
     public static final String BACKGROUND_DYNAMIC = "dynamic";
     public static final String DISMISS_TAP = "tap";
     public static final String DISMISS_HOLD = "hold";
@@ -35,6 +38,12 @@ public final class SmartAlarmStore {
     public static final String DISMISS_ALTERNATING = "alternating";
     public static final String DISMISS_RANDOM = "random";
     public static final String DISMISS_COMBINATION = "combination";
+    public static final int TASK_SHAKE = 1;
+    public static final int TASK_STEPS = 1 << 1;
+    public static final int TASK_MATH = 1 << 2;
+    public static final int TASK_MEMORY = 1 << 3;
+    public static final int TASK_ALTERNATING = 1 << 4;
+    public static final int ALL_WAKE_TASKS = TASK_SHAKE | TASK_STEPS | TASK_MATH | TASK_MEMORY | TASK_ALTERNATING;
     public static final int PREVIEW_ALARM_ID = 0x0F0F0F;
     private final SharedPreferences prefs;
     private final Context context;
@@ -76,6 +85,7 @@ public final class SmartAlarmStore {
     public int shakeCount() { return clamp(prefs.getInt("shake_count", 12), 5, 40); }
     public int stepCount() { return clamp(prefs.getInt("step_count", 20), 5, 100); }
     public int alternatingTapCount() { return clamp(prefs.getInt("alternating_tap_count", 10), 4, 30); }
+    public int multipleTaskMask() { return prefs.getInt("multiple_task_mask", ALL_WAKE_TASKS) & ALL_WAKE_TASKS; }
     public boolean wakeCheckEnabled() { return prefs.getBoolean("wake_check_enabled", false); }
     public int wakeCheckDelayMinutes() { return clamp(prefs.getInt("wake_check_delay_minutes", 5), 1, 30); }
     public boolean enabledOnDay(int calendarDay) { return (daysMask() & (1 << calendarDay)) != 0; }
@@ -122,10 +132,12 @@ public final class SmartAlarmStore {
     public void setEnabled(boolean enabled) { prefs.edit().putBoolean("enabled", enabled).apply(); register(context, id); }
 
     public void saveWakeTasks(int mathDifficulty, int memoryDifficulty, int shakeCount, int stepCount,
-                              int alternatingTapCount, boolean wakeCheckEnabled, int wakeCheckDelayMinutes) {
+                              int alternatingTapCount, int multipleTaskMask,
+                              boolean wakeCheckEnabled, int wakeCheckDelayMinutes) {
         prefs.edit().putInt("math_difficulty", mathDifficulty).putInt("memory_difficulty", memoryDifficulty)
                 .putInt("shake_count", shakeCount).putInt("step_count", stepCount)
                 .putInt("alternating_tap_count", alternatingTapCount)
+                .putInt("multiple_task_mask", multipleTaskMask & ALL_WAKE_TASKS)
                 .putBoolean("wake_check_enabled", wakeCheckEnabled)
                 .putInt("wake_check_delay_minutes", wakeCheckDelayMinutes).apply();
     }
@@ -174,6 +186,7 @@ public final class SmartAlarmStore {
                     .put("mathDifficulty", alarm.mathDifficulty()).put("memoryDifficulty", alarm.memoryDifficulty())
                     .put("shakeCount", alarm.shakeCount()).put("stepCount", alarm.stepCount())
                     .put("alternatingTapCount", alarm.alternatingTapCount())
+                    .put("multipleTaskMask", alarm.multipleTaskMask())
                     .put("wakeCheckEnabled", alarm.wakeCheckEnabled())
                     .put("wakeCheckDelayMinutes", alarm.wakeCheckDelayMinutes()));
         }
@@ -200,7 +213,8 @@ public final class SmartAlarmStore {
                     value.optString("dismissMethod", DISMISS_TAP), value.optInt("dismissHoldSeconds", 3));
             alarm.saveWakeTasks(value.optInt("mathDifficulty", 1), value.optInt("memoryDifficulty", 1),
                     value.optInt("shakeCount", 12), value.optInt("stepCount", 20),
-                    value.optInt("alternatingTapCount", 10), value.optBoolean("wakeCheckEnabled", false),
+                    value.optInt("alternatingTapCount", 10), value.optInt("multipleTaskMask", ALL_WAKE_TASKS),
+                    value.optBoolean("wakeCheckEnabled", false),
                     value.optInt("wakeCheckDelayMinutes", 5));
         }
         context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()

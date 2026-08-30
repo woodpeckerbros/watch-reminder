@@ -159,6 +159,9 @@ public final class SmartAlarmAlertActivity extends Activity {
         String style = settings == null ? SmartAlarmStore.BACKGROUND_SUNRISE : settings.backgroundStyle();
         if (SmartAlarmStore.BACKGROUND_DYNAMIC.equals(style)) return backgroundForNow();
         if (SmartAlarmStore.BACKGROUND_MORNING.equals(style)) return R.drawable.home_horizon_morning;
+        if (SmartAlarmStore.BACKGROUND_NOON.equals(style)) return R.drawable.home_horizon_noon;
+        if (SmartAlarmStore.BACKGROUND_EVENING.equals(style)) return R.drawable.home_horizon_evening;
+        if (SmartAlarmStore.BACKGROUND_NIGHT.equals(style)) return R.drawable.home_horizon_night;
         return R.drawable.smart_alarm_sunrise;
     }
 

@@ -221,6 +221,8 @@ public class UiText {
         put("זריחה חזקה", "Bright sunrise");
         put("בוקר מוקדם", "Early morning");
         put("משתנה לפי השעה", "Changes with time");
+        put("בוקר", "Morning"); put("צהריים", "Noon");
+        put("ערב", "Evening"); put("לילה", "Night");
         put("אופן כיבוי השעון", "Alarm dismissal method");
         put("לחיצה רגילה", "Single tap");
         put("לחיצה ארוכה", "Press and hold");
@@ -230,6 +232,9 @@ public class UiText {
         put("תרגיל חשבון", "Math task"); put("תרגיל זיכרון", "Memory task");
         put("לחיצות מתחלפות", "Alternating taps"); put("משימה אקראית", "Random task");
         put("שילוב שתי משימות", "Two-task combination");
+        put("משימות מרובות", "Multiple tasks");
+        put("בחרו את משימות ההשכמה", "Choose wake-up tasks");
+        put("יש לבחור לפחות שתי משימות", "Choose at least two tasks");
         put("מספר ניעורים", "Number of shakes"); put("מספר צעדים", "Number of steps");
         put("מספר לחיצות מתחלפות", "Alternating tap count");
         put("רמת חשבון", "Math difficulty"); put("רמת זיכרון", "Memory difficulty");
