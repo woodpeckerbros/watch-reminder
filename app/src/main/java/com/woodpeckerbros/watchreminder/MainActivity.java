@@ -1378,20 +1378,8 @@ public class MainActivity extends Activity {
                 SmartAlarmStore.DISMISS_MEMORY, SmartAlarmStore.DISMISS_ALTERNATING,
                 SmartAlarmStore.DISMISS_RANDOM, SmartAlarmStore.DISMISS_COMBINATION};
         final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
-        LinearLayout dismissSelector = new LinearLayout(this);
-        dismissSelector.setGravity(Gravity.CENTER);
-        dismissSelector.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
-        Button previousMethod = dayButton("‹", COLOR_SURFACE_2);
-        Button methodButton = pillButton(UiText.t(this, dismissLabels[dismissMethodIndex[0]]), COLOR_ACCENT_DARK);
-        Button nextMethod = dayButton("›", COLOR_SURFACE_2);
-        clearButtonIcon(previousMethod); clearButtonIcon(methodButton); clearButtonIcon(nextMethod);
-        dismissSelector.addView(previousMethod, new LinearLayout.LayoutParams(dp(44), dp(50)));
-        dismissSelector.addView(methodButton, new LinearLayout.LayoutParams(0, dp(50), 1f));
-        dismissSelector.addView(nextMethod, new LinearLayout.LayoutParams(dp(44), dp(50)));
-        dismissCard.addView(dismissSelector, matchParams());
-        TextView dismissPosition = text((dismissMethodIndex[0] + 1) + " / " + dismissLabels.length, 10, COLOR_CARD_MUTED);
-        dismissPosition.setGravity(Gravity.CENTER); dismissPosition.setTextDirection(View.TEXT_DIRECTION_LTR);
-        dismissPosition.setLayoutDirection(View.LAYOUT_DIRECTION_LTR); dismissCard.addView(dismissPosition);
+        WakeMethodCarouselView dismissSelector = new WakeMethodCarouselView(this);
+        dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(82)));
         LinearLayout dismissOptions = new LinearLayout(this);
         dismissOptions.setOrientation(LinearLayout.VERTICAL);
         NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());
@@ -1409,9 +1397,6 @@ public class MainActivity extends Activity {
         dismissCard.addView(dismissOptions);
         Runnable updateDismissOptions = () -> {
             String method = dismissValues[dismissMethodIndex[0]];
-            methodButton.setText(UiText.t(this, dismissLabels[dismissMethodIndex[0]]));
-            clearButtonIcon(methodButton);
-            dismissPosition.setText((dismissMethodIndex[0] + 1) + " / " + dismissLabels.length);
             boolean multiple = SmartAlarmStore.DISMISS_RANDOM.equals(method) || SmartAlarmStore.DISMISS_COMBINATION.equals(method);
             holdOptions.setVisibility(SmartAlarmStore.DISMISS_HOLD.equals(method) ? View.VISIBLE : View.GONE);
             shakeOptions.setVisibility(SmartAlarmStore.DISMISS_SHAKE.equals(method) || multiple ? View.VISIBLE : View.GONE);
@@ -1420,13 +1405,10 @@ public class MainActivity extends Activity {
             memoryOptions.setVisibility(SmartAlarmStore.DISMISS_MEMORY.equals(method) || multiple ? View.VISIBLE : View.GONE);
             alternatingOptions.setVisibility(SmartAlarmStore.DISMISS_ALTERNATING.equals(method) || multiple ? View.VISIBLE : View.GONE);
         };
-        View.OnClickListener nextDismissMethod = v -> {
-            int direction = v == previousMethod ? -1 : 1;
-            dismissMethodIndex[0] = (dismissMethodIndex[0] + direction + dismissLabels.length) % dismissLabels.length;
+        dismissSelector.configure(translated(dismissLabels), dismissMethodIndex[0], index -> {
+            dismissMethodIndex[0] = index;
             updateDismissOptions.run();
-        };
-        previousMethod.setOnClickListener(nextDismissMethod); nextMethod.setOnClickListener(nextDismissMethod);
-        methodButton.setOnClickListener(nextDismissMethod);
+        });
         updateDismissOptions.run();
         content.addView(dismissCard, cardParams());
 
