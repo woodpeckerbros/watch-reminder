@@ -63,18 +63,18 @@ public final class WakeMethodCarouselView extends ViewGroup {
     private View centerCard(String value) {
         LinearLayout card = new LinearLayout(getContext());
         card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_HORIZONTAL);
-        card.setPadding(dp(12), dp(9), dp(12), dp(8)); card.setBackground(background(true)); card.setElevation(dp(10));
-        TextView icon = label(iconAt(selected), 27, 0xFFE2C89C);
+        card.setPadding(dp(14), dp(8), dp(14), dp(7)); card.setBackground(background(true)); card.setElevation(dp(10));
+        TextView icon = label(iconAt(selected), 24, 0xFFE2C89C);
         icon.setShadowLayer(dp(3), 0, dp(1), 0xAA0B2133);
-        card.addView(icon, new LinearLayout.LayoutParams(-1, dp(34)));
-        TextView title = label(value, 19, 0xFFF4EBDD); title.setMaxLines(2);
+        card.addView(icon, new LinearLayout.LayoutParams(-1, dp(29)));
+        TextView title = label(value, 17, 0xFFF4EBDD); title.setMaxLines(2);
         title.setShadowLayer(dp(2), 0, dp(1), 0xBB0B2133);
         card.addView(title, new LinearLayout.LayoutParams(-1, -2));
         TextView description = label(descriptionAt(selected), 10, 0xDFC5C8BA);
         description.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
         description.setMaxLines(2);
         LinearLayout.LayoutParams descriptionParams = new LinearLayout.LayoutParams(-1, 0, 1);
-        descriptionParams.setMargins(0, dp(4), 0, dp(3));
+        descriptionParams.setMargins(dp(3), dp(3), dp(3), dp(3));
         card.addView(description, descriptionParams);
         if (isConfigurable(selected)) {
             Button configure = new Button(getContext());
@@ -86,11 +86,11 @@ public final class WakeMethodCarouselView extends ViewGroup {
             configure.setBackground(configureBackground); configure.setMinHeight(0); configure.setMinimumHeight(0);
             configure.setPadding(dp(14), 0, dp(14), 0);
             configure.setOnClickListener(v -> { if (settingsListener != null) settingsListener.onSettingsRequested(selected); });
-            card.addView(configure, new LinearLayout.LayoutParams(dp(82), dp(34)));
+            card.addView(configure, new LinearLayout.LayoutParams(dp(88), dp(32)));
         }
         TextView dots = label(positionDots(), 11, 0xFFE2C89C);
         dots.setLetterSpacing(.16f);
-        card.addView(dots, new LinearLayout.LayoutParams(-1, dp(16)));
+        card.addView(dots, new LinearLayout.LayoutParams(-1, dp(14)));
         return card;
     }
 
@@ -145,7 +145,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec), height = resolveSize(dp(300), heightSpec);
-        int centerWidth = Math.round(width * .58f), sideWidth = Math.round(width * .48f), sideHeight = Math.round(height * .72f);
+        int centerWidth = Math.round(width * .72f), sideWidth = Math.round(width * .44f), sideHeight = Math.round(height * .70f);
         if (selectedCard != null) selectedCard.measure(MeasureSpec.makeMeasureSpec(centerWidth, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(height - dp(8), MeasureSpec.EXACTLY));
         int sw = MeasureSpec.makeMeasureSpec(sideWidth, MeasureSpec.EXACTLY), sh = MeasureSpec.makeMeasureSpec(sideHeight, MeasureSpec.EXACTLY);
@@ -156,8 +156,8 @@ public final class WakeMethodCarouselView extends ViewGroup {
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int width = r - l, height = b - t, centerWidth = selectedCard == null ? 0 : selectedCard.getMeasuredWidth();
         int centerLeft = (width - centerWidth) / 2;
-        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(14); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
-        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(14); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
+        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(10); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
+        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(10); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
         if (selectedCard != null) selectedCard.layout(centerLeft, dp(4), centerLeft + centerWidth, height - dp(4));
     }
 
