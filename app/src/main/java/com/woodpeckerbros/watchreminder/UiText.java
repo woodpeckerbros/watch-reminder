@@ -221,6 +221,11 @@ public class UiText {
         put("זריחה חזקה", "Bright sunrise");
         put("בוקר מוקדם", "Early morning");
         put("משתנה לפי השעה", "Changes with time");
+        put("אופן כיבוי השעון", "Alarm dismissal method");
+        put("לחיצה רגילה", "Single tap");
+        put("לחיצה ארוכה", "Press and hold");
+        put("לחיצה כפולה", "Double tap");
+        put("משך לחיצה ארוכה בשניות", "Hold duration in seconds");
         put("שעונים מעוררים חכמים", "Smart Alarms");
         put("עדיין לא הוגדר שעון מעורר חכם", "No smart alarms yet");
         put("הוספת שעון מעורר", "Add alarm");

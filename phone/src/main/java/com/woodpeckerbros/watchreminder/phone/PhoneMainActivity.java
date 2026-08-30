@@ -265,6 +265,17 @@ public class PhoneMainActivity extends Activity {
         }
         backgroundStyle.setSelection(backgroundIndex);
         content.addView(labeled("רקע מסך ההתראה", backgroundStyle), wideParams());
+        String[] dismissValues = {"tap", "hold", "double_tap"};
+        Spinner dismissMethod = spinner(new String[]{"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה"});
+        String currentDismiss = alarm.optString("dismissMethod", "tap");
+        int dismissIndex = 0;
+        for (int i = 0; i < dismissValues.length; i++) {
+            if (dismissValues[i].equals(currentDismiss)) dismissIndex = i;
+        }
+        dismissMethod.setSelection(dismissIndex);
+        content.addView(labeled("אופן כיבוי השעון", dismissMethod), wideParams());
+        NumberPicker dismissHoldSeconds = numberPicker(1, 10, alarm.optInt("dismissHoldSeconds", 3));
+        content.addView(labeled("משך לחיצה ארוכה בשניות", dismissHoldSeconds), wideParams());
         LinearLayout snooze = card();
         snooze.addView(text("נודניק", 15, TEXT));
         NumberPicker snoozeMinutes = numberPicker(1, 30, alarm.optInt("snoozeMinutes", 5));
@@ -309,7 +320,9 @@ public class PhoneMainActivity extends Activity {
                         .put("soundVolumePercent", numberValue(soundVolume) * 10)
                         .put("soundUri", alarm.optString("soundUri", ""))
                         .put("alertDurationSeconds", numberValue(duration))
-                        .put("backgroundStyle", backgroundValues[backgroundStyle.getSelectedItemPosition()]);
+                        .put("backgroundStyle", backgroundValues[backgroundStyle.getSelectedItemPosition()])
+                        .put("dismissMethod", dismissValues[dismissMethod.getSelectedItemPosition()])
+                        .put("dismissHoldSeconds", numberValue(dismissHoldSeconds));
                 saveSmartAlarm(alarm, index); showSmartAlarms();
             } catch (Exception error) { Toast.makeText(this, t("לא הצלחתי לשמור"), Toast.LENGTH_LONG).show(); }
         });
@@ -805,7 +818,8 @@ public class PhoneMainActivity extends Activity {
                     .put("daysMask", 126).put("windowMinutes", 30).put("snoozeMinutes", 5).put("snoozeCount", 3)
                     .put("vibrationEnabled", true).put("vibrationStyle", "normal").put("vibrationStrength", 6)
                     .put("soundEnabled", true).put("soundVolumePercent", 80).put("soundUri", "")
-                    .put("alertDurationSeconds", 30).put("backgroundStyle", "sunrise");
+                    .put("alertDurationSeconds", 30).put("backgroundStyle", "sunrise")
+                    .put("dismissMethod", "tap").put("dismissHoldSeconds", 3);
         } catch (Exception ignored) { }
         return alarm;
     }

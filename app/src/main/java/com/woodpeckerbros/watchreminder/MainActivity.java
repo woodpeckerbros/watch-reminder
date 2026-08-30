@@ -1366,6 +1366,21 @@ public class MainActivity extends Activity {
         backgroundCard.addView(backgroundSpinner, matchParams());
         content.addView(backgroundCard, cardParams());
 
+        LinearLayout dismissCard = card();
+        TextView dismissTitle = text("אופן כיבוי השעון", 15, COLOR_CARD_TEXT);
+        AppFont.bold(dismissTitle);
+        dismissCard.addView(dismissTitle);
+        String[] dismissLabels = {"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה"};
+        String[] dismissValues = {SmartAlarmStore.DISMISS_TAP, SmartAlarmStore.DISMISS_HOLD,
+                SmartAlarmStore.DISMISS_DOUBLE_TAP};
+        Spinner dismissSpinner = new Spinner(this);
+        dismissSpinner.setAdapter(spinnerAdapter(translated(dismissLabels)));
+        dismissSpinner.setSelection(indexOf(dismissValues, smart.dismissMethod()));
+        dismissCard.addView(dismissSpinner, matchParams());
+        NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());
+        dismissCard.addView(pickerColumn("משך לחיצה ארוכה בשניות", holdSeconds));
+        content.addView(dismissCard, cardParams());
+
         LinearLayout snoozeCard = card();
         TextView snoozeTitle = text("נודניק", 15, COLOR_CARD_TEXT);
         AppFont.bold(snoozeTitle);
@@ -1480,7 +1495,8 @@ public class MainActivity extends Activity {
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(), soundVolume.slider.getProgress() * 10,
                     selectedSoundUri[0], durationPicker.getValue(),
-                    backgroundValues[backgroundSpinner.getSelectedItemPosition()]);
+                    backgroundValues[backgroundSpinner.getSelectedItemPosition()],
+                    dismissValues[dismissSpinner.getSelectedItemPosition()], holdSeconds.getValue());
             stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this, alarmId);
             Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();

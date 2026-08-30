@@ -31,6 +31,10 @@ final class PhoneUiText {
         put("רקע מסך ההתראה", "Alert screen background");
         put("זריחה חזקה", "Bright sunrise"); put("בוקר מוקדם", "Early morning");
         put("משתנה לפי השעה", "Changes with time");
+        put("אופן כיבוי השעון", "Alarm dismissal method");
+        put("לחיצה רגילה", "Single tap"); put("לחיצה ארוכה", "Press and hold");
+        put("לחיצה כפולה", "Double tap");
+        put("משך לחיצה ארוכה בשניות", "Hold duration in seconds");
         put("כל כמה דקות", "Interval in minutes"); put("מספר פעמים", "Number of times");
         put("רטט וצלצול", "Vibration and sound"); put("רטט", "Vibration"); put("צלצול", "Sound");
         put("סוג רטט", "Vibration pattern"); put("עוצמת רטט", "Vibration strength");

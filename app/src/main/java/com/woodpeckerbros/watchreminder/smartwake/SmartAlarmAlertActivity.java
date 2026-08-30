@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -35,6 +36,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     private boolean explicitlyHandled;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AlertFeedback alertFeedback;
+    private long lastDismissTapAt;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -88,8 +90,32 @@ public final class SmartAlarmAlertActivity extends Activity {
         if (settings.snoozeCount() > 0) {
             body.addView(label(english ? remaining + " snoozes remaining" : "נותרו " + remaining + " נודניקים", 13, 0xFFE8E8E8));
         }
-        Button dismiss = button(english ? "Dismiss" : "כיבוי", 0xFF7E2A35);
-        dismiss.setOnClickListener(v -> dismissAlarm());
+        Button dismiss;
+        String dismissMethod = settings.dismissMethod();
+        int holdDurationSeconds = settings.dismissHoldSeconds();
+        dismissMethod = getIntent().getStringExtra("preview_dismiss_method") == null
+                ? dismissMethod : getIntent().getStringExtra("preview_dismiss_method");
+        holdDurationSeconds = getIntent().getIntExtra("preview_hold_seconds", holdDurationSeconds);
+        if (SmartAlarmStore.DISMISS_HOLD.equals(dismissMethod)) {
+            HoldToDismissButton hold = new HoldToDismissButton(this);
+            styleButton(hold, english ? "Hold to dismiss" : "לחצו לכיבוי", 0xFF7E2A35);
+            hold.configure(holdDurationSeconds, this::dismissAlarm);
+            dismiss = hold;
+            body.addView(label(english ? "Hold for " + holdDurationSeconds + " seconds"
+                    : "יש ללחוץ במשך " + holdDurationSeconds + " שניות", 11, 0xFFE8E8E8));
+        } else {
+            dismiss = button(english ? "Dismiss" : "כיבוי", 0xFF7E2A35);
+            if (SmartAlarmStore.DISMISS_DOUBLE_TAP.equals(dismissMethod)) {
+                dismiss.setText(english ? "Double tap to dismiss" : "לחצו פעמיים לכיבוי");
+                dismiss.setOnClickListener(v -> {
+                    long now = SystemClock.uptimeMillis();
+                    if (now - lastDismissTapAt <= 650L) dismissAlarm();
+                    else lastDismissTapAt = now;
+                });
+            } else {
+                dismiss.setOnClickListener(v -> dismissAlarm());
+            }
+        }
         body.addView(dismiss);
         if (remaining > 0) {
             Button snooze = button((english ? "Snooze " : "נודניק ") + settings.snoozeMinutes()
@@ -149,6 +175,11 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     private Button button(String value, int color) {
         Button button = new Button(this);
+        styleButton(button, value, color);
+        return button;
+    }
+
+    private void styleButton(Button button, String value, int color) {
         button.setText(value);
         button.setTextColor(Color.WHITE);
         button.setTextSize(16);
@@ -164,7 +195,6 @@ public final class SmartAlarmAlertActivity extends Activity {
         );
         params.setMargins(dp(2), dp(7), dp(2), 0);
         button.setLayoutParams(params);
-        return button;
     }
 
     private void close() {

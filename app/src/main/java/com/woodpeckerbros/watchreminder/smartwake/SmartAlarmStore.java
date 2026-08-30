@@ -25,6 +25,9 @@ public final class SmartAlarmStore {
     public static final String BACKGROUND_SUNRISE = "sunrise";
     public static final String BACKGROUND_MORNING = "morning";
     public static final String BACKGROUND_DYNAMIC = "dynamic";
+    public static final String DISMISS_TAP = "tap";
+    public static final String DISMISS_HOLD = "hold";
+    public static final String DISMISS_DOUBLE_TAP = "double_tap";
     private final SharedPreferences prefs;
     private final Context context;
     private final int id;
@@ -58,12 +61,15 @@ public final class SmartAlarmStore {
     public String soundUri() { return prefs.getString("sound_uri", ""); }
     public int alertDurationSeconds() { return clamp(prefs.getInt("alert_duration_seconds", 30), 5, 120); }
     public String backgroundStyle() { return prefs.getString("background_style", BACKGROUND_SUNRISE); }
+    public String dismissMethod() { return prefs.getString("dismiss_method", DISMISS_TAP); }
+    public int dismissHoldSeconds() { return clamp(prefs.getInt("dismiss_hold_seconds", 3), 1, 10); }
     public boolean enabledOnDay(int calendarDay) { return (daysMask() & (1 << calendarDay)) != 0; }
 
     public void save(boolean enabled, int hour, int minute, int daysMask, int windowMinutes,
                      int snoozeMinutes, int snoozeCount, boolean vibrationEnabled,
                      String vibrationStyle, int vibrationStrength, boolean soundEnabled,
-                     int soundVolumePercent, String soundUri, int alertDurationSeconds, String backgroundStyle) {
+                     int soundVolumePercent, String soundUri, int alertDurationSeconds, String backgroundStyle,
+                     String dismissMethod, int dismissHoldSeconds) {
         prefs.edit().putBoolean("enabled", enabled).putInt("hour", hour).putInt("minute", minute)
                 .putInt("days_mask", daysMask).putInt("window_minutes", windowMinutes)
                 .putInt("snooze_minutes", snoozeMinutes).putInt("snooze_count", snoozeCount)
@@ -71,7 +77,9 @@ public final class SmartAlarmStore {
                 .putInt("vibration_strength", vibrationStrength).putBoolean("sound_enabled", soundEnabled)
                 .putInt("sound_volume_percent", soundVolumePercent).putString("sound_uri", soundUri == null ? "" : soundUri)
                 .putInt("alert_duration_seconds", alertDurationSeconds)
-                .putString("background_style", backgroundStyle == null ? BACKGROUND_SUNRISE : backgroundStyle).apply();
+                .putString("background_style", backgroundStyle == null ? BACKGROUND_SUNRISE : backgroundStyle)
+                .putString("dismiss_method", dismissMethod == null ? DISMISS_TAP : dismissMethod)
+                .putInt("dismiss_hold_seconds", dismissHoldSeconds).apply();
         register(context, id);
     }
 
@@ -117,7 +125,8 @@ public final class SmartAlarmStore {
                     .put("vibrationStyle", alarm.vibrationStyle()).put("vibrationStrength", alarm.vibrationStrength())
                     .put("soundEnabled", alarm.soundEnabled()).put("soundVolumePercent", alarm.soundVolumePercent())
                     .put("soundUri", alarm.soundUri()).put("alertDurationSeconds", alarm.alertDurationSeconds())
-                    .put("backgroundStyle", alarm.backgroundStyle()));
+                    .put("backgroundStyle", alarm.backgroundStyle()).put("dismissMethod", alarm.dismissMethod())
+                    .put("dismissHoldSeconds", alarm.dismissHoldSeconds()));
         }
         return result;
     }
@@ -138,7 +147,8 @@ public final class SmartAlarmStore {
                     value.optInt("vibrationStrength", 6), value.optBoolean("soundEnabled", true),
                     value.optInt("soundVolumePercent", 80), value.optString("soundUri", ""),
                     value.optInt("alertDurationSeconds", 30),
-                    value.optString("backgroundStyle", BACKGROUND_SUNRISE));
+                    value.optString("backgroundStyle", BACKGROUND_SUNRISE),
+                    value.optString("dismissMethod", DISMISS_TAP), value.optInt("dismissHoldSeconds", 3));
         }
         context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()
                 .putInt("next_id", highest + 1).apply();
