@@ -159,6 +159,7 @@ public class NextReminderComplicationService extends ComplicationDataSourceServi
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTextSize(21f);
         paint.setFakeBoldText(true);
+        paint.setShadowLayer(1.5f, 0f, 0f, 0xFF000000);
         Rect bounds = new Rect();
         paint.getTextBounds(time, 0, time.length(), bounds);
         canvas.drawText(time, center, center + radius - 13, paint);

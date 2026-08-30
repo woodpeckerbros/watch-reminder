@@ -207,6 +207,7 @@ public final class SmartAlarmAlertActivity extends Activity {
         text.setTextSize(size);
         text.setGravity(Gravity.CENTER);
         text.setPadding(dp(3), dp(5), dp(3), dp(5));
+        AppTextStyle.apply(text);
         return text;
     }
 
@@ -226,6 +227,7 @@ public final class SmartAlarmAlertActivity extends Activity {
         shape.setCornerRadius(dp(24));
         shape.setStroke(dp(1), 0x99FFFFFF);
         button.setBackground(shape);
+        AppTextStyle.apply(button);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(46)

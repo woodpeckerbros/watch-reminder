@@ -11,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.woodpeckerbros.watchreminder.AppLanguage;
+import com.woodpeckerbros.watchreminder.AppTextStyle;
 
 public final class SmartAlarmWakeCheckActivity extends Activity {
     private int alarmId;
@@ -30,7 +31,9 @@ public final class SmartAlarmWakeCheckActivity extends Activity {
         Button awake = new Button(this); awake.setText(english ? "I'm awake" : "אני ער"); awake.setTextColor(Color.WHITE); awake.setTextSize(18);
         GradientDrawable background = new GradientDrawable(); background.setColor(0xFF287A64); background.setCornerRadius(dp(28)); background.setStroke(dp(2), 0xFFFFD477); awake.setBackground(background);
         awake.setOnClickListener(v -> { SmartAlarmWakeCheckReceiver.confirm(this, alarmId); finishAndRemoveTask(); });
-        body.addView(awake, new LinearLayout.LayoutParams(-1, dp(58))); setContentView(body);
+        body.addView(awake, new LinearLayout.LayoutParams(-1, dp(58)));
+        AppTextStyle.apply(body);
+        setContentView(body);
     }
 
     @Override public void onBackPressed() { }

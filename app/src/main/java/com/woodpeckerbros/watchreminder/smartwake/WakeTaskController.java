@@ -19,6 +19,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.woodpeckerbros.watchreminder.AppLanguage;
+import com.woodpeckerbros.watchreminder.AppTextStyle;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -279,13 +280,15 @@ final class WakeTaskController implements SensorEventListener {
 
     private TextView title(String value, int size) {
         TextView view = new TextView(activity); view.setText(value); view.setTextColor(Color.WHITE); view.setTextSize(size);
-        view.setGravity(Gravity.CENTER); view.setPadding(dp(4), dp(7), dp(4), dp(7)); return view;
+        view.setGravity(Gravity.CENTER); view.setPadding(dp(4), dp(7), dp(4), dp(7));
+        AppTextStyle.apply(view); return view;
     }
 
     private Button action(String value) {
         Button button = new Button(activity); button.setText(value); button.setTextSize(16); button.setTextColor(Color.WHITE);
         GradientDrawable background = new GradientDrawable(); background.setColor(0xCC234F5E); background.setCornerRadius(dp(24));
-        background.setStroke(dp(1), 0xAAFFD77A); button.setBackground(background); button.setAllCaps(false); return button;
+        background.setStroke(dp(1), 0xAAFFD77A); button.setBackground(background); button.setAllCaps(false);
+        AppTextStyle.apply(button); return button;
     }
 
     private void scrollTaskToTop() {

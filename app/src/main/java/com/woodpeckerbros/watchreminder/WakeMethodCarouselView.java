@@ -75,7 +75,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
         title.setShadowLayer(dp(2), 0, dp(1), 0xBB0B2133);
         card.addView(title, new LinearLayout.LayoutParams(-1, -2));
         TextView description = label(descriptionAt(selected), 10, 0xDFC5C8BA);
-        description.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
+        description.setTypeface(description.getTypeface(), android.graphics.Typeface.NORMAL);
         description.setMaxLines(2);
         LinearLayout.LayoutParams descriptionParams = new LinearLayout.LayoutParams(-1, 0, 1);
         descriptionParams.setMargins(dp(3), dp(3), dp(3), dp(3));
@@ -90,6 +90,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
             configure.setBackground(configureBackground); configure.setMinHeight(0); configure.setMinimumHeight(0);
             configure.setPadding(dp(14), 0, dp(14), 0);
             configure.setOnClickListener(v -> { if (settingsListener != null) settingsListener.onSettingsRequested(selected); });
+            AppTextStyle.apply(configure);
             card.addView(configure, new LinearLayout.LayoutParams(dp(88), dp(32)));
         }
         TextView dots = label(positionDots(), 11, 0xFFE2C89C);
@@ -151,7 +152,8 @@ public final class WakeMethodCarouselView extends ViewGroup {
     private TextView label(String value, int size, int color) {
         TextView result = new TextView(getContext()); result.setText(value); result.setTextColor(color);
         result.setTextSize(size); result.setGravity(Gravity.CENTER);
-        result.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)); return result;
+        AppTextStyle.apply(result);
+        result.setTypeface(result.getTypeface(), android.graphics.Typeface.BOLD); return result;
     }
 
     private String labelAt(int index) { return labels[(index % labels.length + labels.length) % labels.length]; }
