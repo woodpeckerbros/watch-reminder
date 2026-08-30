@@ -174,8 +174,11 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                         + " energy=" + decision.movementEnergy);
                 if (decision.shouldWake) {
                     sessions.remove(session.alarmId);
-                    SmartAlarmReceiver.fire(SmartWakeMonitoringService.this, session.alarmId,
-                            session.targetAt, "estimated_wake_window");
+                    // Hand the early decision back to AlarmManager. A system-delivered alarm has
+                    // the same temporary background-launch privileges as regular reminders;
+                    // calling the receiver directly from this sensor service does not.
+                    SmartAlarmScheduler.scheduleDetectedFire(SmartWakeMonitoringService.this,
+                            session.alarmId, session.targetAt);
                 }
             }
             if (sessions.isEmpty()) stopSelf(); else handler.postDelayed(this, 30_000L);

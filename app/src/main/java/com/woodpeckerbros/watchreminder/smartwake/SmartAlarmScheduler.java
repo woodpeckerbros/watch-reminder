@@ -53,6 +53,26 @@ public final class SmartAlarmScheduler {
 
     public static void scheduleNextAfterHandled(Context context, int alarmId) { reschedule(context, alarmId); }
 
+    public static void scheduleDetectedFire(Context context, int alarmId, long targetAt) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager == null) return;
+        long fireAt = System.currentTimeMillis() + 500L;
+        PendingIntent operation = detectedFireIntent(context, alarmId, targetAt);
+        try {
+            if (ReminderScheduler.canScheduleExactAlarms(context)) {
+                manager.setAlarmClock(new AlarmManager.AlarmClockInfo(
+                        fireAt, alertIntent(context, alarmId, targetAt)), operation);
+            } else {
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, operation);
+            }
+        } catch (SecurityException error) {
+            AppLog.e(context, "SmartAlarm detected fire exact permission missing", error);
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, operation);
+        }
+        AppLog.d(context, "SmartAlarm detected fire handed to AlarmManager id=" + alarmId
+                + " target=" + targetAt + " fireAt=" + fireAt);
+    }
+
     public static void scheduleAutoSnooze(Context context, int alarmId, long targetAt, int delaySeconds) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
@@ -87,6 +107,7 @@ public final class SmartAlarmScheduler {
         if (manager == null) return;
         manager.cancel(windowIntent(context, alarmId, 0));
         manager.cancel(deadlineIntent(context, alarmId, 0));
+        manager.cancel(detectedFireIntent(context, alarmId, 0));
         manager.cancel(autoSnoozeIntent(context, alarmId, 0));
     }
 
@@ -137,6 +158,13 @@ public final class SmartAlarmScheduler {
     private static PendingIntent deadlineIntent(Context context, int alarmId, long targetAt) {
         Intent intent = alarmIntent(context, SmartAlarmReceiver.class, alarmId, targetAt).putExtra("reason", "deadline");
         return PendingIntent.getBroadcast(context, requestCode(alarmId, 2), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static PendingIntent detectedFireIntent(Context context, int alarmId, long targetAt) {
+        Intent intent = alarmIntent(context, SmartAlarmReceiver.class, alarmId, targetAt)
+                .putExtra("reason", "estimated_wake_window");
+        return PendingIntent.getBroadcast(context, requestCode(alarmId, 5), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private static PendingIntent alertIntent(Context context, int alarmId, long targetAt) {

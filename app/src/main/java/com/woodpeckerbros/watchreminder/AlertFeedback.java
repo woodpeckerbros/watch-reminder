@@ -124,7 +124,10 @@ public class AlertFeedback {
         if (ReminderSettings.VIBRATION_OFF.equals(style)) {
             return;
         }
-        long[] pattern = ReminderSettings.vibrationPattern(style, durationMs);
+        // Repeat a short style-specific cycle until the same timeout that owns the sound.
+        // Building one finite waveform used to cap vibration at ten seconds (and some Wear
+        // devices stopped it even earlier), while the ringtone continued to play.
+        long[] pattern = ReminderSettings.vibrationPattern(style, Math.min(durationMs, 2_000));
         int normalizedStrength = Math.max(1, Math.min(10, strength));
         int amplitude = Math.round(normalizedStrength * 255f / 10f);
         int[] amplitudes = new int[pattern.length];
@@ -140,8 +143,8 @@ public class AlertFeedback {
                     Vibrator vibrator = manager.getDefaultVibrator();
                     if (vibrator != null && vibrator.hasVibrator()) {
                         VibrationEffect effect = vibrator.hasAmplitudeControl()
-                                ? VibrationEffect.createWaveform(pattern, amplitudes, -1)
-                                : VibrationEffect.createWaveform(pattern, -1);
+                                ? VibrationEffect.createWaveform(pattern, amplitudes, 0)
+                                : VibrationEffect.createWaveform(pattern, 0);
                         vibrator.vibrate(effect, alarmAttributes);
                     } else {
                         AppLog.w(context, "alert vibration unavailable: no default vibrator");
@@ -155,8 +158,8 @@ public class AlertFeedback {
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         if (vibrator != null && vibrator.hasVibrator()) {
             VibrationEffect effect = vibrator.hasAmplitudeControl()
-                    ? VibrationEffect.createWaveform(pattern, amplitudes, -1)
-                    : VibrationEffect.createWaveform(pattern, -1);
+                    ? VibrationEffect.createWaveform(pattern, amplitudes, 0)
+                    : VibrationEffect.createWaveform(pattern, 0);
             vibrator.vibrate(effect, alarmAttributes);
         } else {
             AppLog.w(context, "alert vibration unavailable: no vibrator");

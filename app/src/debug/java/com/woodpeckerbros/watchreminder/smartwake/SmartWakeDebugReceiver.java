@@ -10,7 +10,7 @@ public final class SmartWakeDebugReceiver extends BroadcastReceiver {
         long targetAt = System.currentTimeMillis() + Math.max(2, intent.getIntExtra("minutes", 10)) * 60_000L;
         new SmartAlarmStateStore(context).begin(targetAt);
         int alarmId = intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
-        if (intent.getBooleanExtra("fire", false)) SmartAlarmReceiver.fire(context, alarmId, targetAt, "debug_test");
+        if (intent.getBooleanExtra("fire", false)) SmartAlarmScheduler.scheduleDetectedFire(context, alarmId, targetAt);
         else SmartWakeMonitoringService.start(context, alarmId, targetAt);
     }
 }

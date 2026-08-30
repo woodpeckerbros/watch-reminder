@@ -18,6 +18,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.woodpeckerbros.watchreminder.AppLanguage;
+import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.AppTextStyle;
 import com.woodpeckerbros.watchreminder.AlertFeedback;
 import com.woodpeckerbros.watchreminder.R;
@@ -43,12 +44,19 @@ public final class SmartAlarmAlertActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         targetAt = getIntent().getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         alarmId = getIntent().getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        AppLog.d(this, "SmartAlarm alert activity onCreate id=" + alarmId
+                + " target=" + targetAt + " reason=" + getIntent().getStringExtra("reason"));
         settings = new SmartAlarmStore(this, alarmId);
         setContentView(content());
         // Match regular reminders once the full-screen UI is visible. The service remains only
         // as a fallback for devices that decline to present the activity.
         SmartAlarmRingingService.stop(this);
         alertFeedback = AlertFeedback.startSmartAlarm(this, settings);
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        AppLog.d(this, "SmartAlarm alert activity onResume id=" + alarmId + " target=" + targetAt);
     }
 
     private View content() {
