@@ -256,6 +256,15 @@ public class PhoneMainActivity extends Activity {
 
         NumberPicker window = numberPicker(5, 60, alarm.optInt("windowMinutes", 30));
         content.addView(labeled("חלון חכם בדקות", window), wideParams());
+        String[] backgroundValues = {"sunrise", "morning", "dynamic"};
+        Spinner backgroundStyle = spinner(new String[]{"זריחה חזקה", "בוקר מוקדם", "משתנה לפי השעה"});
+        String currentBackground = alarm.optString("backgroundStyle", "sunrise");
+        int backgroundIndex = 0;
+        for (int i = 0; i < backgroundValues.length; i++) {
+            if (backgroundValues[i].equals(currentBackground)) backgroundIndex = i;
+        }
+        backgroundStyle.setSelection(backgroundIndex);
+        content.addView(labeled("רקע מסך ההתראה", backgroundStyle), wideParams());
         LinearLayout snooze = card();
         snooze.addView(text("נודניק", 15, TEXT));
         NumberPicker snoozeMinutes = numberPicker(1, 30, alarm.optInt("snoozeMinutes", 5));
@@ -299,7 +308,8 @@ public class PhoneMainActivity extends Activity {
                         .put("vibrationStrength", numberValue(vibrationStrength)).put("soundEnabled", soundEnabled.isChecked())
                         .put("soundVolumePercent", numberValue(soundVolume) * 10)
                         .put("soundUri", alarm.optString("soundUri", ""))
-                        .put("alertDurationSeconds", numberValue(duration));
+                        .put("alertDurationSeconds", numberValue(duration))
+                        .put("backgroundStyle", backgroundValues[backgroundStyle.getSelectedItemPosition()]);
                 saveSmartAlarm(alarm, index); showSmartAlarms();
             } catch (Exception error) { Toast.makeText(this, t("לא הצלחתי לשמור"), Toast.LENGTH_LONG).show(); }
         });
@@ -795,7 +805,7 @@ public class PhoneMainActivity extends Activity {
                     .put("daysMask", 126).put("windowMinutes", 30).put("snoozeMinutes", 5).put("snoozeCount", 3)
                     .put("vibrationEnabled", true).put("vibrationStyle", "normal").put("vibrationStrength", 6)
                     .put("soundEnabled", true).put("soundVolumePercent", 80).put("soundUri", "")
-                    .put("alertDurationSeconds", 30);
+                    .put("alertDurationSeconds", 30).put("backgroundStyle", "sunrise");
         } catch (Exception ignored) { }
         return alarm;
     }

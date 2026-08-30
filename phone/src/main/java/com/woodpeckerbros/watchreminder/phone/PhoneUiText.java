@@ -28,6 +28,9 @@ final class PhoneUiText {
         put("פעיל", "Enabled"); put("כבוי", "Disabled");
         put("שעת השכמה", "Wake-up time"); put("ימי פעילות", "Active days");
         put("חלון חכם בדקות", "Smart window in minutes"); put("נודניק", "Snooze");
+        put("רקע מסך ההתראה", "Alert screen background");
+        put("זריחה חזקה", "Bright sunrise"); put("בוקר מוקדם", "Early morning");
+        put("משתנה לפי השעה", "Changes with time");
         put("כל כמה דקות", "Interval in minutes"); put("מספר פעמים", "Number of times");
         put("רטט וצלצול", "Vibration and sound"); put("רטט", "Vibration"); put("צלצול", "Sound");
         put("סוג רטט", "Vibration pattern"); put("עוצמת רטט", "Vibration strength");

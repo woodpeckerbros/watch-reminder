@@ -62,7 +62,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     private View content() {
         FrameLayout frame = new FrameLayout(this);
         ImageView background = new ImageView(this);
-        background.setImageResource(backgroundForNow());
+        background.setImageResource(selectedBackground());
         background.setScaleType(ImageView.ScaleType.CENTER_CROP);
         frame.addView(background, new FrameLayout.LayoutParams(-1, -1));
         View scrim = new View(this);
@@ -111,6 +111,13 @@ public final class SmartAlarmAlertActivity extends Activity {
         if (hour >= 11 && hour < 16) return R.drawable.home_horizon_noon;
         if (hour >= 16 && hour < 19) return R.drawable.home_horizon_evening;
         return R.drawable.home_horizon_night;
+    }
+
+    private int selectedBackground() {
+        String style = settings == null ? SmartAlarmStore.BACKGROUND_SUNRISE : settings.backgroundStyle();
+        if (SmartAlarmStore.BACKGROUND_DYNAMIC.equals(style)) return backgroundForNow();
+        if (SmartAlarmStore.BACKGROUND_MORNING.equals(style)) return R.drawable.home_horizon_morning;
+        return R.drawable.smart_alarm_sunrise;
     }
 
     private void dismissAlarm() {

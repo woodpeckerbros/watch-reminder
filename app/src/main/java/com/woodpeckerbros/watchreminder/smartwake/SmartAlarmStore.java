@@ -22,6 +22,9 @@ public final class SmartAlarmStore {
     public static final String VIBRATION_NORMAL = "normal";
     public static final String VIBRATION_STRONG = "strong";
     public static final String VIBRATION_LONG = "long";
+    public static final String BACKGROUND_SUNRISE = "sunrise";
+    public static final String BACKGROUND_MORNING = "morning";
+    public static final String BACKGROUND_DYNAMIC = "dynamic";
     private final SharedPreferences prefs;
     private final Context context;
     private final int id;
@@ -54,19 +57,21 @@ public final class SmartAlarmStore {
     public int soundVolumePercent() { return clamp(prefs.getInt("sound_volume_percent", 80), 0, 100); }
     public String soundUri() { return prefs.getString("sound_uri", ""); }
     public int alertDurationSeconds() { return clamp(prefs.getInt("alert_duration_seconds", 30), 5, 120); }
+    public String backgroundStyle() { return prefs.getString("background_style", BACKGROUND_SUNRISE); }
     public boolean enabledOnDay(int calendarDay) { return (daysMask() & (1 << calendarDay)) != 0; }
 
     public void save(boolean enabled, int hour, int minute, int daysMask, int windowMinutes,
                      int snoozeMinutes, int snoozeCount, boolean vibrationEnabled,
                      String vibrationStyle, int vibrationStrength, boolean soundEnabled,
-                     int soundVolumePercent, String soundUri, int alertDurationSeconds) {
+                     int soundVolumePercent, String soundUri, int alertDurationSeconds, String backgroundStyle) {
         prefs.edit().putBoolean("enabled", enabled).putInt("hour", hour).putInt("minute", minute)
                 .putInt("days_mask", daysMask).putInt("window_minutes", windowMinutes)
                 .putInt("snooze_minutes", snoozeMinutes).putInt("snooze_count", snoozeCount)
                 .putBoolean("vibration_enabled", vibrationEnabled).putString("vibration_style", vibrationStyle)
                 .putInt("vibration_strength", vibrationStrength).putBoolean("sound_enabled", soundEnabled)
                 .putInt("sound_volume_percent", soundVolumePercent).putString("sound_uri", soundUri == null ? "" : soundUri)
-                .putInt("alert_duration_seconds", alertDurationSeconds).apply();
+                .putInt("alert_duration_seconds", alertDurationSeconds)
+                .putString("background_style", backgroundStyle == null ? BACKGROUND_SUNRISE : backgroundStyle).apply();
         register(context, id);
     }
 
@@ -111,7 +116,8 @@ public final class SmartAlarmStore {
                     .put("snoozeCount", alarm.snoozeCount()).put("vibrationEnabled", alarm.vibrationEnabled())
                     .put("vibrationStyle", alarm.vibrationStyle()).put("vibrationStrength", alarm.vibrationStrength())
                     .put("soundEnabled", alarm.soundEnabled()).put("soundVolumePercent", alarm.soundVolumePercent())
-                    .put("soundUri", alarm.soundUri()).put("alertDurationSeconds", alarm.alertDurationSeconds()));
+                    .put("soundUri", alarm.soundUri()).put("alertDurationSeconds", alarm.alertDurationSeconds())
+                    .put("backgroundStyle", alarm.backgroundStyle()));
         }
         return result;
     }
@@ -131,7 +137,8 @@ public final class SmartAlarmStore {
                     value.optBoolean("vibrationEnabled", true), value.optString("vibrationStyle", VIBRATION_NORMAL),
                     value.optInt("vibrationStrength", 6), value.optBoolean("soundEnabled", true),
                     value.optInt("soundVolumePercent", 80), value.optString("soundUri", ""),
-                    value.optInt("alertDurationSeconds", 30));
+                    value.optInt("alertDurationSeconds", 30),
+                    value.optString("backgroundStyle", BACKGROUND_SUNRISE));
         }
         context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()
                 .putInt("next_id", highest + 1).apply();

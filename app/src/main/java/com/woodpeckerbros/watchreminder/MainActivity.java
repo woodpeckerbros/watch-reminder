@@ -1353,6 +1353,19 @@ public class MainActivity extends Activity {
         smartWindowCard.addView(pickerColumn("דקות לפני שעת ההשכמה", windowPicker));
         content.addView(smartWindowCard, cardParams());
 
+        LinearLayout backgroundCard = card();
+        TextView backgroundTitle = text("רקע מסך ההתראה", 15, COLOR_CARD_TEXT);
+        AppFont.bold(backgroundTitle);
+        backgroundCard.addView(backgroundTitle);
+        String[] backgroundLabels = {"זריחה חזקה", "בוקר מוקדם", "משתנה לפי השעה"};
+        String[] backgroundValues = {SmartAlarmStore.BACKGROUND_SUNRISE,
+                SmartAlarmStore.BACKGROUND_MORNING, SmartAlarmStore.BACKGROUND_DYNAMIC};
+        Spinner backgroundSpinner = new Spinner(this);
+        backgroundSpinner.setAdapter(spinnerAdapter(translated(backgroundLabels)));
+        backgroundSpinner.setSelection(indexOf(backgroundValues, smart.backgroundStyle()));
+        backgroundCard.addView(backgroundSpinner, matchParams());
+        content.addView(backgroundCard, cardParams());
+
         LinearLayout snoozeCard = card();
         TextView snoozeTitle = text("נודניק", 15, COLOR_CARD_TEXT);
         AppFont.bold(snoozeTitle);
@@ -1466,7 +1479,8 @@ public class MainActivity extends Activity {
                     selectedDaysMask[0], windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(), soundVolume.slider.getProgress() * 10,
-                    selectedSoundUri[0], durationPicker.getValue());
+                    selectedSoundUri[0], durationPicker.getValue(),
+                    backgroundValues[backgroundSpinner.getSelectedItemPosition()]);
             stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this, alarmId);
             Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();
