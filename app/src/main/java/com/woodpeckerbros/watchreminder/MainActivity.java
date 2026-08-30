@@ -1379,7 +1379,7 @@ public class MainActivity extends Activity {
                 SmartAlarmStore.DISMISS_RANDOM, SmartAlarmStore.DISMISS_COMBINATION};
         final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
         WakeMethodCarouselView dismissSelector = new WakeMethodCarouselView(this);
-        dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(82)));
+        dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(220)));
         LinearLayout dismissOptions = new LinearLayout(this);
         dismissOptions.setOrientation(LinearLayout.VERTICAL);
         NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());
@@ -1394,7 +1394,6 @@ public class MainActivity extends Activity {
         View mathOptions = pickerColumn("רמת חשבון", mathDifficulty); dismissOptions.addView(mathOptions);
         NumberPicker memoryDifficulty = numberPicker(1, 3, smart.memoryDifficulty());
         View memoryOptions = pickerColumn("רמת זיכרון", memoryDifficulty); dismissOptions.addView(memoryOptions);
-        dismissCard.addView(dismissOptions);
         Runnable updateDismissOptions = () -> {
             String method = dismissValues[dismissMethodIndex[0]];
             boolean multiple = SmartAlarmStore.DISMISS_RANDOM.equals(method) || SmartAlarmStore.DISMISS_COMBINATION.equals(method);
@@ -1405,7 +1404,7 @@ public class MainActivity extends Activity {
             memoryOptions.setVisibility(SmartAlarmStore.DISMISS_MEMORY.equals(method) || multiple ? View.VISIBLE : View.GONE);
             alternatingOptions.setVisibility(SmartAlarmStore.DISMISS_ALTERNATING.equals(method) || multiple ? View.VISIBLE : View.GONE);
         };
-        dismissSelector.configure(translated(dismissLabels), dismissMethodIndex[0], index -> {
+        dismissSelector.configure(translated(dismissLabels), dismissMethodIndex[0], dismissOptions, index -> {
             dismissMethodIndex[0] = index;
             updateDismissOptions.run();
         });

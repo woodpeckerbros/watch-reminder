@@ -1,122 +1,155 @@
 package com.woodpeckerbros.watchreminder;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.LinearGradient;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.RectF;
-import android.graphics.Shader;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
-/** Compact, swipeable selector designed for a round Wear OS screen. */
-public final class WakeMethodCarouselView extends View {
+/** Three-card carousel whose large center card contains the selected method settings. */
+public final class WakeMethodCarouselView extends ViewGroup {
     public interface Listener { void onSelectionChanged(int index); }
-
-    private final Paint glass = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint subtle = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path chevron = new Path();
     private String[] labels = new String[0];
     private int selected;
-    private float downX;
     private Listener listener;
+    private View settingsView, previousCard, selectedCard, nextCard;
+    private float downX, downY;
+    private boolean horizontalDrag;
 
     public WakeMethodCarouselView(Context context) {
-        super(context);
-        setLayerType(LAYER_TYPE_SOFTWARE, null);
-        border.setStyle(Paint.Style.STROKE);
-        border.setStrokeWidth(dp(1));
-        border.setColor(0x88FFD9A0);
-        subtle.setStrokeWidth(dp(1.5f));
-        subtle.setStyle(Paint.Style.STROKE);
-        subtle.setStrokeCap(Paint.Cap.ROUND);
-        subtle.setColor(0xB8F8EBDD);
-        text.setColor(0xFFF9EEE3);
-        text.setTextAlign(Paint.Align.CENTER);
-        text.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
+        super(context); setClipChildren(false); setClipToPadding(false);
     }
 
-    public void configure(String[] values, int initial, Listener selectionListener) {
+    public void configure(String[] values, int initial, View settings, Listener selectionListener) {
         labels = values == null ? new String[0] : values.clone();
         selected = labels.length == 0 ? 0 : Math.max(0, Math.min(labels.length - 1, initial));
-        listener = selectionListener;
-        invalidate();
+        settingsView = settings; listener = selectionListener; rebuild(0);
     }
 
-    public int selectedIndex() { return selected; }
-
-    @Override protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+    private void rebuild(int direction) {
         if (labels.length == 0) return;
-        float cardLeft = dp(25), cardRight = getWidth() - dp(25);
-        float cardTop = dp(5), cardBottom = getHeight() - dp(21);
-        RectF card = new RectF(cardLeft, cardTop, cardRight, cardBottom);
-        float radius = dp(24);
-        glass.setShader(new LinearGradient(0, cardTop, 0, cardBottom,
-                new int[]{0x803F4D4D, 0x66303B3B, 0x70303A3C}, null, Shader.TileMode.CLAMP));
-        glass.setShadowLayer(dp(7), 0, dp(3), 0x66000000);
-        canvas.drawRoundRect(card, radius, radius, glass);
-        glass.clearShadowLayer();
-        canvas.drawRoundRect(card, radius, radius, border);
-
-        String value = labels[selected];
-        float available = card.width() - dp(42);
-        float size = sp(17);
-        text.setTextSize(size);
-        while (size > sp(11.5f) && text.measureText(value) > available) {
-            size -= sp(.5f); text.setTextSize(size);
+        removeAllViews();
+        previousCard = sideCard(labelAt(selected - 1), false);
+        nextCard = sideCard(labelAt(selected + 1), true);
+        selectedCard = centerCard(labels[selected]);
+        addView(previousCard); addView(nextCard); addView(selectedCard);
+        if (direction != 0) {
+            selectedCard.setAlpha(.72f);
+            selectedCard.setScaleX(.9f);
+            selectedCard.setScaleY(.9f);
+            selectedCard.setTranslationX(dp(direction > 0 ? 42 : -42));
+            selectedCard.animate().alpha(1f).scaleX(1f).scaleY(1f).translationX(0f)
+                    .setDuration(220).start();
+            previousCard.setAlpha(.25f);
+            nextCard.setAlpha(.25f);
+            previousCard.animate().alpha(.58f).setDuration(220).start();
+            nextCard.animate().alpha(.58f).setDuration(220).start();
         }
-        Paint.FontMetrics metrics = text.getFontMetrics();
-        float centerY = (cardTop + cardBottom) / 2f - (metrics.ascent + metrics.descent) / 2f;
-        canvas.drawText(value, getWidth() / 2f, centerY, text);
-
-        drawChevron(canvas, dp(12), (cardTop + cardBottom) / 2f, false);
-        drawChevron(canvas, getWidth() - dp(12), (cardTop + cardBottom) / 2f, true);
-
-        float dotGap = dp(6);
-        float startX = getWidth() / 2f - (labels.length - 1) * dotGap / 2f;
-        float dotY = getHeight() - dp(8);
-        subtle.setStyle(Paint.Style.FILL);
-        for (int i = 0; i < labels.length; i++) {
-            subtle.setColor(i == selected ? 0xFFFFD58E : 0x557F898D);
-            canvas.drawCircle(startX + i * dotGap, dotY, i == selected ? dp(2.2f) : dp(1.35f), subtle);
-        }
-        subtle.setStyle(Paint.Style.STROKE);
+        requestLayout();
     }
 
-    private void drawChevron(Canvas canvas, float centerX, float centerY, boolean right) {
-        float direction = right ? 1f : -1f;
-        chevron.reset();
-        chevron.moveTo(centerX - direction * dp(2.5f), centerY - dp(5));
-        chevron.lineTo(centerX + direction * dp(2.5f), centerY);
-        chevron.lineTo(centerX - direction * dp(2.5f), centerY + dp(5));
-        canvas.drawPath(chevron, subtle);
+    private View centerCard(String value) {
+        LinearLayout card = new LinearLayout(getContext());
+        card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(14), dp(12), dp(14), dp(11)); card.setBackground(background(true)); card.setElevation(dp(7));
+        TextView title = label(value, 17, 0xFFFFF0E1); title.setMaxLines(2);
+        card.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        View divider = new View(getContext()); divider.setBackgroundColor(0x66FFD397);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(dp(72), dp(1));
+        dividerParams.setMargins(0, dp(7), 0, dp(4)); card.addView(divider, dividerParams);
+        if (settingsView != null) {
+            if (settingsView.getParent() instanceof ViewGroup) ((ViewGroup) settingsView.getParent()).removeView(settingsView);
+            if (hasVisibleSettings()) {
+                ScrollView scroll = new ScrollView(getContext()); scroll.setOverScrollMode(OVER_SCROLL_NEVER);
+                scroll.setVerticalScrollBarEnabled(false);
+                scroll.addView(settingsView, new ScrollView.LayoutParams(-1, -2));
+                card.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+            } else {
+                TextView noSettings = label("ללא הגדרות נוספות", 12, 0xBFE7DDD2);
+                noSettings.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
+                card.addView(noSettings, new LinearLayout.LayoutParams(-1, 0, 1));
+            }
+        }
+        return card;
+    }
+
+    private boolean hasVisibleSettings() {
+        if (!(settingsView instanceof ViewGroup)) return settingsView != null && settingsView.getVisibility() == VISIBLE;
+        ViewGroup group = (ViewGroup) settingsView;
+        for (int index = 0; index < group.getChildCount(); index++) {
+            if (group.getChildAt(index).getVisibility() == VISIBLE) return true;
+        }
+        return false;
+    }
+
+    private View sideCard(String value, boolean next) {
+        FrameLayout card = new FrameLayout(getContext()); card.setPadding(dp(10), dp(10), dp(10), dp(10));
+        card.setBackground(background(false)); card.setAlpha(.58f);
+        TextView title = label(value, 12, 0xFFE0D5CA); title.setMaxLines(3);
+        title.setGravity(Gravity.CENTER_VERTICAL | (next ? Gravity.START : Gravity.END));
+        card.addView(title, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
+        card.setOnClickListener(v -> move(next ? 1 : -1)); return card;
+    }
+
+    private GradientDrawable background(boolean center) {
+        GradientDrawable result = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                center ? new int[]{0xE04B5755, 0xE02B3638, 0xE038413F} : new int[]{0xD0252D30, 0xE0182024});
+        result.setCornerRadius(dp(center ? 27 : 23));
+        result.setStroke(dp(1), center ? 0xCCFFD397 : 0x557E8B8C); return result;
+    }
+
+    private TextView label(String value, int size, int color) {
+        TextView result = new TextView(getContext()); result.setText(value); result.setTextColor(color);
+        result.setTextSize(size); result.setGravity(Gravity.CENTER);
+        result.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)); return result;
+    }
+
+    private String labelAt(int index) { return labels[(index % labels.length + labels.length) % labels.length]; }
+    private void move(int direction) {
+        selected = (selected + direction + labels.length) % labels.length;
+        if (listener != null) listener.onSelectionChanged(selected); rebuild(direction);
+    }
+
+    @Override protected void onMeasure(int widthSpec, int heightSpec) {
+        int width = MeasureSpec.getSize(widthSpec), height = resolveSize(dp(300), heightSpec);
+        int centerWidth = Math.round(width * .64f), sideWidth = Math.round(width * .52f), sideHeight = Math.round(height * .78f);
+        if (selectedCard != null) selectedCard.measure(MeasureSpec.makeMeasureSpec(centerWidth, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(height - dp(8), MeasureSpec.EXACTLY));
+        int sw = MeasureSpec.makeMeasureSpec(sideWidth, MeasureSpec.EXACTLY), sh = MeasureSpec.makeMeasureSpec(sideHeight, MeasureSpec.EXACTLY);
+        if (previousCard != null) previousCard.measure(sw, sh); if (nextCard != null) nextCard.measure(sw, sh);
+        setMeasuredDimension(width, height);
+    }
+
+    @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        int width = r - l, height = b - t, centerWidth = selectedCard == null ? 0 : selectedCard.getMeasuredWidth();
+        int centerLeft = (width - centerWidth) / 2;
+        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(25); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
+        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(25); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
+        if (selectedCard != null) selectedCard.layout(centerLeft, dp(4), centerLeft + centerWidth, height - dp(4));
+    }
+
+    @Override public boolean onInterceptTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) { downX = event.getX(); downY = event.getY(); horizontalDrag = false; }
+        else if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+            float dx = Math.abs(event.getX() - downX), dy = Math.abs(event.getY() - downY);
+            if (dx > dp(12) && dx > dy * 1.25f) { horizontalDrag = true; return true; }
+        }
+        return false;
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
-        if (labels.length == 0) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            downX = event.getX(); setPressed(true); return true;
+        if (event.getActionMasked() == MotionEvent.ACTION_UP && horizontalDrag) {
+            float dx = event.getX() - downX; if (Math.abs(dx) >= dp(32)) move(dx < 0 ? 1 : -1);
+            horizontalDrag = false; return true;
         }
-        if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) { setPressed(false); return true; }
-        if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-            setPressed(false);
-            float delta = event.getX() - downX;
-            int direction;
-            if (Math.abs(delta) >= dp(28)) direction = delta < 0 ? 1 : -1;
-            else direction = event.getX() >= getWidth() / 2f ? 1 : -1;
-            selected = (selected + direction + labels.length) % labels.length;
-            performClick(); invalidate();
-            if (listener != null) listener.onSelectionChanged(selected);
-            return true;
-        }
+        if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) horizontalDrag = false;
         return true;
     }
 
-    @Override public boolean performClick() { super.performClick(); return true; }
-    private float dp(float value) { return value * getResources().getDisplayMetrics().density; }
-    private float sp(float value) { return value * getResources().getDisplayMetrics().scaledDensity; }
+    private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 }
