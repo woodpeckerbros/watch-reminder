@@ -6,18 +6,22 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 /** Three-card carousel whose large center card contains the selected method settings. */
 public final class WakeMethodCarouselView extends ViewGroup {
     public interface Listener { void onSelectionChanged(int index); }
+    public interface SettingsListener { void onSettingsRequested(int index); }
     private String[] labels = new String[0];
+    private String[] descriptions = new String[0];
+    private boolean[] configurable = new boolean[0];
     private int selected;
     private Listener listener;
-    private View settingsView, previousCard, selectedCard, nextCard;
+    private SettingsListener settingsListener;
+    private View previousCard, selectedCard, nextCard;
     private float downX, downY;
     private boolean horizontalDrag;
 
@@ -25,10 +29,13 @@ public final class WakeMethodCarouselView extends ViewGroup {
         super(context); setClipChildren(false); setClipToPadding(false);
     }
 
-    public void configure(String[] values, int initial, View settings, Listener selectionListener) {
+    public void configure(String[] values, String[] details, boolean[] hasSettings, int initial,
+                          Listener selectionListener, SettingsListener configureListener) {
         labels = values == null ? new String[0] : values.clone();
+        descriptions = details == null ? new String[0] : details.clone();
+        configurable = hasSettings == null ? new boolean[0] : hasSettings.clone();
         selected = labels.length == 0 ? 0 : Math.max(0, Math.min(labels.length - 1, initial));
-        settingsView = settings; listener = selectionListener; rebuild(0);
+        listener = selectionListener; settingsListener = configureListener; rebuild(0);
     }
 
     private void rebuild(int direction) {
@@ -63,35 +70,28 @@ public final class WakeMethodCarouselView extends ViewGroup {
         TextView title = label(value, 19, 0xFFF4EBDD); title.setMaxLines(2);
         title.setShadowLayer(dp(2), 0, dp(1), 0xBB0B2133);
         card.addView(title, new LinearLayout.LayoutParams(-1, -2));
-        View divider = new View(getContext()); divider.setBackgroundColor(0xA0E2C89C);
-        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(dp(82), dp(1));
-        dividerParams.setMargins(0, dp(6), 0, dp(3)); card.addView(divider, dividerParams);
-        if (settingsView != null) {
-            if (settingsView.getParent() instanceof ViewGroup) ((ViewGroup) settingsView.getParent()).removeView(settingsView);
-            if (hasVisibleSettings()) {
-                ScrollView scroll = new ScrollView(getContext()); scroll.setOverScrollMode(OVER_SCROLL_NEVER);
-                scroll.setVerticalScrollBarEnabled(false);
-                scroll.addView(settingsView, new ScrollView.LayoutParams(-1, -2));
-                card.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-            } else {
-                TextView noSettings = label("אין צורך בהגדרה נוספת", 12, 0xDFC5C8BA);
-                noSettings.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
-                card.addView(noSettings, new LinearLayout.LayoutParams(-1, 0, 1));
-            }
+        TextView description = label(descriptionAt(selected), 10, 0xDFC5C8BA);
+        description.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
+        description.setMaxLines(2);
+        LinearLayout.LayoutParams descriptionParams = new LinearLayout.LayoutParams(-1, 0, 1);
+        descriptionParams.setMargins(0, dp(4), 0, dp(3));
+        card.addView(description, descriptionParams);
+        if (isConfigurable(selected)) {
+            Button configure = new Button(getContext());
+            configure.setText(UiText.t(getContext(), "הגדר")); configure.setTextSize(12); configure.setTextColor(0xFFF4EBDD);
+            configure.setAllCaps(false); configure.setGravity(Gravity.CENTER);
+            GradientDrawable configureBackground = new GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xDD747D63, 0xDD344A43});
+            configureBackground.setCornerRadius(dp(18)); configureBackground.setStroke(dp(1), 0xCCE2C89C);
+            configure.setBackground(configureBackground); configure.setMinHeight(0); configure.setMinimumHeight(0);
+            configure.setPadding(dp(14), 0, dp(14), 0);
+            configure.setOnClickListener(v -> { if (settingsListener != null) settingsListener.onSettingsRequested(selected); });
+            card.addView(configure, new LinearLayout.LayoutParams(dp(82), dp(34)));
         }
         TextView dots = label(positionDots(), 11, 0xFFE2C89C);
         dots.setLetterSpacing(.16f);
         card.addView(dots, new LinearLayout.LayoutParams(-1, dp(16)));
         return card;
-    }
-
-    private boolean hasVisibleSettings() {
-        if (!(settingsView instanceof ViewGroup)) return settingsView != null && settingsView.getVisibility() == VISIBLE;
-        ViewGroup group = (ViewGroup) settingsView;
-        for (int index = 0; index < group.getChildCount(); index++) {
-            if (group.getChildAt(index).getVisibility() == VISIBLE) return true;
-        }
-        return false;
     }
 
     private View sideCard(String value, boolean next) {
@@ -118,6 +118,12 @@ public final class WakeMethodCarouselView extends ViewGroup {
     }
 
     private String labelAt(int index) { return labels[(index % labels.length + labels.length) % labels.length]; }
+    private String descriptionAt(int index) {
+        return index >= 0 && index < descriptions.length ? descriptions[index] : "";
+    }
+    private boolean isConfigurable(int index) {
+        return index >= 0 && index < configurable.length && configurable[index];
+    }
 
     private String iconAt(int index) {
         String[] icons = {"◎", "◷", "×2", "↻", "⇧", "＋−", "◇", "⇄", "✦", "◆"};

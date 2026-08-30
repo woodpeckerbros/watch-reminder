@@ -158,6 +158,9 @@ public class MainActivity extends Activity {
     private ScrollView activeScrollView;
     private View smartAlarmSettingsSavedView;
     private ScrollView smartAlarmSettingsSavedScroll;
+    private View smartAlarmDismissSavedView;
+    private ScrollView smartAlarmDismissSavedScroll;
+    private String dismissSettingsReturnScreen = "smart_alarm_editor";
     private RingtoneChoiceListener smartAlarmRingtoneListener;
     private String smartAlarmRingtoneSelectedUri = "";
     private String ringtoneReturnScreen = "smart_alarm_settings";
@@ -1377,6 +1380,16 @@ public class MainActivity extends Activity {
                 SmartAlarmStore.DISMISS_STEPS, SmartAlarmStore.DISMISS_MATH,
                 SmartAlarmStore.DISMISS_MEMORY, SmartAlarmStore.DISMISS_ALTERNATING,
                 SmartAlarmStore.DISMISS_RANDOM, SmartAlarmStore.DISMISS_COMBINATION};
+        String[] dismissDescriptions = AppLanguage.isEnglish(this)
+                ? new String[]{"Dismiss with one tap", "Hold until the ring completes", "Two quick taps",
+                "Shake your wrist several times", "Walk the selected number of steps", "Solve a short equation",
+                "Repeat a visual sequence", "Tap left and right alternately", "A different wake task each time",
+                "Complete two wake tasks in sequence"}
+                : new String[]{"כיבוי בלחיצה אחת", "החזקה עד להשלמת הטבעת", "שתי לחיצות מהירות",
+                "ניעור היד מספר פעמים", "הליכה במספר הצעדים שנבחר", "פתרון תרגיל חשבון קצר",
+                "שחזור רצף חזותי", "לחיצות ימין ושמאל לסירוגין", "משימת השכמה שונה בכל פעם",
+                "השלמת שתי משימות השכמה ברצף"};
+        boolean[] dismissHasSettings = {false, true, false, true, true, true, true, true, true, true};
         final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
         WakeMethodCarouselView dismissSelector = new WakeMethodCarouselView(this);
         dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(190)));
@@ -1404,9 +1417,14 @@ public class MainActivity extends Activity {
             memoryOptions.setVisibility(SmartAlarmStore.DISMISS_MEMORY.equals(method) || multiple ? View.VISIBLE : View.GONE);
             alternatingOptions.setVisibility(SmartAlarmStore.DISMISS_ALTERNATING.equals(method) || multiple ? View.VISIBLE : View.GONE);
         };
-        dismissSelector.configure(translated(dismissLabels), dismissMethodIndex[0], dismissOptions, index -> {
+        dismissSelector.configure(translated(dismissLabels), dismissDescriptions, dismissHasSettings,
+                dismissMethodIndex[0], index -> {
             dismissMethodIndex[0] = index;
             updateDismissOptions.run();
+        }, index -> {
+            dismissMethodIndex[0] = index;
+            updateDismissOptions.run();
+            showSmartAlarmDismissSettingsScreen(translated(dismissLabels)[index], dismissOptions);
         });
         updateDismissOptions.run();
         content.addView(dismissCard, cardParams());
@@ -5287,6 +5305,42 @@ public class MainActivity extends Activity {
         }, "wr-ringtone-list").start();
     }
 
+    private void showSmartAlarmDismissSettingsScreen(String methodTitle, View settingsView) {
+        dismissSettingsReturnScreen = currentScreen;
+        smartAlarmDismissSavedView = ((ViewGroup) findViewById(android.R.id.content)).getChildAt(0);
+        smartAlarmDismissSavedScroll = activeScrollView;
+        currentScreen = "smart_alarm_dismiss_settings";
+
+        if (settingsView.getParent() instanceof ViewGroup) {
+            ((ViewGroup) settingsView.getParent()).removeView(settingsView);
+        }
+        LinearLayout content = baseContent();
+        addTitle(content, "הגדרת אופן הכיבוי", methodTitle);
+        LinearLayout settingsCard = card(true);
+        settingsCard.addView(settingsView, matchParams());
+        content.addView(settingsCard, cardParams());
+        TextView hint = text("השינויים נשמרים בעורך השעון ויישמרו סופית בלחיצה על שמירה", 10, COLOR_CARD_MUTED);
+        hint.setGravity(Gravity.CENTER);
+        content.addView(hint, matchParams());
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> restoreSmartAlarmDismissEditor());
+        content.addView(back, matchParams());
+        content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(16)));
+        setScrollableContent(content);
+    }
+
+    private void restoreSmartAlarmDismissEditor() {
+        if (smartAlarmDismissSavedView == null) {
+            showSmartAlarmEditor(editingSmartAlarmId, editingSmartAlarmNew);
+            return;
+        }
+        setContentView(smartAlarmDismissSavedView);
+        activeScrollView = smartAlarmDismissSavedScroll;
+        smartAlarmDismissSavedView = null;
+        smartAlarmDismissSavedScroll = null;
+        currentScreen = dismissSettingsReturnScreen;
+    }
+
     private void renderRingtoneChoices(LinearLayout list, String[] selectedUri, int volumePercent,
                                        ArrayList<RingtoneChoice> choices) {
         list.removeAllViews();
@@ -5562,6 +5616,10 @@ public class MainActivity extends Activity {
     }
 
     private boolean navigateBack() {
+        if ("smart_alarm_dismiss_settings".equals(currentScreen)) {
+            restoreSmartAlarmDismissEditor();
+            return true;
+        }
         if ("smart_alarm_ringtone".equals(currentScreen)) {
             finishSmartAlarmRingtoneSelection();
             return true;
