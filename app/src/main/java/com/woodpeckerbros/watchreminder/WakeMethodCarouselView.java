@@ -21,7 +21,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
     private int selected;
     private Listener listener;
     private SettingsListener settingsListener;
-    private View previousCard, selectedCard, nextCard;
+    private View previousCard, selectedCard, nextCard, previousArrow, nextArrow;
     private float downX, downY;
     private boolean horizontalDrag;
 
@@ -44,7 +44,9 @@ public final class WakeMethodCarouselView extends ViewGroup {
         previousCard = sideCard(labelAt(selected - 1), false);
         nextCard = sideCard(labelAt(selected + 1), true);
         selectedCard = centerCard(labels[selected]);
-        addView(previousCard); addView(nextCard); addView(selectedCard);
+        previousArrow = navigationArrow("←", -1);
+        nextArrow = navigationArrow("→", 1);
+        addView(previousCard); addView(nextCard); addView(selectedCard); addView(previousArrow); addView(nextArrow);
         if (direction != 0) {
             selectedCard.setAlpha(.72f);
             selectedCard.setScaleX(.9f);
@@ -103,6 +105,16 @@ public final class WakeMethodCarouselView extends ViewGroup {
         card.setOnClickListener(v -> move(next ? 1 : -1)); return card;
     }
 
+    private View navigationArrow(String symbol, int direction) {
+        TextView arrow = label(symbol, 32, 0xFFFFE8BA);
+        arrow.setGravity(Gravity.CENTER);
+        arrow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        arrow.setTextDirection(View.TEXT_DIRECTION_LTR);
+        arrow.setShadowLayer(dp(6), 0, dp(1), 0xFF06131E);
+        arrow.setOnClickListener(v -> move(direction));
+        return arrow;
+    }
+
     private GradientDrawable background(boolean center) {
         GradientDrawable result = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 center ? new int[]{0xF0747D63, 0xF0344A43, 0xF0263936, 0xF05B6B58}
@@ -150,6 +162,9 @@ public final class WakeMethodCarouselView extends ViewGroup {
                 MeasureSpec.makeMeasureSpec(height - dp(8), MeasureSpec.EXACTLY));
         int sw = MeasureSpec.makeMeasureSpec(sideWidth, MeasureSpec.EXACTLY), sh = MeasureSpec.makeMeasureSpec(sideHeight, MeasureSpec.EXACTLY);
         if (previousCard != null) previousCard.measure(sw, sh); if (nextCard != null) nextCard.measure(sw, sh);
+        int arrowSpec = MeasureSpec.makeMeasureSpec(dp(40), MeasureSpec.EXACTLY);
+        if (previousArrow != null) previousArrow.measure(arrowSpec, arrowSpec);
+        if (nextArrow != null) nextArrow.measure(arrowSpec, arrowSpec);
         setMeasuredDimension(width, height);
     }
 
@@ -159,6 +174,33 @@ public final class WakeMethodCarouselView extends ViewGroup {
         if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(10); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
         if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(10); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
         if (selectedCard != null) selectedCard.layout(centerLeft, dp(4), centerLeft + centerWidth, height - dp(4));
+        int arrowSize = dp(40), arrowY = (height - arrowSize) / 2;
+        if (previousArrow != null) previousArrow.layout(0, arrowY, arrowSize, arrowY + arrowSize);
+        if (nextArrow != null) nextArrow.layout(width - arrowSize, arrowY, width, arrowY + arrowSize);
+    }
+
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            downX = event.getX(); downY = event.getY(); horizontalDrag = false;
+            getParent().requestDisallowInterceptTouchEvent(true);
+        } else if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+            float dx = Math.abs(event.getX() - downX), dy = Math.abs(event.getY() - downY);
+            if (dx > dp(12) && dx > dy * 1.25f) horizontalDrag = true;
+            if (dy > dp(10) && dy > dx * 1.2f) getParent().requestDisallowInterceptTouchEvent(false);
+        } else if (event.getActionMasked() == MotionEvent.ACTION_UP && horizontalDrag) {
+            MotionEvent cancel = MotionEvent.obtain(event);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            super.dispatchTouchEvent(cancel); cancel.recycle();
+            getParent().requestDisallowInterceptTouchEvent(false);
+            float dx = event.getX() - downX;
+            horizontalDrag = false;
+            if (Math.abs(dx) >= dp(32)) move(dx < 0 ? 1 : -1);
+            return true;
+        } else if (event.getActionMasked() == MotionEvent.ACTION_UP
+                || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+            getParent().requestDisallowInterceptTouchEvent(false); horizontalDrag = false;
+        }
+        return super.dispatchTouchEvent(event);
     }
 
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {

@@ -182,6 +182,8 @@ public class MainActivity extends Activity {
     private long swipeStartTime;
     private boolean horizontalBackSwipeCandidate;
     private boolean horizontalBackSwipeTracking;
+    private boolean horizontalBackSwipeSuppressed;
+    private View horizontalCarouselGestureArea;
     private String pendingFocusReminderId;
     private boolean pendingFocusNextReminder;
     private boolean pendingBlessingReminder;
@@ -1370,6 +1372,7 @@ public class MainActivity extends Activity {
         content.addView(backgroundCard, cardParams());
 
         LinearLayout dismissCard = card();
+        dismissCard.setPadding(dp(4), dp(12), dp(4), dp(12));
         TextView dismissTitle = text("אופן כיבוי השעון", 15, COLOR_CARD_TEXT);
         AppFont.bold(dismissTitle);
         dismissCard.addView(dismissTitle);
@@ -1392,6 +1395,7 @@ public class MainActivity extends Activity {
         boolean[] dismissHasSettings = {false, true, false, true, true, true, true, true, true, true};
         final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
         WakeMethodCarouselView dismissSelector = new WakeMethodCarouselView(this);
+        horizontalCarouselGestureArea = dismissSelector;
         dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(190)));
         LinearLayout dismissOptions = new LinearLayout(this);
         dismissOptions.setOrientation(LinearLayout.VERTICAL);
@@ -5560,6 +5564,16 @@ public class MainActivity extends Activity {
     }
 
     private boolean handleHorizontalBackSwipe(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            horizontalBackSwipeSuppressed = isTouchInside(horizontalCarouselGestureArea, event);
+        }
+        if (horizontalBackSwipeSuppressed) {
+            if (event.getActionMasked() == MotionEvent.ACTION_UP
+                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                horizontalBackSwipeSuppressed = false;
+            }
+            return false;
+        }
         if (event.getPointerCount() > 1) {
             horizontalBackSwipeCandidate = false;
             horizontalBackSwipeTracking = false;
@@ -5613,6 +5627,15 @@ public class MainActivity extends Activity {
             return navigateBack();
         }
         return wasTracking;
+    }
+
+    private boolean isTouchInside(View view, MotionEvent event) {
+        if (view == null || !view.isShown()) return false;
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        float rawX = event.getRawX(), rawY = event.getRawY();
+        return rawX >= location[0] && rawX <= location[0] + view.getWidth()
+                && rawY >= location[1] && rawY <= location[1] + view.getHeight();
     }
 
     private boolean navigateBack() {
