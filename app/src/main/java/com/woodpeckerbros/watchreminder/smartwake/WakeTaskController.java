@@ -177,6 +177,10 @@ final class WakeTaskController implements SensorEventListener {
             grid.addView(row, new LinearLayout.LayoutParams(-1, -2));
         }
         body.addView(grid, new LinearLayout.LayoutParams(-1, -2));
+        // Keep the lower answer row above the narrow curved edge of round watches.
+        // Without scrollable space after the grid, reaching the end still leaves the
+        // buttons clipped by the physical bottom of the display.
+        body.addView(new View(activity), new LinearLayout.LayoutParams(1, dp(52)));
         body.requestLayout();
         scrollTaskToTop();
     }
