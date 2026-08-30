@@ -1379,7 +1379,7 @@ public class MainActivity extends Activity {
                 SmartAlarmStore.DISMISS_RANDOM, SmartAlarmStore.DISMISS_COMBINATION};
         final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
         WakeMethodCarouselView dismissSelector = new WakeMethodCarouselView(this);
-        dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(220)));
+        dismissCard.addView(dismissSelector, new LinearLayout.LayoutParams(-1, dp(190)));
         LinearLayout dismissOptions = new LinearLayout(this);
         dismissOptions.setOrientation(LinearLayout.VERTICAL);
         NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());

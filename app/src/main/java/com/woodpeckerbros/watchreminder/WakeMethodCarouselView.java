@@ -56,12 +56,16 @@ public final class WakeMethodCarouselView extends ViewGroup {
     private View centerCard(String value) {
         LinearLayout card = new LinearLayout(getContext());
         card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_HORIZONTAL);
-        card.setPadding(dp(14), dp(12), dp(14), dp(11)); card.setBackground(background(true)); card.setElevation(dp(7));
-        TextView title = label(value, 17, 0xFFFFF0E1); title.setMaxLines(2);
+        card.setPadding(dp(12), dp(9), dp(12), dp(8)); card.setBackground(background(true)); card.setElevation(dp(10));
+        TextView icon = label(iconAt(selected), 27, 0xFFE2C89C);
+        icon.setShadowLayer(dp(3), 0, dp(1), 0xAA0B2133);
+        card.addView(icon, new LinearLayout.LayoutParams(-1, dp(34)));
+        TextView title = label(value, 19, 0xFFF4EBDD); title.setMaxLines(2);
+        title.setShadowLayer(dp(2), 0, dp(1), 0xBB0B2133);
         card.addView(title, new LinearLayout.LayoutParams(-1, -2));
-        View divider = new View(getContext()); divider.setBackgroundColor(0x66FFD397);
-        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(dp(72), dp(1));
-        dividerParams.setMargins(0, dp(7), 0, dp(4)); card.addView(divider, dividerParams);
+        View divider = new View(getContext()); divider.setBackgroundColor(0xA0E2C89C);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(dp(82), dp(1));
+        dividerParams.setMargins(0, dp(6), 0, dp(3)); card.addView(divider, dividerParams);
         if (settingsView != null) {
             if (settingsView.getParent() instanceof ViewGroup) ((ViewGroup) settingsView.getParent()).removeView(settingsView);
             if (hasVisibleSettings()) {
@@ -70,11 +74,14 @@ public final class WakeMethodCarouselView extends ViewGroup {
                 scroll.addView(settingsView, new ScrollView.LayoutParams(-1, -2));
                 card.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
             } else {
-                TextView noSettings = label("ללא הגדרות נוספות", 12, 0xBFE7DDD2);
+                TextView noSettings = label("אין צורך בהגדרה נוספת", 12, 0xDFC5C8BA);
                 noSettings.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
                 card.addView(noSettings, new LinearLayout.LayoutParams(-1, 0, 1));
             }
         }
+        TextView dots = label(positionDots(), 11, 0xFFE2C89C);
+        dots.setLetterSpacing(.16f);
+        card.addView(dots, new LinearLayout.LayoutParams(-1, dp(16)));
         return card;
     }
 
@@ -89,18 +96,19 @@ public final class WakeMethodCarouselView extends ViewGroup {
 
     private View sideCard(String value, boolean next) {
         FrameLayout card = new FrameLayout(getContext()); card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        card.setBackground(background(false)); card.setAlpha(.58f);
-        TextView title = label(value, 12, 0xFFE0D5CA); title.setMaxLines(3);
+        card.setBackground(background(false)); card.setAlpha(.7f); card.setElevation(dp(3));
+        TextView title = label(value, 12, 0xFFC5C8BA); title.setMaxLines(3);
         title.setGravity(Gravity.CENTER_VERTICAL | (next ? Gravity.START : Gravity.END));
         card.addView(title, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
         card.setOnClickListener(v -> move(next ? 1 : -1)); return card;
     }
 
     private GradientDrawable background(boolean center) {
-        GradientDrawable result = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                center ? new int[]{0xE04B5755, 0xE02B3638, 0xE038413F} : new int[]{0xD0252D30, 0xE0182024});
-        result.setCornerRadius(dp(center ? 27 : 23));
-        result.setStroke(dp(1), center ? 0xCCFFD397 : 0x557E8B8C); return result;
+        GradientDrawable result = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                center ? new int[]{0xF0747D63, 0xF0344A43, 0xF0263936, 0xF05B6B58}
+                        : new int[]{0xDD1A3042, 0xE00B2133, 0xDD263936});
+        result.setCornerRadius(dp(center ? 19 : 17));
+        result.setStroke(dp(center ? 2 : 1), center ? 0xFFE2C89C : 0x55747D63); return result;
     }
 
     private TextView label(String value, int size, int color) {
@@ -110,6 +118,20 @@ public final class WakeMethodCarouselView extends ViewGroup {
     }
 
     private String labelAt(int index) { return labels[(index % labels.length + labels.length) % labels.length]; }
+
+    private String iconAt(int index) {
+        String[] icons = {"◎", "◷", "×2", "↻", "⇧", "＋−", "◇", "⇄", "✦", "◆"};
+        return icons[(index % icons.length + icons.length) % icons.length];
+    }
+
+    private String positionDots() {
+        StringBuilder result = new StringBuilder();
+        for (int index = 0; index < labels.length; index++) {
+            if (index > 0) result.append(' ');
+            result.append(index == selected ? '●' : '·');
+        }
+        return result.toString();
+    }
     private void move(int direction) {
         selected = (selected + direction + labels.length) % labels.length;
         if (listener != null) listener.onSelectionChanged(selected); rebuild(direction);
@@ -117,7 +139,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec), height = resolveSize(dp(300), heightSpec);
-        int centerWidth = Math.round(width * .64f), sideWidth = Math.round(width * .52f), sideHeight = Math.round(height * .78f);
+        int centerWidth = Math.round(width * .58f), sideWidth = Math.round(width * .48f), sideHeight = Math.round(height * .72f);
         if (selectedCard != null) selectedCard.measure(MeasureSpec.makeMeasureSpec(centerWidth, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(height - dp(8), MeasureSpec.EXACTLY));
         int sw = MeasureSpec.makeMeasureSpec(sideWidth, MeasureSpec.EXACTLY), sh = MeasureSpec.makeMeasureSpec(sideHeight, MeasureSpec.EXACTLY);
@@ -128,8 +150,8 @@ public final class WakeMethodCarouselView extends ViewGroup {
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int width = r - l, height = b - t, centerWidth = selectedCard == null ? 0 : selectedCard.getMeasuredWidth();
         int centerLeft = (width - centerWidth) / 2;
-        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(25); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
-        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(25); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
+        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(14); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
+        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(14); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
         if (selectedCard != null) selectedCard.layout(centerLeft, dp(4), centerLeft + centerWidth, height - dp(4));
     }
 
