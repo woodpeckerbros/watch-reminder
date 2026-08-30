@@ -1363,15 +1363,15 @@ public class MainActivity extends Activity {
         TextView backgroundTitle = text("רקע מסך ההתראה", 15, COLOR_CARD_TEXT);
         AppFont.bold(backgroundTitle);
         backgroundCard.addView(backgroundTitle);
-        String[] backgroundLabels = {"בוקר", "צהריים", "ערב", "לילה", "משתנה לפי השעה"};
-        String[] backgroundValues = {SmartAlarmStore.BACKGROUND_MORNING, SmartAlarmStore.BACKGROUND_NOON,
+        String[] backgroundLabels = {"זריחה חזקה", "בוקר", "צהריים", "ערב", "לילה", "משתנה לפי השעה"};
+        String[] backgroundValues = {SmartAlarmStore.BACKGROUND_SUNRISE,
+                SmartAlarmStore.BACKGROUND_MORNING, SmartAlarmStore.BACKGROUND_NOON,
                 SmartAlarmStore.BACKGROUND_EVENING, SmartAlarmStore.BACKGROUND_NIGHT,
                 SmartAlarmStore.BACKGROUND_DYNAMIC};
-        int[] backgroundImages = {R.drawable.home_horizon_morning, R.drawable.home_horizon_noon,
+        int[] backgroundImages = {R.drawable.smart_alarm_sunrise,
+                R.drawable.home_horizon_morning, R.drawable.home_horizon_noon,
                 R.drawable.home_horizon_evening, R.drawable.home_horizon_night, 0};
-        String storedBackground = SmartAlarmStore.BACKGROUND_SUNRISE.equals(smart.backgroundStyle())
-                ? SmartAlarmStore.BACKGROUND_MORNING : smart.backgroundStyle();
-        final int[] selectedBackgroundIndex = {indexOf(backgroundValues, storedBackground)};
+        final int[] selectedBackgroundIndex = {indexOf(backgroundValues, smart.backgroundStyle())};
         BackgroundCarouselView backgroundSelector = new BackgroundCarouselView(this);
         backgroundSelector.configure(translated(backgroundLabels), backgroundImages, selectedBackgroundIndex[0], index ->
                 selectedBackgroundIndex[0] = index);

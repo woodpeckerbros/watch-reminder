@@ -79,8 +79,9 @@ public final class BackgroundCarouselView extends ViewGroup {
     private void addPreview(FrameLayout card, int index) {
         if (index == images.length - 1) {
             GridLayout mosaic = new GridLayout(getContext()); mosaic.setColumnCount(2); mosaic.setRowCount(2);
+            int firstDayPartImage = Math.max(0, images.length - 5);
             for (int imageIndex = 0; imageIndex < Math.min(4, images.length - 1); imageIndex++) {
-                ImageView image = image(images[imageIndex]);
+                ImageView image = image(images[firstDayPartImage + imageIndex]);
                 GridLayout.LayoutParams params = new GridLayout.LayoutParams(
                         GridLayout.spec(imageIndex / 2, 1f), GridLayout.spec(imageIndex % 2, 1f));
                 params.width = 0; params.height = 0;

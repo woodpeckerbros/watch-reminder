@@ -256,10 +256,9 @@ public class PhoneMainActivity extends Activity {
 
         NumberPicker window = numberPicker(5, 60, alarm.optInt("windowMinutes", 30));
         content.addView(labeled("חלון חכם בדקות", window), wideParams());
-        String[] backgroundValues = {"morning", "noon", "evening", "night", "dynamic"};
-        Spinner backgroundStyle = spinner(new String[]{"בוקר", "צהריים", "ערב", "לילה", "משתנה לפי השעה"});
-        String currentBackground = alarm.optString("backgroundStyle", "morning");
-        if ("sunrise".equals(currentBackground)) currentBackground = "morning";
+        String[] backgroundValues = {"sunrise", "morning", "noon", "evening", "night", "dynamic"};
+        Spinner backgroundStyle = spinner(new String[]{"זריחה חזקה", "בוקר", "צהריים", "ערב", "לילה", "משתנה לפי השעה"});
+        String currentBackground = alarm.optString("backgroundStyle", "sunrise");
         int backgroundIndex = 0;
         for (int i = 0; i < backgroundValues.length; i++) {
             if (backgroundValues[i].equals(currentBackground)) backgroundIndex = i;
@@ -896,7 +895,7 @@ public class PhoneMainActivity extends Activity {
                     .put("daysMask", 126).put("windowMinutes", 30).put("snoozeMinutes", 5).put("snoozeCount", 3)
                     .put("vibrationEnabled", true).put("vibrationStyle", "normal").put("vibrationStrength", 6)
                     .put("soundEnabled", true).put("soundVolumePercent", 80).put("soundUri", "")
-                    .put("alertDurationSeconds", 30).put("backgroundStyle", "morning")
+                    .put("alertDurationSeconds", 30).put("backgroundStyle", "sunrise")
                     .put("dismissMethod", "tap").put("dismissHoldSeconds", 3);
             alarm.put("mathDifficulty", 1).put("memoryDifficulty", 1).put("shakeCount", 12)
                     .put("stepCount", 20).put("alternatingTapCount", 10)
