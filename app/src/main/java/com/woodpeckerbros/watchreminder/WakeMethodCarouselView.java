@@ -1,6 +1,8 @@
 package com.woodpeckerbros.watchreminder;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -44,8 +46,8 @@ public final class WakeMethodCarouselView extends ViewGroup {
         previousCard = sideCard(labelAt(selected - 1), false);
         nextCard = sideCard(labelAt(selected + 1), true);
         selectedCard = centerCard(labels[selected]);
-        previousArrow = navigationArrow("←", -1);
-        nextArrow = navigationArrow("→", 1);
+        previousArrow = navigationArrow(-1);
+        nextArrow = navigationArrow(1);
         addView(previousCard); addView(nextCard); addView(selectedCard); addView(previousArrow); addView(nextArrow);
         if (direction != 0) {
             selectedCard.setAlpha(.72f);
@@ -105,14 +107,37 @@ public final class WakeMethodCarouselView extends ViewGroup {
         card.setOnClickListener(v -> move(next ? 1 : -1)); return card;
     }
 
-    private View navigationArrow(String symbol, int direction) {
-        TextView arrow = label(symbol, 32, 0xFFFFE8BA);
-        arrow.setGravity(Gravity.CENTER);
-        arrow.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
-        arrow.setTextDirection(View.TEXT_DIRECTION_LTR);
-        arrow.setShadowLayer(dp(6), 0, dp(1), 0xFF06131E);
+    private View navigationArrow(int direction) {
+        View arrow = new NavigationArrowView(getContext(), direction);
         arrow.setOnClickListener(v -> move(direction));
         return arrow;
+    }
+
+    private static final class NavigationArrowView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final int direction;
+
+        NavigationArrowView(Context context, int direction) {
+            super(context); this.direction = direction;
+            paint.setColor(0xFFFFE8BA); paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(context, 2.6f)); paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND); paint.setShadowLayer(dp(context, 4f), 0, dp(context, 1f), 0xFF06131E);
+            setLayerType(LAYER_TYPE_SOFTWARE, null);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float centerX = getWidth() / 2f, centerY = getHeight() / 2f;
+            float halfWidth = dp(getContext(), 5f), halfHeight = dp(getContext(), 8f);
+            float tipX = centerX + direction * halfWidth;
+            float backX = centerX - direction * halfWidth;
+            canvas.drawLine(backX, centerY - halfHeight, tipX, centerY, paint);
+            canvas.drawLine(tipX, centerY, backX, centerY + halfHeight, paint);
+        }
+
+        private static float dp(Context context, float value) {
+            return value * context.getResources().getDisplayMetrics().density;
+        }
     }
 
     private GradientDrawable background(boolean center) {

@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.NumberPicker;
 
 public final class AppTextStyle {
     /** Shared typography defaults for every TextView-derived UI element. */
@@ -38,6 +39,10 @@ public final class AppTextStyle {
     }
 
     public static void apply(View view) {
+        // NumberPicker recreates its selector items while scrolling. Styling only its current
+        // EditText causes the chosen value to lose the app font on the first movement.
+        // Keep the complete wheel consistently in the native Wear OS style instead.
+        if (view instanceof NumberPicker) return;
         if (view instanceof TextView) {
             apply((TextView) view);
         }

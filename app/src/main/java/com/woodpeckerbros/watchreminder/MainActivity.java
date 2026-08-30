@@ -6370,13 +6370,26 @@ public class MainActivity extends Activity {
         NumberPicker picker = new NumberPicker(this);
         picker.setMinValue(min);
         picker.setMaxValue(max);
-        picker.setValue(Math.max(min, Math.min(max, value)));
-        picker.setWrapSelectorWheel(true);
-        picker.setFormatter(number -> String.format(Locale.US, "%02d", number));
+        String[] displayedValues = new String[max - min + 1];
+        for (int index = 0; index < displayedValues.length; index++) {
+            displayedValues[index] = String.format(Locale.US, "%02d", min + index);
+        }
+        picker.setDisplayedValues(displayedValues);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            picker.setTextColor(COLOR_CARD_TEXT);
+            picker.setTextSize(18f * getResources().getDisplayMetrics().scaledDensity);
+        }
+        int selectedValue = Math.max(min, Math.min(max, value));
+        picker.setValue(selectedValue);
+        picker.setWrapSelectorWheel(max - min >= 2);
         picker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(68), dp(86));
         params.setMargins(dp(3), 0, dp(3), 0);
         picker.setLayoutParams(params);
+        picker.post(() -> {
+            picker.setValue(selectedValue);
+            picker.invalidate();
+        });
         return picker;
     }
 
