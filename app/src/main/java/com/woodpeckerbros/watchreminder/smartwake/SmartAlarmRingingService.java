@@ -3,12 +3,16 @@ package com.woodpeckerbros.watchreminder.smartwake;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.ActivityOptions;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.Build;
+import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -50,12 +54,52 @@ public final class SmartAlarmRingingService extends Service {
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         int alarmId = intent == null ? 1 : intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        long targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         if (feedback != null) feedback.stop();
         handler.removeCallbacksAndMessages(null);
+        if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
         feedback = AlertFeedback.startSmartAlarm(this, settings);
+        handler.postDelayed(() -> ensureAlertScreen(alarmId, targetAt), 1_200L);
         handler.postDelayed(this::stopSelf, settings.alertDurationSeconds() * 1000L + 1_000L);
         return START_NOT_STICKY;
+    }
+
+    private void ensureAlertScreen(int alarmId, long targetAt) {
+        if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
+            AppLog.d(this, "SmartAlarm screen fallback skipped; activity visible id=" + alarmId);
+            return;
+        }
+        Intent alert = new Intent(this, SmartAlarmAlertActivity.class)
+                .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
+                .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                .putExtra("reason", "ringing_service_fallback")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Bundle creatorOptions = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setPendingIntentCreatorBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+            creatorOptions = options.toBundle();
+        }
+        PendingIntent open = PendingIntent.getActivity(this, 0x534d5900 + alarmId, alert,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE, creatorOptions);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ActivityOptions options = ActivityOptions.makeBasic();
+                options.setPendingIntentBackgroundActivityStartMode(
+                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+                open.send(this, 0, null, null, null, null, options.toBundle());
+            } else {
+                open.send();
+            }
+            AppLog.w(this, "SmartAlarm screen fallback launch sent id=" + alarmId);
+        } catch (PendingIntent.CanceledException | RuntimeException error) {
+            AppLog.e(this, "SmartAlarm screen fallback launch failed id=" + alarmId, error);
+        }
     }
 
     @Override public void onDestroy() {

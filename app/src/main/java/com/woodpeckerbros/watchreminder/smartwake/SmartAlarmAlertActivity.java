@@ -44,6 +44,14 @@ public final class SmartAlarmAlertActivity extends Activity {
     private boolean previewMode;
     private float previewDownX;
     private float previewDownY;
+    private boolean resumed;
+
+    static boolean isShowing(int expectedAlarmId, long expectedTargetAt) {
+        SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
+        return activity != null && activity.resumed && !activity.isFinishing() && !activity.isDestroyed()
+                && activity.alarmId == expectedAlarmId
+                && (expectedTargetAt == 0L || activity.targetAt == expectedTargetAt);
+    }
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -67,7 +75,13 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        resumed = true;
         AppLog.d(this, "SmartAlarm alert activity onResume id=" + alarmId + " target=" + targetAt);
+    }
+
+    @Override protected void onPause() {
+        resumed = false;
+        super.onPause();
     }
 
     private View content() {
