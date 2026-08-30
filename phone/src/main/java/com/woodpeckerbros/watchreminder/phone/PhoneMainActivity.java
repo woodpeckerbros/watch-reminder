@@ -267,38 +267,64 @@ public class PhoneMainActivity extends Activity {
         content.addView(labeled("רקע מסך ההתראה", backgroundStyle), wideParams());
         String[] dismissValues = {"tap", "hold", "double_tap", "shake", "steps", "math", "memory",
                 "alternating", "random", "combination"};
-        Spinner dismissMethod = spinner(new String[]{"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה",
+        String[] dismissLabels = {"לחיצה רגילה", "לחיצה ארוכה", "לחיצה כפולה",
                 "ניעור היד", "הליכה", "תרגיל חשבון", "תרגיל זיכרון", "לחיצות מתחלפות",
-                "משימה אקראית", "שילוב שתי משימות"});
+                "משימה אקראית", "שילוב שתי משימות"};
         String currentDismiss = alarm.optString("dismissMethod", "tap");
         int dismissIndex = 0;
         for (int i = 0; i < dismissValues.length; i++) {
             if (dismissValues[i].equals(currentDismiss)) dismissIndex = i;
         }
-        dismissMethod.setSelection(dismissIndex);
-        content.addView(labeled("אופן כיבוי השעון", dismissMethod), wideParams());
+        final int[] selectedDismissIndex = {dismissIndex};
+        LinearLayout dismissCard = card();
+        dismissCard.addView(text("אופן כיבוי השעון", 15, TEXT));
+        Button[] dismissButtons = new Button[dismissLabels.length];
+        LinearLayout dismissSettings = new LinearLayout(this); dismissSettings.setOrientation(LinearLayout.VERTICAL);
         NumberPicker dismissHoldSeconds = numberPicker(1, 10, alarm.optInt("dismissHoldSeconds", 3));
-        content.addView(labeled("משך לחיצה ארוכה בשניות", dismissHoldSeconds), wideParams());
+        View holdOptions = labeled("משך לחיצה ארוכה בשניות", dismissHoldSeconds); dismissSettings.addView(holdOptions);
         NumberPicker shakeCount = numberPicker(5, 40, alarm.optInt("shakeCount", 12));
-        content.addView(labeled("מספר ניעורים", shakeCount), wideParams());
+        View shakeOptions = labeled("מספר ניעורים", shakeCount); dismissSettings.addView(shakeOptions);
         NumberPicker stepCount = numberPicker(5, 100, alarm.optInt("stepCount", 20));
-        content.addView(labeled("מספר צעדים", stepCount), wideParams());
+        View stepOptions = labeled("מספר צעדים", stepCount); dismissSettings.addView(stepOptions);
         NumberPicker alternatingTaps = numberPicker(4, 30, alarm.optInt("alternatingTapCount", 10));
-        content.addView(labeled("מספר לחיצות מתחלפות", alternatingTaps), wideParams());
+        View alternatingOptions = labeled("מספר לחיצות מתחלפות", alternatingTaps); dismissSettings.addView(alternatingOptions);
         NumberPicker mathDifficulty = numberPicker(1, 3, alarm.optInt("mathDifficulty", 1));
-        content.addView(labeled("רמת חשבון", mathDifficulty), wideParams());
-        Button mathExample = button("הצגת דוגמת חשבון", SOFT, TEXT);
-        mathExample.setOnClickListener(v -> showWakeTaskExample(true, numberValue(mathDifficulty)));
-        content.addView(mathExample, wideParams());
+        View mathOptions = labeled("רמת חשבון", mathDifficulty); dismissSettings.addView(mathOptions);
         NumberPicker memoryDifficulty = numberPicker(1, 3, alarm.optInt("memoryDifficulty", 1));
-        content.addView(labeled("רמת זיכרון", memoryDifficulty), wideParams());
-        Button memoryExample = button("הצגת דוגמת זיכרון", SOFT, TEXT);
-        memoryExample.setOnClickListener(v -> showWakeTaskExample(false, numberValue(memoryDifficulty)));
-        content.addView(memoryExample, wideParams());
+        View memoryOptions = labeled("רמת זיכרון", memoryDifficulty); dismissSettings.addView(memoryOptions);
+        Runnable updateDismissUi = () -> {
+            String method = dismissValues[selectedDismissIndex[0]];
+            boolean multiple = "random".equals(method) || "combination".equals(method);
+            holdOptions.setVisibility("hold".equals(method) ? View.VISIBLE : View.GONE);
+            shakeOptions.setVisibility("shake".equals(method) || multiple ? View.VISIBLE : View.GONE);
+            stepOptions.setVisibility("steps".equals(method) || multiple ? View.VISIBLE : View.GONE);
+            mathOptions.setVisibility("math".equals(method) || multiple ? View.VISIBLE : View.GONE);
+            memoryOptions.setVisibility("memory".equals(method) || multiple ? View.VISIBLE : View.GONE);
+            alternatingOptions.setVisibility("alternating".equals(method) || multiple ? View.VISIBLE : View.GONE);
+            for (int i = 0; i < dismissButtons.length; i++) {
+                dismissButtons[i].setBackground(round(i == selectedDismissIndex[0] ? ACCENT : SOFT, dp(20), BORDER));
+                dismissButtons[i].setTextColor(i == selectedDismissIndex[0] ? Color.WHITE : TEXT);
+            }
+        };
+        for (int start = 0; start < dismissLabels.length; start += 2) {
+            LinearLayout choicesRow = row();
+            for (int i = start; i < Math.min(start + 2, dismissLabels.length); i++) {
+                final int choiceIndex = i;
+                Button choice = button(dismissLabels[i], SOFT, TEXT); dismissButtons[i] = choice;
+                choice.setOnClickListener(v -> { selectedDismissIndex[0] = choiceIndex; updateDismissUi.run(); });
+                choicesRow.addView(choice);
+            }
+            dismissCard.addView(choicesRow);
+        }
+        dismissCard.addView(dismissSettings); updateDismissUi.run(); content.addView(dismissCard, wideParams());
         Switch wakeCheckEnabled = switchView("בדיקת ערנות לאחר הכיבוי", alarm.optBoolean("wakeCheckEnabled", false));
         content.addView(wakeCheckEnabled, wideParams());
         NumberPicker wakeCheckDelay = numberPicker(1, 30, alarm.optInt("wakeCheckDelayMinutes", 5));
-        content.addView(labeled("בדיקת ערנות אחרי דקות", wakeCheckDelay), wideParams());
+        View wakeCheckDelayOptions = labeled("בדיקת ערנות אחרי דקות", wakeCheckDelay);
+        wakeCheckDelayOptions.setVisibility(wakeCheckEnabled.isChecked() ? View.VISIBLE : View.GONE);
+        wakeCheckEnabled.setOnClickListener(v -> wakeCheckDelayOptions.setVisibility(
+                wakeCheckEnabled.isChecked() ? View.VISIBLE : View.GONE));
+        content.addView(wakeCheckDelayOptions, wideParams());
         LinearLayout snooze = card();
         snooze.addView(text("נודניק", 15, TEXT));
         NumberPicker snoozeMinutes = numberPicker(1, 30, alarm.optInt("snoozeMinutes", 5));
@@ -344,7 +370,7 @@ public class PhoneMainActivity extends Activity {
                         .put("soundUri", alarm.optString("soundUri", ""))
                         .put("alertDurationSeconds", numberValue(duration))
                         .put("backgroundStyle", backgroundValues[backgroundStyle.getSelectedItemPosition()])
-                        .put("dismissMethod", dismissValues[dismissMethod.getSelectedItemPosition()])
+                        .put("dismissMethod", dismissValues[selectedDismissIndex[0]])
                         .put("dismissHoldSeconds", numberValue(dismissHoldSeconds))
                         .put("mathDifficulty", numberValue(mathDifficulty))
                         .put("memoryDifficulty", numberValue(memoryDifficulty))
@@ -854,24 +880,6 @@ public class PhoneMainActivity extends Activity {
                     .put("wakeCheckEnabled", false).put("wakeCheckDelayMinutes", 5);
         } catch (Exception ignored) { }
         return alarm;
-    }
-
-    private void showWakeTaskExample(boolean math, int level) {
-        String message;
-        if (math) {
-            String expression = level == 1 ? "7 + 4 = ?\n8   11   14   17"
-                    : level == 2 ? "8 × 6 = ?\n42   45   48   54"
-                    : "74 − 29 = ?\n41   45   49   52";
-            message = t("רמה") + " " + level + "\n" + expression + "\n\n"
-                    + (level == 1 ? t("שאלה אחת") : level == 2 ? t("שתי שאלות רצופות") : t("שלוש שאלות רצופות"));
-        } else {
-            int length = level == 1 ? 3 : level == 2 ? 5 : 7;
-            message = t("רמה") + " " + level + "\n\n🔴  🟡  🟢  🔵\n\n"
-                    + t("הצבעים מוצגים אחד אחרי השני, ואז חוזרים על הרצף") + "\n"
-                    + t("אורך הרצף") + ": " + length;
-        }
-        new AlertDialog.Builder(this).setTitle(t(math ? "דוגמת תרגיל חשבון" : "דוגמת תרגיל זיכרון"))
-                .setMessage(message).setPositiveButton(t("סגירה"), null).show();
     }
 
     private void saveSmartAlarm(JSONObject alarm, int index) throws Exception {

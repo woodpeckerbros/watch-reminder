@@ -1377,35 +1377,73 @@ public class MainActivity extends Activity {
                 SmartAlarmStore.DISMISS_STEPS, SmartAlarmStore.DISMISS_MATH,
                 SmartAlarmStore.DISMISS_MEMORY, SmartAlarmStore.DISMISS_ALTERNATING,
                 SmartAlarmStore.DISMISS_RANDOM, SmartAlarmStore.DISMISS_COMBINATION};
-        Spinner dismissSpinner = new Spinner(this);
-        dismissSpinner.setAdapter(spinnerAdapter(translated(dismissLabels)));
-        dismissSpinner.setSelection(indexOf(dismissValues, smart.dismissMethod()));
-        dismissCard.addView(dismissSpinner, matchParams());
+        final int[] dismissMethodIndex = {indexOf(dismissValues, smart.dismissMethod())};
+        LinearLayout dismissSelector = new LinearLayout(this);
+        dismissSelector.setGravity(Gravity.CENTER);
+        dismissSelector.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        Button previousMethod = dayButton("‹", COLOR_SURFACE_2);
+        Button methodButton = pillButton(UiText.t(this, dismissLabels[dismissMethodIndex[0]]), COLOR_ACCENT_DARK);
+        Button nextMethod = dayButton("›", COLOR_SURFACE_2);
+        clearButtonIcon(previousMethod); clearButtonIcon(methodButton); clearButtonIcon(nextMethod);
+        dismissSelector.addView(previousMethod, new LinearLayout.LayoutParams(dp(44), dp(50)));
+        dismissSelector.addView(methodButton, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        dismissSelector.addView(nextMethod, new LinearLayout.LayoutParams(dp(44), dp(50)));
+        dismissCard.addView(dismissSelector, matchParams());
+        TextView dismissPosition = text((dismissMethodIndex[0] + 1) + " / " + dismissLabels.length, 10, COLOR_CARD_MUTED);
+        dismissPosition.setGravity(Gravity.CENTER); dismissPosition.setTextDirection(View.TEXT_DIRECTION_LTR);
+        dismissPosition.setLayoutDirection(View.LAYOUT_DIRECTION_LTR); dismissCard.addView(dismissPosition);
+        LinearLayout dismissOptions = new LinearLayout(this);
+        dismissOptions.setOrientation(LinearLayout.VERTICAL);
         NumberPicker holdSeconds = numberPicker(1, 10, smart.dismissHoldSeconds());
-        dismissCard.addView(pickerColumn("משך לחיצה ארוכה בשניות", holdSeconds));
+        View holdOptions = pickerColumn("משך לחיצה ארוכה בשניות", holdSeconds); dismissOptions.addView(holdOptions);
         NumberPicker shakeCount = numberPicker(5, 40, smart.shakeCount());
-        dismissCard.addView(pickerColumn("מספר ניעורים", shakeCount));
+        View shakeOptions = pickerColumn("מספר ניעורים", shakeCount); dismissOptions.addView(shakeOptions);
         NumberPicker stepCount = numberPicker(5, 100, smart.stepCount());
-        dismissCard.addView(pickerColumn("מספר צעדים", stepCount));
+        View stepOptions = pickerColumn("מספר צעדים", stepCount); dismissOptions.addView(stepOptions);
         NumberPicker alternatingTaps = numberPicker(4, 30, smart.alternatingTapCount());
-        dismissCard.addView(pickerColumn("מספר לחיצות מתחלפות", alternatingTaps));
+        View alternatingOptions = pickerColumn("מספר לחיצות מתחלפות", alternatingTaps); dismissOptions.addView(alternatingOptions);
         NumberPicker mathDifficulty = numberPicker(1, 3, smart.mathDifficulty());
-        dismissCard.addView(pickerColumn("רמת חשבון", mathDifficulty));
-        Button mathExample = pillButton("הצגת דוגמת חשבון", COLOR_SURFACE_2);
-        mathExample.setOnClickListener(v -> showMathWakeTaskExample(mathDifficulty.getValue()));
-        dismissCard.addView(mathExample);
+        View mathOptions = pickerColumn("רמת חשבון", mathDifficulty); dismissOptions.addView(mathOptions);
         NumberPicker memoryDifficulty = numberPicker(1, 3, smart.memoryDifficulty());
-        dismissCard.addView(pickerColumn("רמת זיכרון", memoryDifficulty));
-        Button memoryExample = pillButton("הצגת דוגמת זיכרון", COLOR_SURFACE_2);
-        memoryExample.setOnClickListener(v -> showMemoryWakeTaskExample(memoryDifficulty.getValue()));
-        dismissCard.addView(memoryExample);
+        View memoryOptions = pickerColumn("רמת זיכרון", memoryDifficulty); dismissOptions.addView(memoryOptions);
+        dismissCard.addView(dismissOptions);
+        Runnable updateDismissOptions = () -> {
+            String method = dismissValues[dismissMethodIndex[0]];
+            methodButton.setText(UiText.t(this, dismissLabels[dismissMethodIndex[0]]));
+            clearButtonIcon(methodButton);
+            dismissPosition.setText((dismissMethodIndex[0] + 1) + " / " + dismissLabels.length);
+            boolean multiple = SmartAlarmStore.DISMISS_RANDOM.equals(method) || SmartAlarmStore.DISMISS_COMBINATION.equals(method);
+            holdOptions.setVisibility(SmartAlarmStore.DISMISS_HOLD.equals(method) ? View.VISIBLE : View.GONE);
+            shakeOptions.setVisibility(SmartAlarmStore.DISMISS_SHAKE.equals(method) || multiple ? View.VISIBLE : View.GONE);
+            stepOptions.setVisibility(SmartAlarmStore.DISMISS_STEPS.equals(method) || multiple ? View.VISIBLE : View.GONE);
+            mathOptions.setVisibility(SmartAlarmStore.DISMISS_MATH.equals(method) || multiple ? View.VISIBLE : View.GONE);
+            memoryOptions.setVisibility(SmartAlarmStore.DISMISS_MEMORY.equals(method) || multiple ? View.VISIBLE : View.GONE);
+            alternatingOptions.setVisibility(SmartAlarmStore.DISMISS_ALTERNATING.equals(method) || multiple ? View.VISIBLE : View.GONE);
+        };
+        View.OnClickListener nextDismissMethod = v -> {
+            int direction = v == previousMethod ? -1 : 1;
+            dismissMethodIndex[0] = (dismissMethodIndex[0] + direction + dismissLabels.length) % dismissLabels.length;
+            updateDismissOptions.run();
+        };
+        previousMethod.setOnClickListener(nextDismissMethod); nextMethod.setOnClickListener(nextDismissMethod);
+        methodButton.setOnClickListener(nextDismissMethod);
+        updateDismissOptions.run();
+        content.addView(dismissCard, cardParams());
+
+        LinearLayout wakeCheckCard = card();
+        TextView wakeCheckTitle = text("בדיקת ערנות", 15, COLOR_CARD_TEXT);
+        AppFont.bold(wakeCheckTitle); wakeCheckCard.addView(wakeCheckTitle);
         Switch wakeCheckSwitch = new Switch(this);
         setSwitchText(wakeCheckSwitch, "בדיקת ערנות לאחר הכיבוי");
         wakeCheckSwitch.setChecked(smart.wakeCheckEnabled());
-        dismissCard.addView(wakeCheckSwitch);
+        wakeCheckCard.addView(wakeCheckSwitch);
         NumberPicker wakeCheckDelay = numberPicker(1, 30, smart.wakeCheckDelayMinutes());
-        dismissCard.addView(pickerColumn("בדיקת ערנות אחרי דקות", wakeCheckDelay));
-        content.addView(dismissCard, cardParams());
+        View wakeCheckDelayOptions = pickerColumn("בדיקת ערנות אחרי דקות", wakeCheckDelay);
+        wakeCheckDelayOptions.setVisibility(wakeCheckSwitch.isChecked() ? View.VISIBLE : View.GONE);
+        wakeCheckSwitch.setOnClickListener(v -> wakeCheckDelayOptions.setVisibility(
+                wakeCheckSwitch.isChecked() ? View.VISIBLE : View.GONE));
+        wakeCheckCard.addView(wakeCheckDelayOptions);
+        content.addView(wakeCheckCard, cardParams());
 
         LinearLayout snoozeCard = card();
         TextView snoozeTitle = text("נודניק", 15, COLOR_CARD_TEXT);
@@ -1510,6 +1548,7 @@ public class MainActivity extends Activity {
         content.addView(feedbackCard, cardParams());
 
         Button tryAlarm = pillButton("נסו את השעון", COLOR_ACCENT_DARK);
+        clearButtonIcon(tryAlarm);
         tryAlarm.setOnClickListener(v -> {
             stopSmartAlarmPreview();
             SmartAlarmStore preview = new SmartAlarmStore(this, SmartAlarmStore.PREVIEW_ALARM_ID);
@@ -1519,7 +1558,7 @@ public class MainActivity extends Activity {
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(),
                     soundVolume.slider.getProgress() * 10, selectedSoundUri[0], durationPicker.getValue(),
                     backgroundValues[backgroundSpinner.getSelectedItemPosition()],
-                    dismissValues[dismissSpinner.getSelectedItemPosition()], holdSeconds.getValue());
+                    dismissValues[dismissMethodIndex[0]], holdSeconds.getValue());
             preview.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
                     stepCount.getValue(), alternatingTaps.getValue(), false, wakeCheckDelay.getValue());
             startActivity(new Intent(this, com.woodpeckerbros.watchreminder.smartwake.SmartAlarmAlertActivity.class)
@@ -1543,7 +1582,7 @@ public class MainActivity extends Activity {
                     vibrationStrength.slider.getProgress() + 1, soundSwitch.isChecked(), soundVolume.slider.getProgress() * 10,
                     selectedSoundUri[0], durationPicker.getValue(),
                     backgroundValues[backgroundSpinner.getSelectedItemPosition()],
-                    dismissValues[dismissSpinner.getSelectedItemPosition()], holdSeconds.getValue());
+                    dismissValues[dismissMethodIndex[0]], holdSeconds.getValue());
             smart.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
                     stepCount.getValue(), alternatingTaps.getValue(), wakeCheckSwitch.isChecked(),
                     wakeCheckDelay.getValue());
@@ -5371,63 +5410,6 @@ public class MainActivity extends Activity {
                 sound, volumePercent, soundUri);
     }
 
-    private void showMathWakeTaskExample(int level) {
-        int a = level == 1 ? 7 : level == 2 ? 8 : 74;
-        int b = level == 1 ? 4 : level == 2 ? 6 : 29;
-        String operator = level == 2 ? "×" : level == 3 ? "−" : "+";
-        int answer = level == 1 ? a + b : level == 2 ? a * b : a - b;
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(18), dp(12), dp(18), dp(8));
-        content.addView(text("רמה " + level + " · " + level + " " + (level == 1 ? "שאלה" : "שאלות"), 13, COLOR_TEXT));
-        TextView question = text(a + " " + operator + " " + b + " = ?", 27, COLOR_TEXT);
-        question.setGravity(Gravity.CENTER); content.addView(question, matchParams());
-        int[] options = {answer - 3, answer, answer + 4, answer + 7};
-        LinearLayout answers = actionRow();
-        for (int option : options) {
-            Button choice = pillButton(String.valueOf(option), COLOR_SURFACE_2);
-            choice.setOnClickListener(v -> Toast.makeText(this,
-                    UiText.t(this, option == answer ? "נכון — כך תתקדמו לשאלה הבאה" : "לא נכון — נסו שוב"),
-                    Toast.LENGTH_SHORT).show());
-            answers.addView(choice);
-        }
-        content.addView(answers);
-        new AlertDialog.Builder(this).setTitle(UiText.t(this, "דוגמת תרגיל חשבון"))
-                .setView(content).setNegativeButton(UiText.t(this, "סגירה"), null).show();
-    }
-
-    private void showMemoryWakeTaskExample(int level) {
-        int length = level == 1 ? 3 : level == 2 ? 5 : 7;
-        int[] colors = {0xFFFF6B6B, 0xFFFFD166, 0xFF4ED6A8, 0xFF6FA8FF};
-        int[] sequence = new int[length];
-        java.util.Random random = new java.util.Random();
-        for (int i = 0; i < length; i++) sequence[i] = random.nextInt(colors.length);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(18), dp(10), dp(18), dp(8));
-        TextView hint = text("רמה " + level + " · רצף של " + length + " צבעים", 13, COLOR_TEXT);
-        hint.setGravity(Gravity.CENTER); content.addView(hint);
-        TextView display = text("●", 48, COLOR_TEXT); display.setGravity(Gravity.CENTER); content.addView(display, matchParams());
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(UiText.t(this, "דוגמת תרגיל זיכרון"))
-                .setView(content).setNegativeButton(UiText.t(this, "סגירה"), null).create();
-        dialog.setOnShowListener(ignored -> {
-            for (int i = 0; i < sequence.length; i++) {
-                int index = i;
-                mainHandler.postDelayed(() -> {
-                    if (dialog.isShowing()) { display.setText("●"); display.setTextColor(colors[sequence[index]]); }
-                }, 300L + i * 650L);
-                mainHandler.postDelayed(() -> { if (dialog.isShowing()) display.setText("·"); }, 700L + i * 650L);
-            }
-            mainHandler.postDelayed(() -> {
-                if (!dialog.isShowing()) return;
-                display.setTextColor(COLOR_TEXT);
-                display.setText(UiText.t(this, "עכשיו יש לחזור על הרצף בעזרת ארבעת כפתורי הצבע"));
-                display.setTextSize(14);
-            }, 500L + sequence.length * 650L);
-        });
-        dialog.show();
-    }
-
     private void stopSmartAlarmPreview() {
         if (smartAlarmPreview != null) {
             smartAlarmPreview.stop();
@@ -6125,7 +6107,7 @@ public class MainActivity extends Activity {
         if (v.contains("עריכה")) return AppButtonIconDrawable.Kind.FILE;
         if (v.contains("צום") || v.contains("אוכל")) return AppButtonIconDrawable.Kind.CLOCK;
         if (v.contains("אודות") || v.contains("רישיונות")) return AppButtonIconDrawable.Kind.INFO;
-        return AppButtonIconDrawable.Kind.INFO;
+        return null;
     }
 
     private TextView outlinedText(String value, int size, int fillColor) {
