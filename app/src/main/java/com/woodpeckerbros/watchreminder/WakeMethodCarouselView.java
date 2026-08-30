@@ -98,7 +98,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
 
     private View sideCard(String value, boolean next) {
         FrameLayout card = new FrameLayout(getContext()); card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        card.setBackground(background(false)); card.setAlpha(.7f); card.setElevation(dp(3));
+        card.setBackground(background(false)); card.setAlpha(.82f); card.setElevation(dp(3));
         TextView title = label(value, 12, 0xFFC5C8BA); title.setMaxLines(3);
         title.setGravity(Gravity.CENTER_VERTICAL | (next ? Gravity.START : Gravity.END));
         card.addView(title, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
@@ -120,7 +120,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
                 center ? new int[]{0xF0747D63, 0xF0344A43, 0xF0263936, 0xF05B6B58}
                         : new int[]{0xDD1A3042, 0xE00B2133, 0xDD263936});
         result.setCornerRadius(dp(center ? 19 : 17));
-        result.setStroke(dp(center ? 2 : 1), center ? 0xFFE2C89C : 0x55747D63); return result;
+        result.setStroke(dp(center ? 2 : 1), center ? 0xFFE2C89C : 0x88747D63); return result;
     }
 
     private TextView label(String value, int size, int color) {
@@ -157,7 +157,7 @@ public final class WakeMethodCarouselView extends ViewGroup {
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec), height = resolveSize(dp(300), heightSpec);
-        int centerWidth = Math.round(width * .72f), sideWidth = Math.round(width * .44f), sideHeight = Math.round(height * .70f);
+        int centerWidth = Math.round(width * .64f), sideWidth = Math.round(width * .50f), sideHeight = Math.round(height * .70f);
         if (selectedCard != null) selectedCard.measure(MeasureSpec.makeMeasureSpec(centerWidth, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(height - dp(8), MeasureSpec.EXACTLY));
         int sw = MeasureSpec.makeMeasureSpec(sideWidth, MeasureSpec.EXACTLY), sh = MeasureSpec.makeMeasureSpec(sideHeight, MeasureSpec.EXACTLY);
@@ -171,8 +171,8 @@ public final class WakeMethodCarouselView extends ViewGroup {
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int width = r - l, height = b - t, centerWidth = selectedCard == null ? 0 : selectedCard.getMeasuredWidth();
         int centerLeft = (width - centerWidth) / 2;
-        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft + dp(10); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
-        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth - dp(10); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
+        if (previousCard != null) { int y = (height - previousCard.getMeasuredHeight()) / 2, right = centerLeft - dp(5); previousCard.layout(right - previousCard.getMeasuredWidth(), y, right, y + previousCard.getMeasuredHeight()); }
+        if (nextCard != null) { int y = (height - nextCard.getMeasuredHeight()) / 2, left = centerLeft + centerWidth + dp(5); nextCard.layout(left, y, left + nextCard.getMeasuredWidth(), y + nextCard.getMeasuredHeight()); }
         if (selectedCard != null) selectedCard.layout(centerLeft, dp(4), centerLeft + centerWidth, height - dp(4));
         int arrowSize = dp(40), arrowY = (height - arrowSize) / 2;
         if (previousArrow != null) previousArrow.layout(0, arrowY, arrowSize, arrowY + arrowSize);
