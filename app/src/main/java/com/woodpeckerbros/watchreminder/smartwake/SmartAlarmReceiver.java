@@ -8,12 +8,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
-    private static final String CHANNEL = "smart_alarm_alert_v4";
+    private static final String CHANNEL = "smart_alarm_alert_v5";
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
@@ -45,7 +47,8 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
             }
         }
         NotificationChannel channel = new NotificationChannel(CHANNEL, "Smart Alarm", NotificationManager.IMPORTANCE_HIGH);
-        channel.setSound(null, null); channel.enableVibration(false); channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        channel.setSound(null, null); channel.enableVibration(false);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
         Intent activity = new Intent(context, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
@@ -74,7 +77,15 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         SmartWakeMonitoringService.stop(context, alarmId);
         SmartAlarmScheduler.scheduleAutoSnooze(context, alarmId, targetAt,
                 new SmartAlarmStore(context, alarmId).alertDurationSeconds());
-        SmartAlarmRingingService.start(context, alarmId, targetAt);
+        Context appContext = context.getApplicationContext();
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
+                AppLog.d(appContext, "SmartAlarm ringing fallback skipped; activity visible id=" + alarmId);
+            } else {
+                SmartAlarmRingingService.start(appContext, alarmId, targetAt);
+                AppLog.w(appContext, "SmartAlarm ringing fallback started id=" + alarmId);
+            }
+        }, 900L);
         AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason);
     }
 

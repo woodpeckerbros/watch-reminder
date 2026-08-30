@@ -8,8 +8,8 @@ import android.content.Intent;
 public final class SmartWakeDebugReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = System.currentTimeMillis() + Math.max(2, intent.getIntExtra("minutes", 10)) * 60_000L;
-        new SmartAlarmStateStore(context).begin(targetAt);
         int alarmId = intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        new SmartAlarmStateStore(context, alarmId).begin(targetAt);
         if (intent.getBooleanExtra("fire", false)) SmartAlarmScheduler.scheduleDetectedFire(context, alarmId, targetAt);
         else SmartWakeMonitoringService.start(context, alarmId, targetAt);
     }
