@@ -6383,6 +6383,15 @@ public class MainActivity extends Activity {
         picker.setValue(selectedValue);
         picker.setWrapSelectorWheel(max - min >= 2);
         picker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
+        picker.setOnTouchListener((view, event) -> {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+                view.getParent().requestDisallowInterceptTouchEvent(true);
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                view.getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            return false;
+        });
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(68), dp(86));
         params.setMargins(dp(3), 0, dp(3), 0);
         picker.setLayoutParams(params);
