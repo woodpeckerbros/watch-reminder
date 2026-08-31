@@ -1,6 +1,6 @@
 # סטטוס פרויקט - WatchReminder
 
-עדכון אחרון: 2026-08-28
+עדכון אחרון: 2026-08-31
 
 ## 1. מטרת הפרויקט הנוכחית
 
@@ -44,6 +44,7 @@ WatchReminder/
 
 ## 4. מה השתנה בסשן הזה
 
+- בבדיקת A/B נקייה על OnePlus Watch פיזי במצב `Asleep`, התזכורת הרגילה ו־Smart Alarm הופעלו זה אחר זה דרך `AlarmManager`. בשני המקרים OPlus System UI העיר את המסך, הפעיל את ה־full-screen PendingIntent וה־Activity הנכונה הפכה למסך העליון והממוקד (`result code=0`). ערוץ Smart Alarm הועלה ל־`smart_alarm_alert_v7` ופוצל לערוץ רוטט ולערוץ שקט, כדי שהסיווג כאזעקה לא יהיה תלוי ברטט ישיר, וכדי לכבד בחירה מפורשת של המשתמש בלא רטט. באבחון הרטט נמצאה הגבלת firmware נפרדת: כאשר `bedtime_mode=1` ו־`mcu_zen_mode=1`, OnePlus סיים הן רטט ישיר של האפליקציה ב־`USAGE_ALARM` והן רטט של OPlus System UI בסטטוס `ignored_for_settings`. אותה חסימה נרשמה גם בתזכורת הרגילה; היא אינה כשל בלולאת הרטט של Smart Alarm אלא מדיניות Bedtime של היצרן.
 - תוקן כשל הקפצת מסך Smart Alarm ב־OnePlus Watch. בבדיקת A/B פיזית התברר שתזכורת רגילה על היד מקבלת פתיחת full-screen מ־OnePlus System UI כ־300ms לאחר פרסום ההתראה, בעוד שב־Smart Alarm שירות הצלצול עלה כ־foreground כבר כ־60ms לאחר הפרסום וההתראה השנייה שלו מנעה מ־System UI לממש את ה־full-screen intent. הפעלת שירות הצלצול הושהתה כעת ב־900ms ומשמשת רק fail-safe: אם `SmartAlarmAlertActivity` כבר גלויה, השירות אינו עולה וה־Activity מפעילה בעצמה את הצליל והרטט; אם המסך לא עלה, השירות עדיין מתחיל ומבטיח משוב קולי/רטט. בבדיקה חוזרת על OnePlus Watch כשהוא על היד ולא בטעינה, `SmartAlarmAlertActivity` נפתחה, הצליל והרטט הופעלו, ושירות הגיבוי דילג ללא קריסה. בנוסף אומת שמחוץ ליד/בעת טעינה OnePlus עשוי לא להקפיץ full-screen ואף להציג מסך טעינה מעל Activity קיימת; זו התנהגות מערכת ולא הרשאה חסרה. ניסוי `SYSTEM_ALERT_WINDOW` הוסר לחלוטין משום שמסך ההרשאה אינו זמין ב־Wear OS. ערוץ Smart Alarm עלה ל־v5, כלי הדיבוג תומך בתזמון תזכורת רגילה אמיתית דרך AlarmManager, ותוקן state של בדיקת Smart Alarm עבור מזהים שאינם ברירת המחדל.
 - מסלול פתיחת מסך Smart Alarm יושר למסלול המוכח של תזכורת רגילה: ה־Activity PendingIntent משתמש רק ב־`NEW_TASK` ו־`FLAG_UPDATE_CURRENT`, ללא `CLEAR_TOP`/`SINGLE_TOP`/`CANCEL_CURRENT` וללא שליחה מיידית מתחרה של אותו PendingIntent. ההתראה כעת אינה `ongoing`, משתמשת באותם מאפייני full-screen של התזכורת הרגילה, וערוץ Smart Alarm עלה ל־`smart_alarm_alert_v4` כדי לנקות הגדרות ערוץ ישנות שיכלו למנוע פתיחה מלאה.
 - נוספה שכבת fail-safe נפרדת לפתיחת מסך Smart Alarm: שירות הצלצול, שממילא עולה כ־foreground לצלצול ורטט, בודק לאחר 1.2 שניות אם `SmartAlarmAlertActivity` כבר פעילה לאותו alarm/target. אם לא, הוא שולח PendingIntent חדש עם הרשאת background-activity-start בשני צדדיו ב־Android 14/15. אם המסך כבר עלה בדרך הרגילה, הגיבוי מבוטל ואינו פותח כפל מסכים. נוספו לוגים מפורשים לדילוג, שליחה וכשל של המסלול הזה.

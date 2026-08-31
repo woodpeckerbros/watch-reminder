@@ -7,15 +7,21 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
+import com.woodpeckerbros.watchreminder.ReminderSettings;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
-    private static final String CHANNEL = "smart_alarm_alert_v5";
+    private static final String CHANNEL_PREFIX = "smart_alarm_alert_v7";
+    private static final String CHANNEL_VIBRATION = CHANNEL_PREFIX + "_vibration";
+    private static final String CHANNEL_SILENT = CHANNEL_PREFIX + "_silent";
+    private static final long[] SYSTEM_ALARM_VIBRATION =
+            new long[]{0L, 350L, 180L, 350L, 180L, 350L, 180L, 350L};
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
@@ -40,14 +46,25 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         if (!"deadline".equals(reason)) SmartAlarmScheduler.cancelDeadline(context, alarmId);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
+        SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
+        boolean systemVibrationEnabled = settings.vibrationEnabled()
+                && !ReminderSettings.VIBRATION_OFF.equals(settings.vibrationStyle());
+        String channelId = systemVibrationEnabled ? CHANNEL_VIBRATION : CHANNEL_SILENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             for (NotificationChannel existing : manager.getNotificationChannels()) {
-                if (existing.getId().startsWith("smart_alarm_alert") && !CHANNEL.equals(existing.getId()))
+                if (existing.getId().startsWith("smart_alarm_alert")
+                        && !existing.getId().startsWith(CHANNEL_PREFIX))
                     manager.deleteNotificationChannel(existing.getId());
             }
         }
-        NotificationChannel channel = new NotificationChannel(CHANNEL, "Smart Alarm", NotificationManager.IMPORTANCE_HIGH);
-        channel.setSound(null, null); channel.enableVibration(false);
+        NotificationChannel channel = new NotificationChannel(channelId, "Smart Alarm", NotificationManager.IMPORTANCE_HIGH);
+        AudioAttributes alarmAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+        channel.setSound(null, alarmAttributes);
+        channel.enableVibration(systemVibrationEnabled);
+        if (systemVibrationEnabled) channel.setVibrationPattern(SYSTEM_ALARM_VIBRATION);
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
         Intent activity = new Intent(context, SmartAlarmAlertActivity.class)
@@ -57,16 +74,18 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pending = PendingIntent.getActivity(context, 0x534d5803 + alarmId, activity,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        Notification notification = new Notification.Builder(context, CHANNEL)
+        Notification.Builder builder = new Notification.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_notification).setContentTitle("Smart Alarm")
                 .setContentText("זמן להתעורר").setCategory(Notification.CATEGORY_ALARM)
                 .setStyle(new Notification.BigTextStyle().bigText("זמן להתעורר"))
                 .setPriority(Notification.PRIORITY_MAX).setContentIntent(pending)
-                .setFullScreenIntent(pending, true).setSound(null).setVibrate(new long[]{0})
+                .setFullScreenIntent(pending, true).setSound(null)
                 .setDefaults(0).setOnlyAlertOnce(true).setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
-                .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt)).build();
+                .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
+        if (systemVibrationEnabled) builder.setVibrate(SYSTEM_ALARM_VIBRATION);
+        Notification notification = builder.build();
         manager.notify(0x534d5704 + alarmId, notification);
         AppLog.d(context, "SmartAlarm notified id=" + alarmId
                 + " fullScreen=" + AppLog.fullScreenIntentAllowed(context)
@@ -76,7 +95,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         // processes the full-screen intent, leaving sound active without presenting the screen.
         SmartWakeMonitoringService.stop(context, alarmId);
         SmartAlarmScheduler.scheduleAutoSnooze(context, alarmId, targetAt,
-                new SmartAlarmStore(context, alarmId).alertDurationSeconds());
+                settings.alertDurationSeconds());
         Context appContext = context.getApplicationContext();
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
