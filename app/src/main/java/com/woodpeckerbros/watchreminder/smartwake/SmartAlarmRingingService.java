@@ -13,6 +13,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -25,6 +26,7 @@ public final class SmartAlarmRingingService extends Service {
     private static final String CHANNEL = "smart_alarm_ringing_v1";
     private static final int NOTIFICATION_ID = 0x534d5706;
     private AlertFeedback feedback;
+    private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     public static boolean start(Context context, int alarmId, long targetAt) {
@@ -62,10 +64,33 @@ public final class SmartAlarmRingingService extends Service {
             return START_NOT_STICKY;
         }
         SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
+        int alertDurationMs = settings.alertDurationSeconds() * 1000;
+        holdCpuWhileRinging(alertDurationMs);
         feedback = AlertFeedback.startSmartAlarm(this, settings);
         handler.postDelayed(() -> ensureAlertScreen(alarmId, targetAt), 1_200L);
-        handler.postDelayed(this::stopSelf, settings.alertDurationSeconds() * 1000L + 1_000L);
+        handler.postDelayed(this::stopSelf, alertDurationMs + 1_000L);
         return START_NOT_STICKY;
+    }
+
+    private void holdCpuWhileRinging(int alertDurationMs) {
+        releaseWakeLock();
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        if (powerManager == null) {
+            AppLog.w(this, "SmartAlarm partial wake lock unavailable");
+            return;
+        }
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                getPackageName() + ":SmartAlarmRinging");
+        wakeLock.setReferenceCounted(false);
+        long timeoutMs = Math.max(5_000L, alertDurationMs + 2_000L);
+        wakeLock.acquire(timeoutMs);
+        AppLog.d(this, "SmartAlarm partial wake lock acquired timeoutMs=" + timeoutMs);
+    }
+
+    private void releaseWakeLock() {
+        if (wakeLock == null) return;
+        if (wakeLock.isHeld()) wakeLock.release();
+        wakeLock = null;
     }
 
     private void ensureAlertScreen(int alarmId, long targetAt) {
@@ -105,6 +130,7 @@ public final class SmartAlarmRingingService extends Service {
     @Override public void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         if (feedback != null) { feedback.stop(); feedback = null; }
+        releaseWakeLock();
         super.onDestroy();
     }
 
