@@ -103,6 +103,8 @@
     <string name="ui_permission_activity_message">Zmanio משתמשת בהרשאה הזו כדי לזהות אם המשתמש ישן. כך היא יכולה להימנע מהפעלת התראה בזמן השינה, להמתין ולהציג אותה לאחר ההתעוררות. ההרשאה אינה משמשת לספירת צעדים או למעקב אחר אימונים. במסך הבא השעון יבקש גישה לזיהוי פעילות.</string>
     <string name="ui_permission_sensors_title">למה צריך לזהות את מצב השעון?</string>
     <string name="ui_permission_sensors_message">כדי לא להעיר בזמן שינה ולא להפעיל התראה כשהשעון אינו על היד, Zmanio משתמשת בחיישנים כדי לזהות את המצב הנוכחי. כך אפשר להציג את ההתראה מיד כשמתאים, או להמתין עד שהמשתמש ער והשעון שוב על היד. במסך הבא השעון יבקש גישה לחיישנים.</string>
+    <string name="ui_permission_battery_optimization_title">למה צריך החרגה מחיסכון בסוללה?</string>
+    <string name="ui_permission_battery_optimization_message">כדי שמערכת השעון לא תעצור את Zmanio ותבטל תזכורות מתוזמנות, יש לאפשר לאפליקציה לפעול ללא הגבלות אופטימיזציית סוללה. במסך הבא יש לאשר את ההחרגה עבור Zmanio.</string>
     <string name="ui_permission_full_screen_title">למה צריך התראות במסך מלא?</string>
     <string name="ui_permission_full_screen_message">האישור מאפשר לתזכורת חשובה להופיע מעל המסך הנוכחי גם כשהשעון נעול. במסך הבא יש לאפשר זאת עבור Zmanio.</string>
     <string name="ui_enable_alarms_reminders_title">אישור Alarms &amp; reminders</string>

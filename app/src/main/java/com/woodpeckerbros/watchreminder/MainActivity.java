@@ -28,6 +28,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -168,12 +169,14 @@ public class MainActivity extends Activity {
     private boolean editingSmartAlarmNew;
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
+    private boolean batteryOptimizationRequestStarted;
     private boolean permissionRequestInFlight;
     private boolean permissionExplanationVisible;
     private boolean askedPostNotificationsThisSession;
     private boolean askedLocationThisSession;
     private boolean askedActivityRecognitionThisSession;
     private boolean askedBodySensorsThisSession;
+    private boolean askedBatteryOptimizationThisSession;
     private boolean askedExactAlarmThisSession;
     private boolean askedFullScreenThisSession;
     private String currentScreen = "list";
@@ -273,6 +276,15 @@ public class MainActivity extends Activity {
             showList();
         } else if (fullScreenIntentRequestStarted) {
             fullScreenIntentRequestStarted = false;
+        }
+        if (batteryOptimizationRequestStarted) {
+            batteryOptimizationRequestStarted = false;
+            boolean exempt = isIgnoringBatteryOptimizations();
+            AppLog.d(this, "battery optimization request returned exempt=" + exempt);
+            if (exempt && store != null) {
+                store.rescheduleAll();
+                ReminderScheduler.scheduleWatchdog(this);
+            }
         }
         if (startupMaintenancePending || startupMaintenanceRunning || System.currentTimeMillis() - createdAt < 2_500L) {
             mainHandler.postDelayed(() -> ReminderReceiver.dispatchNextQueued(MainActivity.this), 900L);
@@ -5042,6 +5054,9 @@ public class MainActivity extends Activity {
         if (requestBodySensorsIfNeeded()) {
             return;
         }
+        if (requestBatteryOptimizationExemptionIfNeeded()) {
+            return;
+        }
         requestExactAlarmAccessIfNeeded(false);
     }
 
@@ -5125,6 +5140,45 @@ public class MainActivity extends Activity {
             return true;
         }
         return false;
+    }
+
+    private boolean requestBatteryOptimizationExemptionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
+                || isIgnoringBatteryOptimizations()
+                || askedBatteryOptimizationThisSession) {
+            return false;
+        }
+        askedBatteryOptimizationThisSession = true;
+        showPermissionExplanation(
+                R.string.ui_permission_battery_optimization_title,
+                R.string.ui_permission_battery_optimization_message,
+                this::openBatteryOptimizationExemptionRequest);
+        return true;
+    }
+
+    private boolean isIgnoringBatteryOptimizations() {
+        PowerManager manager = (PowerManager) getSystemService(POWER_SERVICE);
+        return manager != null && manager.isIgnoringBatteryOptimizations(getPackageName());
+    }
+
+    private void openBatteryOptimizationExemptionRequest() {
+        batteryOptimizationRequestStarted = true;
+        AppLog.w(this, "request setting IGNORE_BATTERY_OPTIMIZATIONS");
+        Intent request = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.parse("package:" + getPackageName()));
+        try {
+            startActivity(request);
+        } catch (Exception error) {
+            AppLog.w(this, "direct battery optimization request unavailable: "
+                    + error.getClass().getSimpleName());
+            Intent fallback = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            try {
+                startActivity(fallback);
+            } catch (Exception fallbackError) {
+                batteryOptimizationRequestStarted = false;
+                AppLog.e(this, "battery optimization settings unavailable", fallbackError);
+            }
+        }
     }
 
     private void requestCriticalAlertAccessIfNeeded(boolean force) {

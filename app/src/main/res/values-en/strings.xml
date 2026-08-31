@@ -103,6 +103,8 @@
     <string name="ui_permission_activity_message">Zmanio uses this permission to detect when you are asleep. It can then avoid alerting during sleep, wait, and show the reminder after you wake up. It is not used for step counting or workout tracking. On the next screen, the watch will request activity-recognition access.</string>
     <string name="ui_permission_sensors_title">Why detect the watch state?</string>
     <string name="ui_permission_sensors_message">To avoid waking you during sleep or alerting while the watch is off your wrist, Zmanio uses sensors to detect the current state. It can then alert you at the right time, or wait until you are awake and wearing the watch again. On the next screen, the watch will request sensor access.</string>
+    <string name="ui_permission_battery_optimization_title">Why allow unrestricted battery use?</string>
+    <string name="ui_permission_battery_optimization_message">To prevent the watch system from stopping Zmanio and cancelling scheduled reminders, allow the app to run without battery-optimization restrictions. On the next screen, approve the exemption for Zmanio.</string>
     <string name="ui_permission_full_screen_title">Why allow full-screen alerts?</string>
     <string name="ui_permission_full_screen_message">This allows an important reminder to appear over the current screen even while the watch is locked. On the next screen, enable it for Zmanio.</string>
     <string name="ui_enable_alarms_reminders_title">Allow Alarms &amp; reminders</string>
