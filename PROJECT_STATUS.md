@@ -12,7 +12,7 @@
 - Build: `./gradlew :app:testDebugUnitTest :app:assembleDebug`; לטלפון `./gradlew :phone:assembleDebug`.
 - התקנה: `adb install -r app/build/outputs/apk/debug/app-debug.apk`, ואז לפתוח את `com.woodpeckerbros.watchreminder/.MainActivity`.
 - כללי בטיחות: אין לשנות מבנה, package name, Gradle/AGP/SDK או dependencies ללא אישור; לא לבצע force-stop בלי לשחזר alarms.
-- שינוי אחרון: תיעוד רוענן; קוד ההחרגה והטיפול בבקשה חוזרת נמצאים ב־commit האחרון.
+- שינוי אחרון: תועד אישור המשתמש לבצע commit ו־push ל־Git של הפרויקט; קוד ההחרגה והטיפול בבקשה חוזרת נמצאים ב־commit האחרון.
 - משימה מיידית: להמשיך רק במשימה שהמשתמש ביקש, לאמת על השעון הפיזי כשאפשר, ולעדכן כאן רק את המצב הנוכחי.
 
 # FULL PROJECT STATUS

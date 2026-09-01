@@ -8,5 +8,5 @@
 - Prefer small, reversible, task-focused changes. Do not make unrelated changes.
 - After a meaningful task, update `PROJECT_STATUS.md`, updating QUICK RESUME first and keeping it under approximately 40 lines.
 - Move completed or historical information into `PROJECT_HISTORY.md` instead of allowing `PROJECT_STATUS.md` to grow indefinitely.
-- After every meaningful change, create a clear commit and push to Git when the destination is approved; preserve unrelated worktree changes.
+- The user permanently authorizes clear commits and pushes to the project's configured Git remote; preserve unrelated worktree changes and never stage them accidentally.
 - Verify relevant changes by building and, when possible, running on the user's watch and phone.
