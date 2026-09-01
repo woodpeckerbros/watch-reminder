@@ -17,7 +17,7 @@ import com.woodpeckerbros.watchreminder.R;
 import com.woodpeckerbros.watchreminder.ReminderSettings;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_PREFIX = "smart_alarm_alert_v7";
+    private static final String CHANNEL_PREFIX = "smart_alarm_alert_v8";
     private static final String CHANNEL_VIBRATION = CHANNEL_PREFIX + "_vibration";
     private static final String CHANNEL_SILENT = CHANNEL_PREFIX + "_silent";
     private static final long[] SYSTEM_ALARM_VIBRATION =
@@ -65,6 +65,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         channel.setSound(null, alarmAttributes);
         channel.enableVibration(systemVibrationEnabled);
         if (systemVibrationEnabled) channel.setVibrationPattern(SYSTEM_ALARM_VIBRATION);
+        channel.setBypassDnd(manager.isNotificationPolicyAccessGranted());
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
         Intent activity = new Intent(context, SmartAlarmAlertActivity.class)

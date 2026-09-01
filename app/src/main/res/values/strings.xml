@@ -107,6 +107,9 @@
     <string name="ui_permission_battery_optimization_message">כדי שמערכת השעון לא תעצור את Zmanio ותבטל תזכורות מתוזמנות, יש לאפשר לאפליקציה לפעול ללא הגבלות אופטימיזציית סוללה. במסך הבא יש לאשר את ההחרגה עבור Zmanio.</string>
     <string name="ui_permission_full_screen_title">למה צריך התראות במסך מלא?</string>
     <string name="ui_permission_full_screen_message">האישור מאפשר לתזכורת חשובה להופיע מעל המסך הנוכחי גם כשהשעון נעול. במסך הבא יש לאפשר זאת עבור Zmanio.</string>
+    <string name="ui_permission_dnd_title">לאפשר לשעון המעורר לעקוף “נא לא להפריע”?</string>
+    <string name="ui_permission_dnd_message">אישור אופציונלי זה מאפשר לערוץ של השעון המעורר החכם לבקש צלצול ורטט גם במצב “נא לא להפריע”. במסך הבא יש לבחור ב־Zmanio ולאשר. מצב השינה והגדרות המערכת עדיין יכולים לחסום את ההתראה.</string>
+    <string name="ui_permission_dnd_unavailable">השעון אינו מציג את מסך הגישה ל״נא לא להפריע״.</string>
     <string name="ui_enable_alarms_reminders_title">אישור Alarms &amp; reminders</string>
     <string name="ui_enable_alarms_reminders_message">כדי שהתזכורות יצלצלו בזמן גם כשהשעון במצב חיסכון או המסך כבוי, צריך לאשר לאפליקציה Alarms &amp; reminders. במסך שייפתח חפש Zmanio או Alarms &amp; reminders, פתח את Zmanio והפעל Allow.</string>
     <string name="ui_enable_alarms_reminders_hint">במסך שייפתח צריך להפעיל Alarms &amp; reminders כדי שהתזכורות יפעלו בזמן.</string>

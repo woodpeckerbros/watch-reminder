@@ -181,6 +181,7 @@ public class MainActivity extends Activity {
     private boolean askedBatteryOptimizationThisSession;
     private boolean askedExactAlarmThisSession;
     private boolean askedFullScreenThisSession;
+    private boolean askedNotificationPolicyThisSession;
     private String currentScreen = "list";
     private float swipeStartX;
     private float swipeStartY;
@@ -5076,7 +5077,10 @@ public class MainActivity extends Activity {
         if (requestBatteryOptimizationExemptionIfNeeded()) {
             return;
         }
-        requestExactAlarmAccessIfNeeded(false);
+        if (requestExactAlarmAccessIfNeeded(false)) {
+            return;
+        }
+        requestNotificationPolicyAccessIfNeeded();
     }
 
     private boolean requestNotificationAccessIfNeeded() {
@@ -5202,6 +5206,30 @@ public class MainActivity extends Activity {
                 batteryOptimizationRequestStarted = false;
                 AppLog.e(this, "battery optimization settings unavailable", fallbackError);
             }
+        }
+    }
+
+    private boolean requestNotificationPolicyAccessIfNeeded() {
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager == null || manager.isNotificationPolicyAccessGranted() || askedNotificationPolicyThisSession) {
+            return false;
+        }
+        askedNotificationPolicyThisSession = true;
+        showPermissionExplanation(
+                R.string.ui_permission_dnd_title,
+                R.string.ui_permission_dnd_message,
+                this::openNotificationPolicyAccessSettings);
+        return true;
+    }
+
+    private void openNotificationPolicyAccessSettings() {
+        AppLog.w(this, "request setting NOTIFICATION_POLICY_ACCESS");
+        try {
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
+        } catch (Exception error) {
+            AppLog.w(this, "notification policy settings unavailable: "
+                    + error.getClass().getSimpleName());
+            Toast.makeText(this, getString(R.string.ui_permission_dnd_unavailable), Toast.LENGTH_LONG).show();
         }
     }
 

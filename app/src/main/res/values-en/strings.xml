@@ -107,6 +107,9 @@
     <string name="ui_permission_battery_optimization_message">To prevent the watch system from stopping Zmanio and cancelling scheduled reminders, allow the app to run without battery-optimization restrictions. On the next screen, approve the exemption for Zmanio.</string>
     <string name="ui_permission_full_screen_title">Why allow full-screen alerts?</string>
     <string name="ui_permission_full_screen_message">This allows an important reminder to appear over the current screen even while the watch is locked. On the next screen, enable it for Zmanio.</string>
+    <string name="ui_permission_dnd_title">Allow Smart Alarm to bypass Do Not Disturb?</string>
+    <string name="ui_permission_dnd_message">This optional access lets the Smart Alarm channel request sound and vibration during Do Not Disturb. On the next screen, select Zmanio and approve it. Bedtime and system settings can still block the alert.</string>
+    <string name="ui_permission_dnd_unavailable">This watch does not provide the Do Not Disturb access screen.</string>
     <string name="ui_enable_alarms_reminders_title">Allow Alarms &amp; reminders</string>
     <string name="ui_enable_alarms_reminders_message">To make reminders ring on time even when the watch is saving power or the screen is off, allow Alarms &amp; reminders for this app. On the screen that opens, find Zmanio or Alarms &amp; reminders, open Zmanio, and turn on Allow.</string>
     <string name="ui_enable_alarms_reminders_hint">On the screen that opens, enable Alarms &amp; reminders so reminders can run on time.</string>
