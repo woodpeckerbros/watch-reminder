@@ -1273,6 +1273,10 @@ public class MainActivity extends Activity {
         for (int alarmId : alarmIds) {
             SmartAlarmStore alarm = new SmartAlarmStore(this, alarmId);
             LinearLayout alarmCard = card(true);
+            alarmCard.setOnLongClickListener(v -> {
+                showSmartAlarmActions(alarmId);
+                return true;
+            });
             TextView time = text(String.format(Locale.US, "%02d:%02d", alarm.hour(), alarm.minute()), 25, COLOR_CARD_TEXT);
             AppFont.bold(time);
             alarmCard.addView(time);
@@ -6773,6 +6777,25 @@ public class MainActivity extends Activity {
                         () -> {
                             store.delete(reminder);
                             showList();
+                        },
+                        null
+                }
+        );
+    }
+
+    private void showSmartAlarmActions(int alarmId) {
+        SmartAlarmStore alarm = new SmartAlarmStore(this, alarmId);
+        String title = String.format(Locale.US, "%02d:%02d", alarm.hour(), alarm.minute());
+        showActionDialog(
+                title,
+                translated(new String[]{"עריכה", "מחיקה", "ביטול"}),
+                new int[]{COLOR_SURFACE_2, 0xFF7E2A35, COLOR_SURFACE_2},
+                new Runnable[]{
+                        () -> showSmartAlarmEditor(alarmId, false),
+                        () -> {
+                            SmartAlarmScheduler.cancel(this, alarmId);
+                            SmartAlarmStore.delete(this, alarmId);
+                            showSmartAlarmSettings();
                         },
                         null
                 }
