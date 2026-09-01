@@ -15,6 +15,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -164,7 +165,29 @@ class BackupStorage {
         if (backups.isEmpty()) {
             queryCollection(context, MediaStore.Downloads.EXTERNAL_CONTENT_URI, backups, seen);
         }
+        if (backups.isEmpty()) {
+            scanLegacyDownloadFolders(backups, seen);
+        }
         return backups;
+    }
+
+    private static void scanLegacyDownloadFolders(ArrayList<BackupEntry> backups, Set<String> seen) {
+        File downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        scanFolder(new File(downloads, "Zmanio"), backups, seen, 2);
+        scanFolder(new File(downloads, "WatchReminder"), backups, seen, 2);
+    }
+
+    private static void scanFolder(File folder, ArrayList<BackupEntry> backups,
+                                   Set<String> seen, int depth) {
+        File[] files = folder.listFiles();
+        if (files == null || depth < 0) return;
+        for (File file : files) {
+            if (file.isDirectory()) {
+                scanFolder(file, backups, seen, depth - 1);
+            } else if (isBackupName(file.getName()) && seen.add(file.getName())) {
+                backups.add(new BackupEntry(file.getName(), Uri.fromFile(file), file.lastModified()));
+            }
+        }
     }
 
     private static void queryCollection(Context context, Uri collection,
