@@ -21,8 +21,10 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 class BackupStorage {
     static final String MESSAGE_PATH = "/watch_reminder_backup";
@@ -150,7 +152,12 @@ class BackupStorage {
 
     static List<BackupEntry> listBackups(Context context) {
         ArrayList<BackupEntry> backups = new ArrayList<>();
-        Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+        Set<String> seen = new HashSet<>();
+        // Files copied by a file manager (or by an older app version) are not
+        // guaranteed to be exposed through MediaStore.Downloads. The general
+        // external-files collection includes both those files and current
+        // app-created Downloads entries.
+        Uri collection = MediaStore.Files.getContentUri("external");
         String[] projection = {
                 MediaStore.MediaColumns._ID,
                 MediaStore.MediaColumns.DISPLAY_NAME,
@@ -175,6 +182,9 @@ class BackupStorage {
             while (cursor.moveToNext()) {
                 String name = cursor.getString(nameIndex);
                 if (!isBackupName(name)) {
+                    continue;
+                }
+                if (!seen.add(name)) {
                     continue;
                 }
                 Uri uri = android.content.ContentUris.withAppendedId(collection, cursor.getLong(idIndex));

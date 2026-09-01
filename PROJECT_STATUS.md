@@ -14,7 +14,8 @@
 - התקנה: `adb install -r app/build/outputs/apk/debug/app-debug.apk`, ואז לפתוח את `com.woodpeckerbros.watchreminder/.MainActivity`.
 - כללי בטיחות: אין לשנות מבנה, package name, Gradle/AGP/SDK או dependencies ללא אישור; לא לבצע force-stop בלי לשחזר alarms.
 - שינוי אחרון: בדיקת reboot אישרה שמערכת OnePlus מבצעת force-stop החוסם את כל מסלולי השחזור. לאחר פתיחה דרך ADB שוחזרו ואומתו Smart Alarm 07:00, תזכורת 07:15, חלון 06:20 ו־watchdog 07:17; ה־job רץ ונרשם מחדש.
-- משימה מיידית: לאמת שליחת restore אמיתית מהטלפון לאחר תיקון `BIND_LISTENER`; גרסת Play בטלפון מול APK מקומי בשעון אינה הבעיה הצפויה כל עוד ה־applicationId וה־path זהים.
+- שינוי אחרון (01/09): תיקון רשימת הגיבויים בטלפון — הסריקה עוברת דרך `MediaStore.Files` הכללי ומזהה גם קבצי `.zmbu`/`.wrbu` שנמצאים בתיקיות Downloads ונוצרו בגרסאות קודמות או דרך מנהל קבצים; נוספה מניעת כפילויות. נבנה והותקן APK debug בטלפון ללא מחיקת נתונים.
+- משימה מיידית: לפתוח בטלפון הגדרות → גיבויים ולאמת ששני קבצי `Zmanio_*.zmbu` שנמצאו ב־`Download/Zmanio` מוצגים וניתנים לבחירה.
 
 # FULL PROJECT STATUS
 
