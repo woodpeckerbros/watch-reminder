@@ -305,6 +305,7 @@ public class MainActivity extends Activity {
     }
 
     private void scheduleStartupMaintenance() {
+        ReminderRecoveryJobService.schedule(this);
         if (startupMaintenancePending || startupMaintenanceRunning || startupMaintenanceDone) {
             return;
         }

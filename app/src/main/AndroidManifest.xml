@@ -45,6 +45,11 @@
         </service>
 
         <service
+            android:name=".ReminderRecoveryJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <service
             android:name=".smartwake.SmartWakeMonitoringService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
@@ -296,9 +301,12 @@
 
         <receiver
             android:name=".BootReceiver"
+            android:directBootAware="true"
             android:exported="false">
             <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.USER_UNLOCKED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />

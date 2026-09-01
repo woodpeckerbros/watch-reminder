@@ -5,11 +5,21 @@ import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmScheduler;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.UserManager;
 
 public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+        UserManager userManager = context.getSystemService(UserManager.class);
+        if (userManager != null && !userManager.isUserUnlocked()) {
+            return;
+        }
         AppLog.d(context, "BootReceiver action=" + (intent == null ? "" : intent.getAction()));
+        ReminderRecoveryJobService.schedule(context);
+        recover(context);
+    }
+
+    static void recover(Context context) {
         AlarmScheduleMigration.clearLegacyAlarmsOnce(context);
         new ReminderSettings(context).applyPowerSaveDefaultOnce();
         long now = System.currentTimeMillis();
