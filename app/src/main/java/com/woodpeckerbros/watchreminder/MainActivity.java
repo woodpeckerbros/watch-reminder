@@ -1358,6 +1358,14 @@ public class MainActivity extends Activity {
         timeCard.addView(timePickerRow(hourPicker, minutePicker));
         content.addView(timeCard, cardParams());
 
+        LinearLayout smartWindowCard = card();
+        TextView smartWindowTitle = text("חלון השכמה חכם", 15, COLOR_CARD_TEXT);
+        AppFont.bold(smartWindowTitle);
+        smartWindowCard.addView(smartWindowTitle);
+        NumberPicker windowPicker = numberPicker(5, 60, smart.windowMinutes());
+        smartWindowCard.addView(pickerColumn("דקות לפני שעת ההשכמה", windowPicker));
+        content.addView(smartWindowCard, cardParams());
+
         final int[] selectedDaysMask = {smart.daysMask()};
         LinearLayout daysCard = card();
         TextView daysTitle = text("ימי פעילות", 15, COLOR_CARD_TEXT);
@@ -1381,14 +1389,6 @@ public class MainActivity extends Activity {
         daysCard.addView(firstDays);
         daysCard.addView(secondDays);
         content.addView(daysCard, cardParams());
-
-        LinearLayout smartWindowCard = card();
-        TextView smartWindowTitle = text("חלון השכמה חכם", 15, COLOR_CARD_TEXT);
-        AppFont.bold(smartWindowTitle);
-        smartWindowCard.addView(smartWindowTitle);
-        NumberPicker windowPicker = numberPicker(5, 60, smart.windowMinutes());
-        smartWindowCard.addView(pickerColumn("דקות לפני שעת ההשכמה", windowPicker));
-        content.addView(smartWindowCard, cardParams());
 
         LinearLayout backgroundCard = card();
         TextView backgroundTitle = text("רקע מסך ההתראה", 15, COLOR_CARD_TEXT);

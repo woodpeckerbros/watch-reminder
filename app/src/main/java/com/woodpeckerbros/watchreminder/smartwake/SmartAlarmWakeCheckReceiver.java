@@ -18,6 +18,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
     private static final int NOTIFICATION_BASE = 0x534d5A00;
 
     static void schedule(Context context, int alarmId, long targetAt, int minutes) {
+        cancel(context, alarmId);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
         long at = System.currentTimeMillis() + Math.max(1, minutes) * 60_000L;
@@ -27,6 +28,16 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
             else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
         } catch (SecurityException error) { manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending); }
         AppLog.d(context, "SmartAlarm wake check scheduled id=" + alarmId + " at=" + at);
+    }
+
+    static void cancel(Context context, int alarmId) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager != null) {
+            manager.cancel(receiverIntent(context, alarmId, 0L, false));
+            manager.cancel(receiverIntent(context, alarmId, 0L, true));
+        }
+        NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
     }
 
     static void confirm(Context context, int alarmId) {

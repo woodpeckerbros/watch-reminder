@@ -187,6 +187,8 @@ public final class SmartAlarmAlertActivity extends Activity {
         stopFeedback();
         if (settings.wakeCheckEnabled() && !wakeCheckEscalation) {
             SmartAlarmWakeCheckReceiver.schedule(this, alarmId, targetAt, settings.wakeCheckDelayMinutes());
+        } else {
+            SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
         }
         SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId);
         close();

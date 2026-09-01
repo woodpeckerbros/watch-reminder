@@ -53,6 +53,12 @@ public final class SmartAlarmActions extends BroadcastReceiver {
             }
         }
         state.dismiss(targetAt);
+        if (new SmartAlarmStore(context, alarmId).wakeCheckEnabled()) {
+            SmartAlarmWakeCheckReceiver.schedule(context, alarmId, targetAt,
+                    new SmartAlarmStore(context, alarmId).wakeCheckDelayMinutes());
+        } else {
+            SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
+        }
         SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId);
         AppLog.d(context, "SmartAlarm notification dismiss id=" + alarmId);
     }
