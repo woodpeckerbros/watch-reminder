@@ -203,6 +203,7 @@ public class MainActivity extends Activity {
     private boolean startupMaintenancePending;
     private boolean startupMaintenanceRunning;
     private boolean startupMaintenanceDone;
+    private boolean foregroundDueCheckRunning;
     private int startupListPass;
     private int homeUpcomingLoadGeneration;
     private LinearLayout homeUpcomingContainer;
@@ -364,7 +365,8 @@ public class MainActivity extends Activity {
         if (store == null) {
             return;
         }
-        if (startupMaintenancePending || startupMaintenanceRunning || System.currentTimeMillis() - createdAt < 2_500L) {
+        if (startupMaintenancePending || startupMaintenanceRunning || foregroundDueCheckRunning
+                || System.currentTimeMillis() - createdAt < 2_500L) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -372,15 +374,25 @@ public class MainActivity extends Activity {
             return;
         }
         lastForegroundDueCheckAt = now;
+        foregroundDueCheckRunning = true;
         AppLog.d(this, "MainActivity foreground due check");
-        ReminderDueChecker.dispatchDue(this, now - ReminderDueChecker.CATCH_UP_LOOKBACK_MS, now);
-        ReminderAudit.run(this);
-        store.rescheduleAll();
-        DafYomiScheduler.dispatchIfDueNow(this);
-        OmerScheduler.dispatchIfDueNow(this);
-        ReminderScheduler.scheduleWatchdog(this);
-        ReminderReceiver.dispatchNextQueued(this);
-        IntermittentFastingScheduler.schedule(this);
+        new Thread(() -> {
+            try {
+                ReminderDueChecker.dispatchDue(MainActivity.this, now - ReminderDueChecker.CATCH_UP_LOOKBACK_MS, now);
+                ReminderAudit.run(MainActivity.this);
+                store.rescheduleAll();
+                ReminderReceiver.dispatchNextQueued(MainActivity.this);
+                DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
+                OmerScheduler.dispatchIfDueNow(MainActivity.this);
+                ReminderScheduler.scheduleWatchdog(MainActivity.this);
+                IntermittentFastingScheduler.schedule(MainActivity.this);
+            } finally {
+                mainHandler.post(() -> {
+                    foregroundDueCheckRunning = false;
+                    refreshVisibleScreenIfRemindersChanged();
+                });
+            }
+        }, "wr-foreground-due-check").start();
     }
 
     private boolean showMissedReminderReliabilityPromptIfNeeded() {

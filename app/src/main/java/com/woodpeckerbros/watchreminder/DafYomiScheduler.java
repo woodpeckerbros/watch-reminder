@@ -67,6 +67,11 @@ public class DafYomiScheduler {
             schedule(context);
             return false;
         }
+        if (new ReminderAlertQueueStore(context).hasActiveAlert()) {
+            AppLog.d(context, "daf yomi catch-up deferred behind regular alert");
+            scheduleRetry(context, 1);
+            return false;
+        }
         AppLog.d(context, "daf yomi catch-up open alert trigger=" + NextReminderCalculator.formatDateTime(todayTriggerAt));
         Intent alert = new Intent(context, DafYomiAlertActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

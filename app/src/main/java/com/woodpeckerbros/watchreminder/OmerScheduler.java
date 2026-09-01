@@ -50,6 +50,11 @@ public class OmerScheduler {
             schedule(context);
             return false;
         }
+        if (new ReminderAlertQueueStore(context).hasActiveAlert()) {
+            AppLog.d(context, "omer catch-up deferred behind regular alert");
+            scheduleRetry(context, 1);
+            return false;
+        }
         AppLog.d(context, "omer catch-up open alert day=" + item.day + " at=" + NextReminderCalculator.formatDateTime(item.triggerAt));
         openAlert(context, item.triggerAt);
         OmerReceiver.cancelNotification(context);

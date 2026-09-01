@@ -16,7 +16,15 @@ public class BootReceiver extends BroadcastReceiver {
         }
         AppLog.d(context, "BootReceiver action=" + (intent == null ? "" : intent.getAction()));
         ReminderRecoveryJobService.schedule(context);
-        recover(context);
+        PendingResult pendingResult = goAsync();
+        Context appContext = context.getApplicationContext();
+        new Thread(() -> {
+            try {
+                recover(appContext);
+            } finally {
+                pendingResult.finish();
+            }
+        }, "wr-boot-recovery").start();
     }
 
     static void recover(Context context) {

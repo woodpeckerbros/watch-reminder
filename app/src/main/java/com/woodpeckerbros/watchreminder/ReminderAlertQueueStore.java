@@ -68,6 +68,11 @@ public class ReminderAlertQueueStore {
         return !getQueue().isEmpty();
     }
 
+    public boolean hasActiveAlert() {
+        clearStaleActive();
+        return prefs.getString(KEY_ACTIVE, null) != null;
+    }
+
     public void complete(String occurrenceId) {
         String active = prefs.getString(KEY_ACTIVE, null);
         if (occurrenceId == null || occurrenceId.equals(active)) {
