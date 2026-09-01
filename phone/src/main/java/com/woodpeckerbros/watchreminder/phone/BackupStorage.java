@@ -158,23 +158,31 @@ class BackupStorage {
         // external-files collection includes both those files and current
         // app-created Downloads entries.
         Uri collection = MediaStore.Files.getContentUri("external");
+        queryCollection(context, collection, backups, seen);
+        // Keep a provider-specific fallback for devices whose Files provider
+        // does not expose the Downloads volume to third-party packages.
+        if (backups.isEmpty()) {
+            queryCollection(context, MediaStore.Downloads.EXTERNAL_CONTENT_URI, backups, seen);
+        }
+        return backups;
+    }
+
+    private static void queryCollection(Context context, Uri collection,
+                                         ArrayList<BackupEntry> backups, Set<String> seen) {
         String[] projection = {
                 MediaStore.MediaColumns._ID,
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.DATE_MODIFIED
         };
-        String selection = "(" + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? OR "
-                + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?)";
-        String[] args = new String[]{"Zmanio_%", "WatchReminder_%"};
         try (Cursor cursor = context.getContentResolver().query(
                 collection,
                 projection,
-                selection,
-                args,
+                null,
+                null,
                 MediaStore.MediaColumns.DATE_MODIFIED + " DESC"
         )) {
             if (cursor == null) {
-                return backups;
+                return;
             }
             int idIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID);
             int nameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME);
@@ -193,7 +201,6 @@ class BackupStorage {
         } catch (Exception exception) {
             android.util.Log.e("WatchReminderPhone", "Could not query latest backup", exception);
         }
-        return backups;
     }
 
     private static BackupEntry latestBackup(Context context) {
