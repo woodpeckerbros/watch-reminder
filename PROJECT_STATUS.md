@@ -14,7 +14,7 @@
 - התקנה: `adb install -r app/build/outputs/apk/debug/app-debug.apk`, ואז לפתוח את `com.woodpeckerbros.watchreminder/.MainActivity`.
 - כללי בטיחות: אין לשנות מבנה, package name, Gradle/AGP/SDK או dependencies ללא אישור; לא לבצע force-stop בלי לשחזר alarms.
 - שינוי אחרון: בדיקת reboot אישרה שמערכת OnePlus מבצעת force-stop החוסם את כל מסלולי השחזור. לאחר פתיחה דרך ADB שוחזרו ואומתו Smart Alarm 07:00, תזכורת 07:15, חלון 06:20 ו־watchdog 07:17; ה־job רץ ונרשם מחדש.
-- משימה מיידית: למצוא הגדרת/פקודת OnePlus שמונעת force-stop באתחול, או פתרון ברמת מערכת; במקביל לבצע בדיקת התראה קרובה עם מסך כבוי.
+- משימה מיידית: לאמת שליחת restore אמיתית מהטלפון לאחר תיקון `BIND_LISTENER`; גרסת Play בטלפון מול APK מקומי בשעון אינה הבעיה הצפויה כל עוד ה־applicationId וה־path זהים.
 
 # FULL PROJECT STATUS
 
@@ -49,6 +49,7 @@ Smart Alarm נמצא תחת `app/src/main/java/com/woodpeckerbros/watchreminder/
 
 - OnePlus עשוי לבצע force-stop פנימי דרך מנהל החשמל; אין API לאפליקציית צד שלישי שמונע זאת לחלוטין.
 - reboot מוחק רשומות AlarmManager. USER_UNLOCKED ו־JobScheduler persisted נוספו כגיבוי, אך אינם יכולים לרוץ כאשר OnePlus מסמן את החבילה stopped אחרי boot.
+- שחזור טלפון→שעון: שירותי `WearableListenerService` נרשמו רק עם `MESSAGE_RECEIVED`; נוסף גם `com.google.android.gms.wearable.BIND_LISTENER` בשעון ובטלפון. שני המודולים נבנו, ורישום השירות אומת על השעון.
 - OnePlus עשוי לדחות רטט בזמן Bedtime/DND גם כאשר הערוץ מוגדר כ־Alarm.
 - בקשת `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` על OnePlus מפנה למסך דמה; אין להניח שהמשתמש אושר אלא לבדוק `PowerManager`.
 - ADB אלחוטי אינו תמיד מחובר. אין לבצע בדיקות התקנה/force-stop בלי לוודא serial ולשחזר תזמונים.
