@@ -779,9 +779,12 @@ public class PhoneMainActivity extends Activity {
                 send.setOnClickListener(v -> sendRestore(backup));
                 Button share = button("שיתוף", SOFT, TEXT);
                 share.setOnClickListener(v -> shareBackup(backup));
+                Button save = button("שמירה", SOFT, TEXT);
+                save.setOnClickListener(v -> saveBackupCopy(backup));
                 buttons.addView(load);
                 buttons.addView(send);
                 buttons.addView(share);
+                buttons.addView(save);
                 section.addView(buttons);
             }
         }
@@ -789,6 +792,16 @@ public class PhoneMainActivity extends Activity {
         pick.setOnClickListener(v -> pickBackupFile());
         section.addView(pick, wideParams());
         content.addView(section, wideParams());
+    }
+
+    private void saveBackupCopy(BackupStorage.BackupEntry backup) {
+        try {
+            String fileName = BackupStorage.saveCopy(this, backup);
+            Toast.makeText(this, "הגיבוי נשמר ב־Downloads/Zmanio: " + fileName, Toast.LENGTH_LONG).show();
+            showSettings();
+        } catch (Exception exception) {
+            Toast.makeText(this, t("לא הצלחתי לשמור את קובץ הגיבוי"), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void addLogSection(LinearLayout content) {
