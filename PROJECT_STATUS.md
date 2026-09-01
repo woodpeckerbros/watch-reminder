@@ -49,7 +49,7 @@ Smart Alarm נמצא תחת `app/src/main/java/com/woodpeckerbros/watchreminder/
 
 - OnePlus עשוי לבצע force-stop פנימי דרך מנהל החשמל; אין API לאפליקציית צד שלישי שמונע זאת לחלוטין.
 - reboot מוחק רשומות AlarmManager. USER_UNLOCKED ו־JobScheduler persisted נוספו כגיבוי, אך אינם יכולים לרוץ כאשר OnePlus מסמן את החבילה stopped אחרי boot.
-- שחזור טלפון→שעון: שירותי `WearableListenerService` נרשמו רק עם `MESSAGE_RECEIVED`; נוסף גם `com.google.android.gms.wearable.BIND_LISTENER` בשעון ובטלפון. שני המודולים נבנו, ורישום השירות אומת על השעון.
+- שחזור טלפון→שעון: `BIND_LISTENER` הופרד ל־intent-filter ללא data constraints, בעוד `MESSAGE_RECEIVED` נשאר ב־filter של path. שני המודולים נבנו, וה־APK המתוקן הותקן ואומת בשעון; נדרש ניסיון שליחה נוסף מהטלפון.
 - רשימת Smart Alarm: לחיצה ארוכה על כרטיס שעון מעורר פותחת תפריט עריכה/מחיקה/ביטול זהה לתזכורת רגילה; מחיקה מבטלת תחילה את תזמוני השעון.
 - OnePlus עשוי לדחות רטט בזמן Bedtime/DND גם כאשר הערוץ מוגדר כ־Alarm.
 - בקשת `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` על OnePlus מפנה למסך דמה; אין להניח שהמשתמש אושר אלא לבדוק `PowerManager`.
