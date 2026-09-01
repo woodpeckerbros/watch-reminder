@@ -51,7 +51,19 @@ public class DafYomiScheduler {
             return false;
         }
         long todayTriggerAt = todayTriggerAt(context, settings.dafYomiHour(), settings.dafYomiMinute());
-        if (todayTriggerAt > now) {
+        // If an earlier day's page is still outstanding, do not wait for
+        // today's scheduled time. This is the common case after a missed
+        // alarm, reboot, or force-stop: show the catch-up as soon as the app
+        // gets its first chance to run.
+        boolean hasEarlierOutstanding = false;
+        long today = DafYomiStore.epochDay(now);
+        for (DafYomiHelper.Item item : store.dueItems(context)) {
+            if (item.epochDay < today) {
+                hasEarlierOutstanding = true;
+                break;
+            }
+        }
+        if (todayTriggerAt > now && !hasEarlierOutstanding) {
             schedule(context);
             return false;
         }
