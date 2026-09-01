@@ -7,14 +7,14 @@
 - מודולים: `:app` לשעון ו־`:phone` לטלפון.
 - מצב נוכחי: תזכורות רגילות, AlarmManager, Smart Alarm, נודניק, גיבוי ו־complications פעילים.
 - מכשיר בדיקה: OnePlus Watch 3 פיזי ב־ADB אלחוטי; אמולטור Wear זמין לפי הצורך.
-- תקלה קריטית 01/09: reboot של השעון סביב 05:05 מחק את AlarmManager, ו־BootReceiver לא שיחזר את Smart Alarm 07:00 ואת התזכורת 07:15. נוסף שחזור גם ב־USER_UNLOCKED ו־JobScheduler מחזורי persisted כקו הגנה שני.
+- תקלה קריטית 01/09: reboot מוחק את AlarmManager, ובבדיקה מבוקרת OnePlus סימן את האפליקציה `stopped=true` ורשם `FORCE STOP`; לכן גם BootReceiver וגם JobScheduler persisted נחסמו עד פתיחת האפליקציה.
 - סיכון מרכזי: firmware של OnePlus עלול לבצע force-stop או לחסום רטט בזמן Bedtime/DND. שום מנגנון Android אינו יכול להתאושש מ־force-stop אמיתי עד פתיחת האפליקציה.
 - החרגת סוללה: קיימת בקשת Android בקוד; ב־OnePlus `FakeSettingsActivity` אינה מציגה אישור. בשעון הבדיקה ההחרגה ניתנת דרך Doze allowlist של ADB.
 - Build: `./gradlew :app:testDebugUnitTest :app:assembleDebug`; לטלפון `./gradlew :phone:assembleDebug`.
 - התקנה: `adb install -r app/build/outputs/apk/debug/app-debug.apk`, ואז לפתוח את `com.woodpeckerbros.watchreminder/.MainActivity`.
 - כללי בטיחות: אין לשנות מבנה, package name, Gradle/AGP/SDK או dependencies ללא אישור; לא לבצע force-stop בלי לשחזר alarms.
-- שינוי אחרון: נוסף `ReminderRecoveryJobService` מתמשך לאחר reboot, ו־BootReceiver מאזין גם ל־locked boot ול־user unlocked. Build ובדיקות עברו; לפני reboot ה־job רץ ושיחזר את alarms של 07:00 ו־07:15.
-- משימה מיידית: לאחר חזרת ADB האלחוטי מה־reboot המבוקר, לאמת שה־job נשמר ושה־alarms שוחזרו בלי פתיחה ידנית; לאחר מכן לבצע בדיקת התראה קרובה עם מסך כבוי.
+- שינוי אחרון: בדיקת reboot אישרה שמערכת OnePlus מבצעת force-stop החוסם את כל מסלולי השחזור. לאחר פתיחה דרך ADB שוחזרו ואומתו Smart Alarm 07:00, תזכורת 07:15, חלון 06:20 ו־watchdog 07:17; ה־job רץ ונרשם מחדש.
+- משימה מיידית: למצוא הגדרת/פקודת OnePlus שמונעת force-stop באתחול, או פתרון ברמת מערכת; במקביל לבצע בדיקת התראה קרובה עם מסך כבוי.
 
 # FULL PROJECT STATUS
 
@@ -48,7 +48,7 @@ Smart Alarm נמצא תחת `app/src/main/java/com/woodpeckerbros/watchreminder/
 ## שבור, לא גמור או מסוכן
 
 - OnePlus עשוי לבצע force-stop פנימי דרך מנהל החשמל; אין API לאפליקציית צד שלישי שמונע זאת לחלוטין.
-- reboot מוחק רשומות AlarmManager. החל מתיקון 01/09, USER_UNLOCKED ו־JobScheduler persisted מספקים שני מסלולי שחזור בנוסף ל־BOOT_COMPLETED.
+- reboot מוחק רשומות AlarmManager. USER_UNLOCKED ו־JobScheduler persisted נוספו כגיבוי, אך אינם יכולים לרוץ כאשר OnePlus מסמן את החבילה stopped אחרי boot.
 - OnePlus עשוי לדחות רטט בזמן Bedtime/DND גם כאשר הערוץ מוגדר כ־Alarm.
 - בקשת `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` על OnePlus מפנה למסך דמה; אין להניח שהמשתמש אושר אלא לבדוק `PowerManager`.
 - ADB אלחוטי אינו תמיד מחובר. אין לבצע בדיקות התקנה/force-stop בלי לוודא serial ולשחזר תזמונים.
