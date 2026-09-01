@@ -284,6 +284,8 @@ public class MainActivity extends Activity {
             if (exempt && store != null) {
                 store.rescheduleAll();
                 ReminderScheduler.scheduleWatchdog(this);
+            } else if (!exempt) {
+                mainHandler.postDelayed(this::showBatteryOptimizationUnavailableDialog, 250L);
             }
         }
         if (startupMaintenancePending || startupMaintenanceRunning || System.currentTimeMillis() - createdAt < 2_500L) {
@@ -5179,6 +5181,25 @@ public class MainActivity extends Activity {
                 AppLog.e(this, "battery optimization settings unavailable", fallbackError);
             }
         }
+    }
+
+    private void showBatteryOptimizationUnavailableDialog() {
+        if (isFinishing() || isDestroyed() || isIgnoringBatteryOptimizations()) {
+            return;
+        }
+        permissionExplanationVisible = true;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.ui_permission_battery_unavailable_title)
+                .setMessage(R.string.ui_permission_battery_unavailable_message)
+                .setPositiveButton(R.string.ui_continue, (dialog, which) -> {
+                    permissionExplanationVisible = false;
+                    requestMissingAccessIfNeeded();
+                })
+                .setOnCancelListener(dialog -> {
+                    permissionExplanationVisible = false;
+                    requestMissingAccessIfNeeded();
+                })
+                .show();
     }
 
     private void requestCriticalAlertAccessIfNeeded(boolean force) {

@@ -105,6 +105,8 @@
     <string name="ui_permission_sensors_message">To avoid waking you during sleep or alerting while the watch is off your wrist, Zmanio uses sensors to detect the current state. It can then alert you at the right time, or wait until you are awake and wearing the watch again. On the next screen, the watch will request sensor access.</string>
     <string name="ui_permission_battery_optimization_title">Why allow unrestricted battery use?</string>
     <string name="ui_permission_battery_optimization_message">To prevent the watch system from stopping Zmanio and cancelling scheduled reminders, allow the app to run without battery-optimization restrictions. On the next screen, approve the exemption for Zmanio.</string>
+    <string name="ui_permission_battery_unavailable_title">The watch did not open the approval</string>
+    <string name="ui_permission_battery_unavailable_message">The watch system returned to Zmanio without showing an approval or granting an exemption. This is a firmware limitation on this device; Zmanio will not report the request as successful.</string>
     <string name="ui_permission_full_screen_title">Why allow full-screen alerts?</string>
     <string name="ui_permission_full_screen_message">This allows an important reminder to appear over the current screen even while the watch is locked. On the next screen, enable it for Zmanio.</string>
     <string name="ui_enable_alarms_reminders_title">Allow Alarms &amp; reminders</string>
