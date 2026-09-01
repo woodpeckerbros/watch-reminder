@@ -142,10 +142,6 @@ class BackupStorage {
         }
     }
 
-    static String saveCopy(Context context, BackupEntry entry) throws Exception {
-        return saveNamed(context, readBackup(context, entry), entry.name, false, false);
-    }
-
     static boolean hasLastBackup(Context context) {
         if (!context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_LAST_URI, "")
