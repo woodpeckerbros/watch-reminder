@@ -116,6 +116,8 @@ public class MainActivity extends Activity {
     private static final int COLOR_CARD_TEXT = 0xFFF4EBDD;
     private static final int COLOR_CARD_MUTED = 0xFFC5C8BA;
     private static final String STARTUP_PREFS_NAME = "startup_reliability";
+    private static final String PERMISSION_PREFS_NAME = "permission_state";
+    private static final String KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN = "battery_optimization_prompt_shown";
     private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
     private static final long MISSED_ALERT_LOOKBACK_MS = 24 * 60 * 60_000L;
@@ -284,8 +286,6 @@ public class MainActivity extends Activity {
             if (exempt && store != null) {
                 store.rescheduleAll();
                 ReminderScheduler.scheduleWatchdog(this);
-            } else if (!exempt) {
-                mainHandler.postDelayed(this::showBatteryOptimizationUnavailableDialog, 250L);
             }
         }
         if (startupMaintenancePending || startupMaintenanceRunning || System.currentTimeMillis() - createdAt < 2_500L) {
@@ -5147,10 +5147,15 @@ public class MainActivity extends Activity {
     private boolean requestBatteryOptimizationExemptionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
                 || isIgnoringBatteryOptimizations()
-                || askedBatteryOptimizationThisSession) {
+                || askedBatteryOptimizationThisSession
+                || getSharedPreferences(PERMISSION_PREFS_NAME, MODE_PRIVATE)
+                .getBoolean(KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN, false)) {
             return false;
         }
         askedBatteryOptimizationThisSession = true;
+        getSharedPreferences(PERMISSION_PREFS_NAME, MODE_PRIVATE).edit()
+                .putBoolean(KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN, true)
+                .apply();
         showPermissionExplanation(
                 R.string.ui_permission_battery_optimization_title,
                 R.string.ui_permission_battery_optimization_message,
@@ -5181,25 +5186,6 @@ public class MainActivity extends Activity {
                 AppLog.e(this, "battery optimization settings unavailable", fallbackError);
             }
         }
-    }
-
-    private void showBatteryOptimizationUnavailableDialog() {
-        if (isFinishing() || isDestroyed() || isIgnoringBatteryOptimizations()) {
-            return;
-        }
-        permissionExplanationVisible = true;
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.ui_permission_battery_unavailable_title)
-                .setMessage(R.string.ui_permission_battery_unavailable_message)
-                .setPositiveButton(R.string.ui_continue, (dialog, which) -> {
-                    permissionExplanationVisible = false;
-                    requestMissingAccessIfNeeded();
-                })
-                .setOnCancelListener(dialog -> {
-                    permissionExplanationVisible = false;
-                    requestMissingAccessIfNeeded();
-                })
-                .show();
     }
 
     private void requestCriticalAlertAccessIfNeeded(boolean force) {
