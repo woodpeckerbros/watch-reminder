@@ -51,6 +51,7 @@ Smart Alarm נמצא תחת `app/src/main/java/com/woodpeckerbros/watchreminder/
 - reboot מוחק רשומות AlarmManager. USER_UNLOCKED ו־JobScheduler persisted נוספו כגיבוי, אך אינם יכולים לרוץ כאשר OnePlus מסמן את החבילה stopped אחרי boot.
 - שחזור טלפון→שעון: `BIND_LISTENER` הופרד ל־intent-filter ללא data constraints, בעוד `MESSAGE_RECEIVED` נשאר ב־filter של path. שני המודולים נבנו, וה־APK המתוקן הותקן ואומת בשעון; נדרש ניסיון שליחה נוסף מהטלפון.
 - אבחון restore 01/09: לוג WearableService בשעון מדווח `Mismatched certificate` ואז `Failed to deliver message` עבור `/watch_reminder_restore`. הטלפון הוא Play-signed והשעון debug-signed; Google Data Layer דוחה את ההודעה לפני שהשירות מופעל. אין בפרויקט keystore של Play. פתרון: להתקין את שני הצדדים חתומים באותו מפתח (העלאה משותפת ל־Play), או להתקין את שני APK-ה־debug המקומיים לאחר גיבוי נתוני הטלפון.
+- 01/09: `phone-debug.apk` הותקן בהצלחה מעל התקנת הטלפון ללא הסרה; חתימת הטלפון אומתה זהה לשעון (`dc11fc53`). נפתח מסך הרשאת התראות בטלפון, ויש לאשר אותו לפני בדיקת restore.
 - רשימת Smart Alarm: לחיצה ארוכה על כרטיס שעון מעורר פותחת תפריט עריכה/מחיקה/ביטול זהה לתזכורת רגילה; מחיקה מבטלת תחילה את תזמוני השעון.
 - OnePlus עשוי לדחות רטט בזמן Bedtime/DND גם כאשר הערוץ מוגדר כ־Alarm.
 - בקשת `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` על OnePlus מפנה למסך דמה; אין להניח שהמשתמש אושר אלא לבדוק `PowerManager`.
