@@ -264,6 +264,23 @@ public final class SmartAlarmAlertActivity extends Activity {
         finishAndRemoveTask();
     }
 
+    static void startSystemTimerFallback(Context context, int alarmId) {
+        NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(0x534d5704 + alarmId);
+        Intent timer = new Intent(android.provider.AlarmClock.ACTION_SET_TIMER)
+                .putExtra(android.provider.AlarmClock.EXTRA_LENGTH, 1)
+                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            PendingIntent launch = PendingIntent.getActivity(context, 0x534d5a00 + alarmId, timer,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            launch.send();
+            AppLog.d(context, "SmartAlarm system timer fallback started id=" + alarmId);
+        } catch (PendingIntent.CanceledException | RuntimeException error) {
+            AppLog.w(context, "SmartAlarm system timer fallback unavailable");
+        }
+    }
+
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private void stopFeedback() {
         SmartAlarmRingingService.stop(this);
