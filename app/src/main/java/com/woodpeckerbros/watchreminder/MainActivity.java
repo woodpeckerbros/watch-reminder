@@ -1852,13 +1852,15 @@ public class MainActivity extends Activity {
         actions.addView(back);
         content.addView(actions);
 
+        FrameLayout settingsRoot = setScrollableContent(content);
         TextView appVersion = text(getString(R.string.app_name) + " · גרסה " + installedVersionName(),
                 10, COLOR_MUTED);
         appVersion.setGravity(Gravity.CENTER);
-        appVersion.setPadding(0, dp(8), 0, dp(12));
-        content.addView(appVersion, matchParams());
-
-        setScrollableContent(content);
+        appVersion.setPadding(0, dp(2), 0, dp(2));
+        FrameLayout.LayoutParams versionParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT, dp(22), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        versionParams.bottomMargin = dp(4);
+        settingsRoot.addView(appVersion, versionParams);
     }
 
     private String installedVersionName() {
