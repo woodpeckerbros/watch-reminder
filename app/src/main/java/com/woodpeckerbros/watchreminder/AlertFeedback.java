@@ -13,10 +13,17 @@ import android.os.VibratorManager;
 import android.media.RingtoneManager;
 import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmStore;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class AlertFeedback {
+    private static final Object VIBRATION_LOCK = new Object();
+    private static final AtomicLong NEXT_VIBRATION_OWNER = new AtomicLong();
+    private static long activeVibrationOwner;
+
     private final Context context;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaPlayer player;
+    private long vibrationOwner;
 
     private AlertFeedback(Context context) {
         this.context = context.getApplicationContext();
@@ -53,7 +60,7 @@ public class AlertFeedback {
     public void stop() {
         handler.removeCallbacksAndMessages(null);
         stopSound();
-        stopVibration(context);
+        stopOwnedVibration();
     }
 
     private void startInternal(ReminderSettings settings) {
@@ -120,9 +127,15 @@ public class AlertFeedback {
     }
 
     private void startVibration(String style, int strength, int durationMs) {
-        stopVibration(context);
         if (ReminderSettings.VIBRATION_OFF.equals(style)) {
             return;
+        }
+        long owner;
+        synchronized (VIBRATION_LOCK) {
+            cancelVibration(context);
+            owner = NEXT_VIBRATION_OWNER.incrementAndGet();
+            vibrationOwner = owner;
+            activeVibrationOwner = owner;
         }
         // Repeat a short style-specific cycle until the same timeout that owns the sound.
         // Building one finite waveform used to cap vibration at ten seconds (and some Wear
@@ -146,6 +159,7 @@ public class AlertFeedback {
                                 ? VibrationEffect.createWaveform(pattern, amplitudes, 0)
                                 : VibrationEffect.createWaveform(pattern, 0);
                         vibrator.vibrate(effect, alarmAttributes);
+                        AppLog.d(context, "alert vibration started owner=" + owner);
                     } else {
                         AppLog.w(context, "alert vibration unavailable: no default vibrator");
                     }
@@ -161,12 +175,31 @@ public class AlertFeedback {
                     ? VibrationEffect.createWaveform(pattern, amplitudes, 0)
                     : VibrationEffect.createWaveform(pattern, 0);
             vibrator.vibrate(effect, alarmAttributes);
+            AppLog.d(context, "alert vibration started owner=" + owner);
         } else {
             AppLog.w(context, "alert vibration unavailable: no vibrator");
         }
     }
 
     public static void stopVibration(Context context) {
+        synchronized (VIBRATION_LOCK) {
+            activeVibrationOwner = 0;
+            cancelVibration(context);
+        }
+    }
+
+    private void stopOwnedVibration() {
+        synchronized (VIBRATION_LOCK) {
+            if (vibrationOwner == 0 || activeVibrationOwner != vibrationOwner) {
+                return;
+            }
+            activeVibrationOwner = 0;
+            vibrationOwner = 0;
+            cancelVibration(context);
+        }
+    }
+
+    private static void cancelVibration(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 VibratorManager manager = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
