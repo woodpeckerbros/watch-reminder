@@ -5169,6 +5169,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
                 || isIgnoringBatteryOptimizations()
                 || askedBatteryOptimizationThisSession
+                || !hasBatteryOptimizationExemptionSettings()
                 || getSharedPreferences(PERMISSION_PREFS_NAME, MODE_PRIVATE)
                 .getBoolean(KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN, false)) {
             return false;
@@ -5209,9 +5210,16 @@ public class MainActivity extends Activity {
         }
     }
 
+    private boolean hasBatteryOptimizationExemptionSettings() {
+        Intent request = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.parse("package:" + getPackageName()));
+        return request.resolveActivity(getPackageManager()) != null;
+    }
+
     private boolean requestNotificationPolicyAccessIfNeeded() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager == null || manager.isNotificationPolicyAccessGranted() || askedNotificationPolicyThisSession) {
+        if (manager == null || manager.isNotificationPolicyAccessGranted()
+                || askedNotificationPolicyThisSession || !hasNotificationPolicyAccessSettings()) {
             return false;
         }
         askedNotificationPolicyThisSession = true;
@@ -5222,8 +5230,17 @@ public class MainActivity extends Activity {
         return true;
     }
 
+    private boolean hasNotificationPolicyAccessSettings() {
+        Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+        return intent.resolveActivity(getPackageManager()) != null;
+    }
+
     private void openNotificationPolicyAccessSettings() {
         AppLog.w(this, "request setting NOTIFICATION_POLICY_ACCESS");
+        if (!hasNotificationPolicyAccessSettings()) {
+            Toast.makeText(this, getString(R.string.ui_permission_dnd_unavailable), Toast.LENGTH_LONG).show();
+            return;
+        }
         try {
             startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
         } catch (Exception error) {
@@ -5241,7 +5258,8 @@ public class MainActivity extends Activity {
     }
 
     private boolean requestExactAlarmAccessIfNeeded(boolean force) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || ReminderScheduler.canScheduleExactAlarms(this)) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || ReminderScheduler.canScheduleExactAlarms(this)
+                || !hasExactAlarmSettings()) {
             return false;
         }
         if ((exactAlarmRequestStarted || askedExactAlarmThisSession) && !force) {
@@ -5272,8 +5290,14 @@ public class MainActivity extends Activity {
         }
     }
 
+    private boolean hasExactAlarmSettings() {
+        Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                .setData(Uri.parse("package:" + getPackageName()));
+        return intent.resolveActivity(getPackageManager()) != null;
+    }
+
     private boolean requestFullScreenIntentAccessIfNeeded(boolean force) {
-        if (canUseFullScreenIntent()) {
+        if (canUseFullScreenIntent() || !hasFullScreenIntentSettings()) {
             return false;
         }
         if ((fullScreenIntentRequestStarted || askedFullScreenThisSession) && !force) {
@@ -5299,6 +5323,12 @@ public class MainActivity extends Activity {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
             startActivity(fallback);
         }
+    }
+
+    private boolean hasFullScreenIntentSettings() {
+        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                .setData(Uri.parse("package:" + getPackageName()));
+        return intent.resolveActivity(getPackageManager()) != null;
     }
 
     private void showPermissionExplanation(int titleRes, int messageRes, Runnable request) {
