@@ -4,14 +4,11 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.provider.AlarmClock;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 
 import java.util.Calendar;
-import java.util.List;
 
 /**
  * Optional bridge to the device Clock app. The system alarm is silent, but asks the Clock app
@@ -95,22 +92,12 @@ final class SystemAlarmHapticBridge {
         return 0x534d6a00 | ((alarmId & 0xffff) << 1);
     }
 
-    /**
-     * A resolver is not an alarm provider: launching it from a background alarm interrupts the
-     * user and may require a manual selection. Use this optional bridge only when Android exposes
-     * an actual Clock activity for the public AlarmClock intent.
-     */
+    /** A resolver is not an alarm provider and must never be launched from a background alarm. */
     private static ComponentName publicClockHandler(Context context, Intent intent) {
-        List<ResolveInfo> candidates = context.getPackageManager().queryIntentActivities(
-                intent, PackageManager.MATCH_DEFAULT_ONLY);
-        for (ResolveInfo candidate : candidates) {
-            if (candidate.activityInfo == null) continue;
-            String packageName = candidate.activityInfo.packageName;
-            String className = candidate.activityInfo.name;
-            if (isResolver(packageName) || isResolver(className)) continue;
-            return new ComponentName(packageName, className);
-        }
-        return null;
+        ComponentName handler = intent.resolveActivity(context.getPackageManager());
+        if (handler == null || isResolver(handler.getPackageName()) || isResolver(handler.getClassName()))
+            return null;
+        return handler;
     }
 
     private static boolean isResolver(String value) {
