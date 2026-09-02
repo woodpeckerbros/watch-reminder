@@ -2,6 +2,7 @@ package com.woodpeckerbros.watchreminder.smartwake;
 
 import android.app.Activity;
 import android.app.NotificationManager;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -45,6 +46,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     private float previewDownX;
     private float previewDownY;
     private boolean resumed;
+    private boolean systemTimerFallbackStarted;
 
     static boolean isShowing(int expectedAlarmId, long expectedTargetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
@@ -71,6 +73,10 @@ public final class SmartAlarmAlertActivity extends Activity {
         // as a fallback for devices that decline to present the activity.
         SmartAlarmRingingService.stop(this);
         alertFeedback = AlertFeedback.startSmartAlarm(this, settings);
+        if (settings.systemTimerFallbackEnabled() && !previewMode) {
+            handler.postDelayed(this::startSystemTimerFallback,
+                    settings.alertDurationSeconds() * 1000L);
+        }
     }
 
     @Override protected void onResume() {
@@ -258,6 +264,25 @@ public final class SmartAlarmAlertActivity extends Activity {
     private void close() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) manager.cancel(0x534d5704 + alarmId);
+        finishAndRemoveTask();
+    }
+
+    private void startSystemTimerFallback() {
+        if (systemTimerFallbackStarted || explicitlyHandled || isFinishing() || isDestroyed()) return;
+        systemTimerFallbackStarted = true;
+        stopFeedback();
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(0x534d5704 + alarmId);
+        Intent timer = new Intent(android.provider.AlarmClock.ACTION_SET_TIMER)
+                .putExtra(android.provider.AlarmClock.EXTRA_LENGTH, 1)
+                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(timer);
+            AppLog.d(this, "SmartAlarm system timer fallback started id=" + alarmId);
+        } catch (RuntimeException error) {
+            AppLog.w(this, "SmartAlarm system timer fallback unavailable");
+        }
         finishAndRemoveTask();
     }
 

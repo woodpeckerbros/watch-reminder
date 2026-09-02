@@ -1519,6 +1519,18 @@ public class MainActivity extends Activity {
         wakeCheckCard.addView(wakeCheckDelayOptions);
         content.addView(wakeCheckCard, cardParams());
 
+        LinearLayout systemTimerCard = card();
+        TextView systemTimerTitle = text("גיבוי רטט של השעון", 15, COLOR_CARD_TEXT);
+        AppFont.bold(systemTimerTitle);
+        systemTimerCard.addView(systemTimerTitle);
+        TextView systemTimerHint = text("אם לא תתעוררו עד סוף ההתראה, האפליקציה תנסה להפעיל טיימר חד־פעמי בשעון המערכת. הצליל והרטט יפעלו לפי הגדרות השעון, ולא לפי הגדרות האפליקציה.", 11, COLOR_CARD_MUTED);
+        systemTimerCard.addView(systemTimerHint);
+        Switch systemTimerFallbackSwitch = new Switch(this);
+        setSwitchText(systemTimerFallbackSwitch, "הפעלת גיבוי שעון מערכת");
+        systemTimerFallbackSwitch.setChecked(smart.systemTimerFallbackEnabled());
+        systemTimerCard.addView(systemTimerFallbackSwitch);
+        content.addView(systemTimerCard, cardParams());
+
         LinearLayout snoozeCard = card();
         TextView snoozeTitle = text("נודניק", 15, COLOR_CARD_TEXT);
         AppFont.bold(snoozeTitle);
@@ -1671,6 +1683,7 @@ public class MainActivity extends Activity {
             smart.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
                     stepCount.getValue(), alternatingTaps.getValue(), multipleTaskMask[0], wakeCheckSwitch.isChecked(),
                     wakeCheckDelay.getValue());
+            smart.setSystemTimerFallbackEnabled(systemTimerFallbackSwitch.isChecked());
             stopSmartAlarmPreview();
             SmartAlarmScheduler.reschedule(this, alarmId);
             Toast.makeText(this, UiText.t(this, "השעון המעורר נשמר"), Toast.LENGTH_SHORT).show();

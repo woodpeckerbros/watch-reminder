@@ -87,6 +87,10 @@ public final class SmartAlarmStore {
     public int alternatingTapCount() { return clamp(prefs.getInt("alternating_tap_count", 10), 4, 30); }
     public int multipleTaskMask() { return prefs.getInt("multiple_task_mask", ALL_WAKE_TASKS) & ALL_WAKE_TASKS; }
     public boolean wakeCheckEnabled() { return prefs.getBoolean("wake_check_enabled", false); }
+    public boolean systemTimerFallbackEnabled() { return prefs.getBoolean("system_timer_fallback_enabled", false); }
+    public void setSystemTimerFallbackEnabled(boolean enabled) {
+        prefs.edit().putBoolean("system_timer_fallback_enabled", enabled).apply();
+    }
     public int wakeCheckDelayMinutes() { return clamp(prefs.getInt("wake_check_delay_minutes", 5), 1, 30); }
     public boolean enabledOnDay(int calendarDay) { return (daysMask() & (1 << calendarDay)) != 0; }
 
@@ -188,7 +192,8 @@ public final class SmartAlarmStore {
                     .put("alternatingTapCount", alarm.alternatingTapCount())
                     .put("multipleTaskMask", alarm.multipleTaskMask())
                     .put("wakeCheckEnabled", alarm.wakeCheckEnabled())
-                    .put("wakeCheckDelayMinutes", alarm.wakeCheckDelayMinutes()));
+                    .put("wakeCheckDelayMinutes", alarm.wakeCheckDelayMinutes())
+                    .put("systemTimerFallbackEnabled", alarm.systemTimerFallbackEnabled()));
         }
         return result;
     }
@@ -216,6 +221,7 @@ public final class SmartAlarmStore {
                     value.optInt("alternatingTapCount", 10), value.optInt("multipleTaskMask", ALL_WAKE_TASKS),
                     value.optBoolean("wakeCheckEnabled", false),
                     value.optInt("wakeCheckDelayMinutes", 5));
+            alarm.setSystemTimerFallbackEnabled(value.optBoolean("systemTimerFallbackEnabled", false));
         }
         context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()
                 .putInt("next_id", highest + 1).apply();
