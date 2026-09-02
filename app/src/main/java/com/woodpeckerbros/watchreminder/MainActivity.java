@@ -1523,7 +1523,7 @@ public class MainActivity extends Activity {
         TextView systemTimerTitle = text("גיבוי רטט של השעון", 15, COLOR_CARD_TEXT);
         AppFont.bold(systemTimerTitle);
         systemTimerCard.addView(systemTimerTitle);
-        TextView systemTimerHint = text("האפליקציה תנסה ליצור מראש אזעקת מערכת שקטה עם רטט לשעת ההשכמה. הרטט מופעל בידי שעון המערכת ועשוי לעבוד גם במצב שינה; התנהגותו כפופה להגדרות המכשיר.", 11, COLOR_CARD_MUTED);
+        TextView systemTimerHint = text("בשעונים שבהם אפליקציית השעון תומכת בכך, האפליקציה תנסה ליצור מראש אזעקת מערכת שקטה עם רטט לשעת ההשכמה. אם המכשיר מציג מסך בחירה במקום תמיכה ישירה, לא תבוצע פעולה כדי לא להפריע להתראה או לנודניק.", 11, COLOR_CARD_MUTED);
         systemTimerCard.addView(systemTimerHint);
         Switch systemTimerFallbackSwitch = new Switch(this);
         setSwitchText(systemTimerFallbackSwitch, "הפעלת גיבוי שעון מערכת");
