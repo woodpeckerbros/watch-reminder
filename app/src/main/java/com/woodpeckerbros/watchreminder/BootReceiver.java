@@ -43,7 +43,7 @@ public class BootReceiver extends BroadcastReceiver {
         JewishDayScheduler.schedule(context);
         TekufaScheduler.schedule(context);
         IntermittentFastingScheduler.schedule(context);
-        SmartAlarmScheduler.reschedule(context);
+        SmartAlarmScheduler.recover(context);
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.requestAll(context);
         ReminderReceiver.dispatchNextQueued(context);

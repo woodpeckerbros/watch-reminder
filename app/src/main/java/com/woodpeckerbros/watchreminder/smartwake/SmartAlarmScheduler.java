@@ -20,6 +20,35 @@ public final class SmartAlarmScheduler {
         for (int alarmId : SmartAlarmStore.ids(context)) schedule(context, alarmId);
     }
 
+    /**
+     * Restores schedules after a periodic recovery pass without replacing an active snooze.
+     * A normal reschedule calculates the next calendar occurrence, which would otherwise discard
+     * a snooze whose original alarm time has already passed.
+     */
+    public static void recover(Context context) {
+        long now = System.currentTimeMillis();
+        for (int alarmId : SmartAlarmStore.ids(context)) {
+            SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
+            SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+            long targetAt = state.targetAt();
+            if (store.enabled() && state.snoozeUsed() > 0 && targetAt > now && !state.dismissed(targetAt)) {
+                AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                if (manager != null) {
+                    setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
+                    AppLog.d(context, "SmartAlarm recovery preserved snooze id=" + alarmId
+                            + " target=" + targetAt + " used=" + state.snoozeUsed());
+                }
+                continue;
+            }
+            if (state.fired(targetAt) && !state.dismissed(targetAt)) {
+                AppLog.d(context, "SmartAlarm recovery preserved active alert id=" + alarmId
+                        + " target=" + targetAt);
+                continue;
+            }
+            reschedule(context, alarmId);
+        }
+    }
+
     public static void reschedule(Context context, int alarmId) {
         cancel(context, alarmId);
         schedule(context, alarmId);
