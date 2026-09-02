@@ -40,5 +40,9 @@ public final class SmartAlarmStateStore {
     }
 
     public int snoozeUsed() { return prefs.getInt("snooze_used", 0); }
+    public long systemAlarmTargetAt() { return prefs.getLong("system_alarm_target_at", 0L); }
+    public void setSystemAlarmTargetAt(long targetAt) {
+        prefs.edit().putLong("system_alarm_target_at", targetAt).apply();
+    }
     public void clear() { prefs.edit().clear().apply(); }
 }

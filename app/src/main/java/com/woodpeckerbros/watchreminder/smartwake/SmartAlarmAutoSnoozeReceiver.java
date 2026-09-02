@@ -22,9 +22,6 @@ public final class SmartAlarmAutoSnoozeReceiver extends BroadcastReceiver {
         SmartAlarmRingingService.stop(context);
         SmartAlarmActions.cancelNotification(context, alarmId);
         SmartAlarmAlertActivity.closeAutoSnoozed(alarmId, targetAt);
-        if (settings.systemTimerFallbackEnabled()) {
-            SmartAlarmAlertActivity.startSystemTimerFallback(context, alarmId);
-        }
         if (state.snoozeUsed() < settings.snoozeCount()) {
             AppLog.w(context, "SmartAlarm unanswered; auto-snooze id=" + alarmId
                     + " used=" + state.snoozeUsed() + " of=" + settings.snoozeCount());

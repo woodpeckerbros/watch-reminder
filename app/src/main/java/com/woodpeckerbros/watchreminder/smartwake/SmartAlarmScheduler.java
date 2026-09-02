@@ -77,6 +77,7 @@ public final class SmartAlarmScheduler {
         state.beginSnooze(targetAt, state.snoozeUsed() + 1);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
+        SystemAlarmHapticBridge.schedule(context, alarmId, targetAt);
         AppLog.d(context, "SmartAlarm snoozed id=" + alarmId + " original=" + originalTargetAt + " target=" + targetAt);
     }
 
@@ -132,6 +133,7 @@ public final class SmartAlarmScheduler {
     }
 
     public static void cancel(Context context, int alarmId) {
+        SystemAlarmHapticBridge.cancel(context, alarmId);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
         manager.cancel(windowIntent(context, alarmId, 0));
