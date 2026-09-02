@@ -1852,7 +1852,21 @@ public class MainActivity extends Activity {
         actions.addView(back);
         content.addView(actions);
 
+        TextView appVersion = text(getString(R.string.app_name) + " · גרסה " + installedVersionName(),
+                10, COLOR_MUTED);
+        appVersion.setGravity(Gravity.CENTER);
+        appVersion.setPadding(0, dp(8), 0, dp(12));
+        content.addView(appVersion, matchParams());
+
         setScrollableContent(content);
+    }
+
+    private String installedVersionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return "לא ידועה";
+        }
     }
 
     private void showLanguageOnboarding() {
