@@ -135,6 +135,11 @@ public class MainActivity extends Activity {
         thread.setDaemon(true);
         return thread;
     });
+    private static final ExecutorService REMINDER_ACTION_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "wr-reminder-action");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private ReminderStore store;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -1878,9 +1883,15 @@ public class MainActivity extends Activity {
         logsHint.setPadding(0, dp(3), 0, dp(6));
         logsCard.addView(logsHint);
         LinearLayout logsActions = actionRow();
-        Button sendLogs = pillButton("לוגים לטלפון", COLOR_ACCENT_DARK);
+        Button sendLogs = pillButton(AppLanguage.isEnglish(this) ? "Logs\nto phone" : "לוגים\nלטלפון", COLOR_ACCENT_DARK);
+        clearButtonIcon(sendLogs);
+        sendLogs.setSingleLine(false);
+        sendLogs.setMaxLines(2);
         sendLogs.setOnClickListener(v -> sendLogsToPhone());
-        Button clearLogs = pillButton("ניקוי לוגים", COLOR_SURFACE_2);
+        Button clearLogs = pillButton(AppLanguage.isEnglish(this) ? "Clear\nlogs" : "ניקוי\nלוגים", COLOR_SURFACE_2);
+        clearButtonIcon(clearLogs);
+        clearLogs.setSingleLine(false);
+        clearLogs.setMaxLines(2);
         clearLogs.setOnClickListener(v -> confirmClearLogs());
         logsActions.addView(sendLogs);
         logsActions.addView(clearLogs);
@@ -4475,26 +4486,30 @@ public class MainActivity extends Activity {
     }
 
     private void completeUpcoming(Reminder reminder) {
-        ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
-        NextReminderCalculator.NextReminder next = NextReminderCalculator.nextForReminder(this, reminder, snoozeStore, new ReminderEventStore(this));
-        if (next == null) {
-            return;
-        }
-        ReminderEventStore eventStore = new ReminderEventStore(this);
-        if (next.snoozed) {
-            ReminderScheduler.cancelSnooze(this, reminder.id, reminder.name);
-            eventStore.markLatestPendingDone(reminder.id);
+        REMINDER_ACTION_EXECUTOR.execute(() -> {
+            ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
+            NextReminderCalculator.NextReminder next = NextReminderCalculator.nextForReminder(
+                    this, reminder, snoozeStore, new ReminderEventStore(this));
+            if (next == null) {
+                return;
+            }
+            ReminderEventStore eventStore = new ReminderEventStore(this);
+            if (next.snoozed) {
+                ReminderScheduler.cancelSnooze(this, reminder.id, reminder.name);
+                eventStore.markLatestPendingDone(reminder.id);
+            } else {
+                ReminderScheduler.skipOccurrence(this, reminder, next.scheduledAt);
+                eventStore.markUpcomingDone(reminder.id, next.reminderName, reminder.description, next.scheduledAt);
+            }
             if (reminder.isOneTime()) {
                 store.delete(reminder);
             }
-        } else {
-            ReminderScheduler.skipOccurrence(this, reminder, next.scheduledAt);
-            eventStore.markUpcomingDone(reminder.id, next.reminderName, reminder.description, next.scheduledAt);
-            if (reminder.isOneTime()) {
-                store.delete(reminder);
-            }
-        }
-        showList();
+            mainHandler.post(() -> {
+                if (!isFinishing() && "list".equals(currentScreen)) {
+                    showList();
+                }
+            });
+        });
     }
 
     private void showSnoozeUpcomingOptions(Reminder reminder) {
@@ -4576,25 +4591,34 @@ public class MainActivity extends Activity {
     }
 
     private void snoozeUpcoming(Reminder reminder, NextReminderCalculator.NextReminder next, int minutes) {
-        ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
-        long originalScheduledAt = next.scheduledAt;
-        for (ReminderSnoozeStore.Snooze snooze : snoozeStore.getAll()) {
-            if (snooze.reminderId.equals(reminder.id)) {
-                originalScheduledAt = snooze.originalScheduledAt;
-                break;
+        REMINDER_ACTION_EXECUTOR.execute(() -> {
+            ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
+            long originalScheduledAt = next.scheduledAt;
+            for (ReminderSnoozeStore.Snooze snooze : snoozeStore.getAll()) {
+                if (snooze.reminderId.equals(reminder.id)) {
+                    originalScheduledAt = snooze.originalScheduledAt;
+                    break;
+                }
             }
-        }
-        if (!next.snoozed) {
-            ReminderScheduler.skipOccurrence(this, reminder, next.scheduledAt);
-        }
-        long baseAt = Math.max(System.currentTimeMillis(), next.scheduledAt);
-        long nextScheduledAt = ReminderScheduler.scheduleSnoozeAt(this, reminder.id, next.reminderName, baseAt + minutes * 60_000L, originalScheduledAt);
-        new ReminderEventStore(this).markUpcomingSnoozed(reminder.id, next.reminderName, reminder.description, originalScheduledAt, minutes, nextScheduledAt);
-        AppLog.d(this, "main snooze upcoming id=" + reminder.id + " minutes=" + minutes + " at=" + NextReminderCalculator.formatDateTime(nextScheduledAt));
-        Toast.makeText(this,
-                (AppLanguage.isEnglish(this) ? "Snoozed until " : "נדחה ל-") + NextReminderCalculator.formatTime(nextScheduledAt),
-                Toast.LENGTH_SHORT).show();
-        showList();
+            if (!next.snoozed) {
+                ReminderScheduler.skipOccurrence(this, reminder, next.scheduledAt);
+            }
+            long baseAt = Math.max(System.currentTimeMillis(), next.scheduledAt);
+            long nextScheduledAt = ReminderScheduler.scheduleSnoozeAt(this, reminder.id,
+                    next.reminderName, baseAt + minutes * 60_000L, originalScheduledAt);
+            new ReminderEventStore(this).markUpcomingSnoozed(reminder.id, next.reminderName,
+                    reminder.description, originalScheduledAt, minutes, nextScheduledAt);
+            AppLog.d(this, "main snooze upcoming id=" + reminder.id + " minutes=" + minutes
+                    + " at=" + NextReminderCalculator.formatDateTime(nextScheduledAt));
+            long scheduledAt = nextScheduledAt;
+            mainHandler.post(() -> {
+                Toast.makeText(this, (AppLanguage.isEnglish(this) ? "Snoozed until " : "נדחה ל-")
+                        + NextReminderCalculator.formatTime(scheduledAt), Toast.LENGTH_SHORT).show();
+                if (!isFinishing() && "list".equals(currentScreen)) {
+                    showList();
+                }
+            });
+        });
     }
 
     private void showEditor(Reminder reminder) {

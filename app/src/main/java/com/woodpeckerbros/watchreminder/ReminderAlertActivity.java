@@ -27,8 +27,15 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ReminderAlertActivity extends Activity {
+    private static final ExecutorService ALERT_ACTION_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "wr-alert-action");
+        thread.setDaemon(true);
+        return thread;
+    });
     private static final int COLOR_BG = 0xFF061522;
     private static final int COLOR_SURFACE = 0xFF0B2133;
     private static final int COLOR_SURFACE_2 = 0xFF142A3A;
@@ -142,26 +149,24 @@ public class ReminderAlertActivity extends Activity {
         done.setLayoutParams(doneParams);
         done.setTextSize(18);
         done.setOnClickListener(v -> {
-            stopVibration();
             AppLog.d(this, "alert done occurrence=" + occurrenceId);
-            handler.removeCallbacksAndMessages(null);
-            cancelNotification(occurrenceId);
-            ReminderEventStore eventStore = new ReminderEventStore(this);
-            for (String id : currentOccurrenceIds(occurrenceId, occurrenceIds)) {
-                if (id != null) {
-                    eventStore.markDone(id);
-                    ReminderScheduler.cancelAutoSnooze(this, id, reminderId, alertReminderName);
+            finishImmediatelyForAction(() -> {
+                ReminderEventStore eventStore = new ReminderEventStore(this);
+                for (String id : currentOccurrenceIds(occurrenceId, occurrenceIds)) {
+                    if (id != null) {
+                        eventStore.markDone(id);
+                        ReminderScheduler.cancelAutoSnooze(this, id, reminderId, alertReminderName);
+                    }
                 }
-            }
-            if (reminderId != null) {
-                ReminderScheduler.cancelSnooze(this, reminderId, alertReminderName);
-                ReminderScheduler.cancelDeferredRetry(this, reminderId);
-                Reminder doneReminder = new ReminderStore(this).find(reminderId);
-                if (doneReminder != null && doneReminder.isOneTime()) {
-                    new ReminderStore(this).delete(doneReminder);
+                if (reminderId != null) {
+                    ReminderScheduler.cancelSnooze(this, reminderId, alertReminderName);
+                    ReminderScheduler.cancelDeferredRetry(this, reminderId);
+                    Reminder doneReminder = new ReminderStore(this).find(reminderId);
+                    if (doneReminder != null && doneReminder.isOneTime()) {
+                        new ReminderStore(this).delete(doneReminder);
+                    }
                 }
-            }
-            closeAfterAction();
+            });
         });
         card.addView(done);
 
@@ -311,26 +316,24 @@ public class ReminderAlertActivity extends Activity {
     }
 
     private void snooze(String activeOccurrenceId, List<String> occurrenceIds, String reminderId, String reminderName, int minutes, long originalScheduledAt) {
-        stopVibration();
-        List<String> currentIds = currentOccurrenceIds(activeOccurrenceId, occurrenceIds);
-        AppLog.d(this, "alert snooze occurrence=" + activeOccurrenceId + " count=" + currentIds.size() + " minutes=" + minutes);
-        handler.removeCallbacksAndMessages(null);
-        cancelNotification(activeOccurrenceId);
-        if (reminderId != null) {
-            if (!currentIds.isEmpty()) {
-                long nextScheduledAt = ReminderScheduler.scheduleSnooze(this, reminderId, reminderName, minutes, originalScheduledAt);
-                ReminderEventStore eventStore = new ReminderEventStore(this);
-                for (String occurrenceId : currentIds) {
-                    if (occurrenceId != null) {
-                        eventStore.markSnoozed(occurrenceId, minutes, nextScheduledAt);
-                        ReminderScheduler.cancelAutoSnooze(this, occurrenceId, reminderId, reminderName);
+        AppLog.d(this, "alert snooze occurrence=" + activeOccurrenceId + " minutes=" + minutes);
+        finishImmediatelyForAction(() -> {
+            List<String> currentIds = currentOccurrenceIds(activeOccurrenceId, occurrenceIds);
+            if (reminderId != null) {
+                if (!currentIds.isEmpty()) {
+                    long nextScheduledAt = ReminderScheduler.scheduleSnooze(this, reminderId, reminderName, minutes, originalScheduledAt);
+                    ReminderEventStore eventStore = new ReminderEventStore(this);
+                    for (String occurrenceId : currentIds) {
+                        if (occurrenceId != null) {
+                            eventStore.markSnoozed(occurrenceId, minutes, nextScheduledAt);
+                            ReminderScheduler.cancelAutoSnooze(this, occurrenceId, reminderId, reminderName);
+                        }
                     }
+                } else {
+                    ReminderScheduler.scheduleSnooze(this, reminderId, reminderName, minutes, originalScheduledAt);
                 }
-            } else {
-                ReminderScheduler.scheduleSnooze(this, reminderId, reminderName, minutes, originalScheduledAt);
             }
-        }
-        closeAfterAction();
+        });
     }
 
     private void snoozeOneDay(String activeOccurrenceId, List<String> occurrenceIds, String reminderId, String reminderName, long originalScheduledAt) {
@@ -411,6 +414,33 @@ public class ReminderAlertActivity extends Activity {
         requestComplicationRefreshOnce();
         finishAndRemoveTask();
         ReminderReceiver.dispatchNextQueued(this);
+    }
+
+    /**
+     * Acknowledge touch synchronously, then persist the reminder state off the UI thread.
+     * The monitoring FGS keeps the process eligible while the short operation completes.
+     */
+    private void finishImmediatelyForAction(Runnable action) {
+        if (actionClosed) {
+            return;
+        }
+        actionClosed = true;
+        handler.removeCallbacksAndMessages(null);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        finishAndRemoveTask();
+        ALERT_ACTION_EXECUTOR.execute(() -> {
+            try {
+                stopVibration();
+                cancelNotification(activeOccurrenceId);
+                action.run();
+                new ReminderAlertQueueStore(this).complete(activeOccurrenceId);
+                ComplicationRefresh.request(this);
+            } catch (Exception exception) {
+                AppLog.e(this, "alert action persistence failed", exception);
+            } finally {
+                ReminderReceiver.dispatchNextQueued(this);
+            }
+        });
     }
 
     private void requestComplicationRefreshOnce() {
