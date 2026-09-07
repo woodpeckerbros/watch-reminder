@@ -685,6 +685,7 @@ public class PhoneMainActivity extends Activity {
         content.addView(settingsCard, wideParams());
 
         addBackupSection(content);
+        addLogSection(content);
 
         Button licenses = button("ⓘ  אודות ורישיונות", SOFT, TEXT);
         licenses.setOnClickListener(v -> showAboutAndLicenses());

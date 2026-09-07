@@ -8,7 +8,7 @@ import android.graphics.drawable.Drawable;
 
 /** Small semantic line icons for text buttons; avoids font-dependent emoji rendering. */
 final class AppButtonIconDrawable extends Drawable {
-    enum Kind { PLUS, ADD, HISTORY, LIST, ALARM, CLOCK, BELL, SETTINGS, BACK, SAVE, DELETE, FILE, PHONE, PHONE_IN, PHONE_OUT, LOCATION, SOUND, INFO }
+    enum Kind { PLUS, ADD, HISTORY, LIST, ALARM, CLOCK, BELL, WATER, STAR_OF_DAVID, SUNRISE, SETTINGS, BACK, SAVE, DELETE, FILE, PHONE, PHONE_IN, PHONE_OUT, LOCATION, SOUND, INFO }
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Kind kind;
 
@@ -43,6 +43,46 @@ final class AppButtonIconDrawable extends Drawable {
             case ALARM: c.drawCircle(0,2,8,paint); c.drawLine(0,2,0,-3,paint); c.drawLine(0,2,4,4,paint); c.drawArc(new RectF(-10,-10,-2,-3),205,130,false,paint); c.drawArc(new RectF(2,-10,10,-3),205,130,false,paint); break;
             case CLOCK: c.drawCircle(0,0,9,paint); c.drawLine(0,0,0,-5,paint); c.drawLine(0,0,5,2,paint); break;
             case BELL: Path bell=new Path(); bell.moveTo(-8,6); bell.quadTo(-4,2,-4,-3); bell.quadTo(0,-10,4,-3); bell.quadTo(4,2,8,6); bell.close(); c.drawPath(bell,paint); c.drawCircle(0,8,1.4f,paint); break;
+            case WATER:
+                Path drop = new Path();
+                drop.moveTo(0, -10);
+                drop.cubicTo(-2, -6, -8, -1, -8, 4);
+                drop.cubicTo(-8, 10, -4, 12, 0, 12);
+                drop.cubicTo(4, 12, 8, 10, 8, 4);
+                drop.cubicTo(8, -1, 2, -6, 0, -10);
+                c.drawPath(drop, paint);
+                c.drawArc(new RectF(-4, 1, 1, 7), 110, 80, false, paint);
+                break;
+            case STAR_OF_DAVID:
+                Path starUp = new Path();
+                Path starDown = new Path();
+                for (int i = 0; i < 3; i++) {
+                    double upAngle = -Math.PI / 2 + i * Math.PI * 2 / 3;
+                    double downAngle = Math.PI / 2 + i * Math.PI * 2 / 3;
+                    float upX = (float) Math.cos(upAngle) * 9f;
+                    float upY = (float) Math.sin(upAngle) * 9f;
+                    float downX = (float) Math.cos(downAngle) * 9f;
+                    float downY = (float) Math.sin(downAngle) * 9f;
+                    if (i == 0) {
+                        starUp.moveTo(upX, upY);
+                        starDown.moveTo(downX, downY);
+                    } else {
+                        starUp.lineTo(upX, upY);
+                        starDown.lineTo(downX, downY);
+                    }
+                }
+                starUp.close();
+                starDown.close();
+                c.drawPath(starUp, paint);
+                c.drawPath(starDown, paint);
+                break;
+            case SUNRISE:
+                c.drawLine(-10, 6, 10, 6, paint);
+                c.drawArc(new RectF(-7, -5, 7, 9), 180, 180, false, paint);
+                c.drawLine(0, -10, 0, -7, paint);
+                c.drawLine(-8, -5, -6, -3, paint);
+                c.drawLine(8, -5, 6, -3, paint);
+                break;
             case SETTINGS:
                 Path gear = new Path();
                 for (int i = 0; i < 24; i++) {

@@ -10,7 +10,9 @@ import java.util.List;
 public final class NotificationChannelMaintenance {
     private static final String REMINDER_ALERTS_ID = "reminder_alerts_no_system_vibration_v2";
     private static final String FASTING_ALERTS_ID = "intermittent_fasting_alerts_no_system_vibration_v2";
+    private static final String WATER_ALERTS_ID = "water_reminders_no_system_vibration_v1";
     private static final String BACKGROUND_CHECK_ID = "reminder_service";
+    private static final String REMINDER_MONITORING_ID = "reminder_monitoring";
     private static final String WEAR_WAIT_ID = "deferred_wear_state";
 
     private NotificationChannelMaintenance() {
@@ -52,8 +54,11 @@ public final class NotificationChannelMaintenance {
         if (FASTING_ALERTS_ID.equals(id)) {
             return UiText.t(context, "צום לסירוגין");
         }
-        if (BACKGROUND_CHECK_ID.equals(id)) {
-            return UiText.t(context, "בדיקת רקע לתזכורות");
+        if (WATER_ALERTS_ID.equals(id)) {
+            return AppLanguage.wrap(context).getString(R.string.water_reminders_title);
+        }
+        if (BACKGROUND_CHECK_ID.equals(id) || REMINDER_MONITORING_ID.equals(id)) {
+            return UiText.t(context, "ניטור תזכורות");
         }
         if (WEAR_WAIT_ID.equals(id)) {
             return UiText.t(context, "המתנה לענידת השעון");

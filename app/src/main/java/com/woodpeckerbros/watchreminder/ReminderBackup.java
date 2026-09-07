@@ -88,6 +88,15 @@ public class ReminderBackup {
                             .put("fastingHours", settings.fastingHours())
                             .put("fastingStartHour", settings.fastingStartHour())
                             .put("fastingStartMinute", settings.fastingStartMinute())
+                            .put("waterRemindersEnabled", settings.waterRemindersEnabled())
+                            .put("waterMode", settings.waterMode())
+                            .put("waterDailyTargetMl", settings.waterDailyTargetMl())
+                            .put("waterAmountMl", settings.waterAmountMl())
+                            .put("waterIntervalMinutes", settings.waterIntervalMinutes())
+                            .put("waterStartHour", settings.waterStartHour())
+                            .put("waterStartMinute", settings.waterStartMinute())
+                            .put("waterEndHour", settings.waterEndHour())
+                            .put("waterEndMinute", settings.waterEndMinute())
                             .put("language", settings.language())
                             .put("jewishMode", settings.jewishMode()))
                     .put("quietTimeRules", new QuietTimeRuleStore(context).toJsonArray())
@@ -312,11 +321,11 @@ public class ReminderBackup {
         ReminderScheduler.scheduleWatchdog(context);
         SmartAlarmScheduler.reschedule(context);
         if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderForegroundService.start(context);
+            ReminderMonitoringService.start(context);
         } else {
-            ReminderForegroundService.stop(context);
+            ReminderMonitoringService.stop(context);
         }
-        ComplicationRefresh.requestNextAndFasting(context);
+        ComplicationRefresh.requestAll(context);
         return reminders.size();
     }
 
@@ -327,6 +336,7 @@ public class ReminderBackup {
                 .put("omer", exportPreferences(context, "omer_state", "retry_until"))
                 .put("moonBlessing", exportPreferences(context, "moon_blessing_state"))
                 .put("intermittentFasting", exportPreferences(context, "intermittent_fasting"))
+                .put("waterReminder", exportPreferences(context, WaterReminderStore.PREFS_NAME))
                 .put("reminderHistory", new ReminderEventStore(context).recentForBackup(
                         System.currentTimeMillis() - HISTORY_BACKUP_WINDOW_MS))
                 .put("occurrenceState", exportPreferences(context, "reminder_occurrence_state"))
@@ -341,6 +351,7 @@ public class ReminderBackup {
         restorePreferences(context, "omer_state", state.optJSONObject("omer"));
         restorePreferences(context, "moon_blessing_state", state.optJSONObject("moonBlessing"));
         restorePreferences(context, "intermittent_fasting", state.optJSONObject("intermittentFasting"));
+        restorePreferences(context, WaterReminderStore.PREFS_NAME, state.optJSONObject("waterReminder"));
         JSONArray reminderHistory = state.optJSONArray("reminderHistory");
         if (reminderHistory != null) {
             new ReminderEventStore(context).restoreRecent(reminderHistory);
@@ -364,6 +375,7 @@ public class ReminderBackup {
         DafYomiScheduler.schedule(context);
         OmerScheduler.schedule(context);
         IntermittentFastingScheduler.schedule(context);
+        WaterReminderScheduler.schedule(context);
     }
 
     private static JSONObject exportPreferences(Context context, String name, String... excludedKeys) throws Exception {
@@ -472,6 +484,17 @@ public class ReminderBackup {
                 json.optInt("fastingStartHour", settings.fastingStartHour()),
                 json.optInt("fastingStartMinute", settings.fastingStartMinute())
         );
+        settings.setWaterRemindersEnabled(json.optBoolean("waterRemindersEnabled", settings.waterRemindersEnabled()));
+        settings.setWaterMode(json.optString("waterMode", settings.waterMode()));
+        settings.setWaterDailyTargetMl(json.optInt("waterDailyTargetMl", settings.waterDailyTargetMl()));
+        settings.setWaterAmountMl(json.optInt("waterAmountMl", settings.waterAmountMl()));
+        settings.setWaterIntervalMinutes(json.optInt("waterIntervalMinutes", settings.waterIntervalMinutes()));
+        settings.setWaterWindow(
+                json.optInt("waterStartHour", settings.waterStartHour()),
+                json.optInt("waterStartMinute", settings.waterStartMinute()),
+                json.optInt("waterEndHour", settings.waterEndHour()),
+                json.optInt("waterEndMinute", settings.waterEndMinute())
+        );
         settings.setLanguage(json.optString("language", settings.language()));
         settings.setJewishMode(json.optBoolean("jewishMode", settings.jewishMode()));
         MoonBlessingScheduler.schedule(context);
@@ -480,6 +503,7 @@ public class ReminderBackup {
         JewishDayScheduler.schedule(context);
         TekufaScheduler.schedule(context);
         IntermittentFastingScheduler.schedule(context);
+        WaterReminderScheduler.schedule(context);
     }
 
     private static File documentsDir(Context context) {

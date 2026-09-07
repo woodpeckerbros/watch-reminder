@@ -4,9 +4,11 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
+import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -28,7 +30,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -41,6 +42,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -91,6 +93,7 @@ public class MainActivity extends Activity {
     public static final String EXTRA_OPEN_PENDING_RESTORE = "open_pending_restore";
     public static final String EXTRA_OPEN_ZMANIM_DAY = "open_zmanim_day";
     public static final String EXTRA_OPEN_FASTING_SETTINGS = "open_fasting_settings";
+    public static final String EXTRA_OPEN_WATER_SETTINGS = "open_water_settings";
 
     private static final int REQUEST_POST_NOTIFICATIONS = 10;
     private static final int REQUEST_FINE_LOCATION = 11;
@@ -117,7 +120,6 @@ public class MainActivity extends Activity {
     private static final int COLOR_CARD_MUTED = 0xFFC5C8BA;
     private static final String STARTUP_PREFS_NAME = "startup_reliability";
     private static final String PERMISSION_PREFS_NAME = "permission_state";
-    private static final String KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN = "battery_optimization_prompt_shown";
     private static final String KEY_LAST_MISSED_PROMPT_DAY = "last_missed_prompt_day";
     private static final long LATE_ALERT_THRESHOLD_MS = 2 * 60_000L;
     private static final long MISSED_ALERT_LOOKBACK_MS = 24 * 60 * 60_000L;
@@ -125,6 +127,11 @@ public class MainActivity extends Activity {
     private static final long LOCATION_RESCHEDULE_DEBOUNCE_MS = 750L;
     private static final ExecutorService LOCATION_RESCHEDULER = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "zmanim-location-rescheduler");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private static final ExecutorService RESTORE_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "wr-restore");
         thread.setDaemon(true);
         return thread;
     });
@@ -171,14 +178,12 @@ public class MainActivity extends Activity {
     private boolean editingSmartAlarmNew;
     private boolean exactAlarmRequestStarted;
     private boolean fullScreenIntentRequestStarted;
-    private boolean batteryOptimizationRequestStarted;
     private boolean permissionRequestInFlight;
     private boolean permissionExplanationVisible;
     private boolean askedPostNotificationsThisSession;
     private boolean askedLocationThisSession;
     private boolean askedActivityRecognitionThisSession;
     private boolean askedBodySensorsThisSession;
-    private boolean askedBatteryOptimizationThisSession;
     private boolean askedExactAlarmThisSession;
     private boolean askedFullScreenThisSession;
     private boolean askedNotificationPolicyThisSession;
@@ -196,6 +201,7 @@ public class MainActivity extends Activity {
     private boolean pendingRestoreFromPhone;
     private boolean pendingZmanimDay;
     private boolean pendingFastingSettings;
+    private boolean pendingWaterSettings;
     private boolean zmanimBackToSettings = true;
     private long lastForegroundDueCheckAt;
     private String lastReminderListFingerprint = "";
@@ -205,6 +211,7 @@ public class MainActivity extends Activity {
     private boolean startupMaintenanceRunning;
     private boolean startupMaintenanceDone;
     private boolean foregroundDueCheckRunning;
+    private ProgressDialog restoreProgress;
     private int startupListPass;
     private int homeUpcomingLoadGeneration;
     private LinearLayout homeUpcomingContainer;
@@ -227,11 +234,19 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        NotificationChannelMaintenance.run(this);
+        // Channel cleanup touches the system notification service and can enumerate many
+        // channels on a watch. It is housekeeping, not a prerequisite for the first frame.
+        new Thread(() -> NotificationChannelMaintenance.run(getApplicationContext()),
+                "wr-channel-maintenance").start();
         createdAt = System.currentTimeMillis();
         store = new ReminderStore(this);
         handleIntent(getIntent());
         ReminderSettings onboardingSettings = new ReminderSettings(this);
+        // This call happens while the user-visible activity is starting, which is a compliant
+        // foreground-service start path. Do not defer it to the background startup worker.
+        if (onboardingSettings.onboardingComplete() && ReminderMonitoringService.isRequired(this)) {
+            ReminderMonitoringService.start(this);
+        }
         if (onboardingSettings.onboardingComplete()) {
             showList();
         } else if (ReminderSettings.LANGUAGE_ENGLISH.equals(onboardingSettings.language())) {
@@ -249,6 +264,7 @@ public class MainActivity extends Activity {
             openPendingRestoreFromPhone();
             openPendingZmanimDay();
             openPendingFastingSettings();
+            openPendingWaterSettings();
         }, 260L);
         if (new ReminderSettings(this).onboardingComplete()) {
             scheduleStartupMaintenance();
@@ -270,6 +286,7 @@ public class MainActivity extends Activity {
             DafYomiScheduler.schedule(this);
             OmerScheduler.schedule(this);
             TekufaScheduler.schedule(this);
+            WaterReminderScheduler.schedule(this);
             ReminderScheduler.scheduleWatchdog(this);
             showList();
         } else if (exactAlarmRequestStarted) {
@@ -280,15 +297,6 @@ public class MainActivity extends Activity {
             showList();
         } else if (fullScreenIntentRequestStarted) {
             fullScreenIntentRequestStarted = false;
-        }
-        if (batteryOptimizationRequestStarted) {
-            batteryOptimizationRequestStarted = false;
-            boolean exempt = isIgnoringBatteryOptimizations();
-            AppLog.d(this, "battery optimization request returned exempt=" + exempt);
-            if (exempt && store != null) {
-                store.rescheduleAll();
-                ReminderScheduler.scheduleWatchdog(this);
-            }
         }
         if (startupMaintenancePending || startupMaintenanceRunning || System.currentTimeMillis() - createdAt < 2_500L) {
             mainHandler.postDelayed(() -> ReminderReceiver.dispatchNextQueued(MainActivity.this), 900L);
@@ -307,7 +315,6 @@ public class MainActivity extends Activity {
     }
 
     private void scheduleStartupMaintenance() {
-        ReminderRecoveryJobService.schedule(this);
         if (startupMaintenancePending || startupMaintenanceRunning || startupMaintenanceDone) {
             return;
         }
@@ -327,6 +334,8 @@ public class MainActivity extends Activity {
         startupMaintenancePending = false;
         startupMaintenanceRunning = true;
         new Thread(() -> {
+            // JobScheduler IPC is maintenance work. Keep it out of the initial UI frame.
+            ReminderRecoveryJobService.schedule(MainActivity.this);
             ReminderSettings settings = new ReminderSettings(MainActivity.this);
             settings.applyPowerSaveDefaultOnce();
             long now = System.currentTimeMillis();
@@ -339,12 +348,13 @@ public class MainActivity extends Activity {
             OmerScheduler.schedule(MainActivity.this);
             TekufaScheduler.schedule(MainActivity.this);
             IntermittentFastingScheduler.schedule(MainActivity.this);
+            WaterReminderScheduler.schedule(MainActivity.this);
             ReminderScheduler.scheduleWatchdog(MainActivity.this);
             ComplicationRefresh.requestAll(MainActivity.this);
             if (settings.serviceEnabled()) {
-                ReminderForegroundService.start(MainActivity.this);
+                ReminderMonitoringService.start(MainActivity.this);
             } else {
-                ReminderForegroundService.stop(MainActivity.this);
+                ReminderMonitoringService.stop(MainActivity.this);
             }
             AppLog.d(MainActivity.this, "startup maintenance end");
             mainHandler.post(() -> {
@@ -387,6 +397,7 @@ public class MainActivity extends Activity {
                 OmerScheduler.dispatchIfDueNow(MainActivity.this);
                 ReminderScheduler.scheduleWatchdog(MainActivity.this);
                 IntermittentFastingScheduler.schedule(MainActivity.this);
+                WaterReminderScheduler.schedule(MainActivity.this);
             } finally {
                 mainHandler.post(() -> {
                     foregroundDueCheckRunning = false;
@@ -419,7 +430,7 @@ public class MainActivity extends Activity {
             message = "The app detected " + (summary.count == 1 ? "a recent reminder" : "several recent reminders")
                     + " that did not appear at the scheduled time.\n\n"
                     + "This can happen because of Wear OS battery management, temporary system load, or restricted background activity.\n\n"
-                    + "We recommend enabling Background Check Active. The app will periodically wake and check for reminders that should be shown.\n\n"
+                    + "We recommend enabling Active Reminder Monitoring. The app maintains reminder delivery and performs a lightweight health check about once an hour.\n\n"
                     + "Note: this may use more battery. You can change the interval later in Advanced Settings.\n\n"
                     + "Latest detected reminder: " + summary.latestName + " at " + NextReminderCalculator.formatTime(summary.latestScheduledAt);
         } else {
@@ -427,27 +438,27 @@ public class MainActivity extends Activity {
                     + (summary.count == 1 ? "שתזכורת אחרונה" : "שכמה תזכורות אחרונות")
                     + " לא הוצגה בזמן המתוכנן.\n\n"
                     + "זה יכול לקרות בגלל ניהול סוללה של Wear OS, עומס זמני של המערכת, או חסימה של פעילות ברקע.\n\n"
-                    + "מומלץ להפעיל \"בדיקת רקע פעילה\". במצב זה האפליקציה תעיר את עצמה מדי פעם ותבדוק אם יש תזכורות שצריך להציג.\n\n"
-                    + "שימו לב: הפעלת האפשרות עשויה לצרוך יותר סוללה. אפשר לשנות אחר כך את מספר הדקות בין בדיקות במסך ההגדרות המתקדמות.\n\n"
+                    + "מומלץ להפעיל \"ניטור תזכורות פעיל\". במצב זה האפליקציה נשארת במצב שירות קדמי ומבצעת בדיקת תקינות קלה בערך פעם בשעה.\n\n"
+                    + "ההתראות עצמן עדיין נמסרות באמצעות AlarmClock, והבדיקה אינה מעירה את השעון רק לצורך תחזוקה.\n\n"
                     + "התזכורת האחרונה שזוהתה: " + summary.latestName + " בשעה " + NextReminderCalculator.formatTime(summary.latestScheduledAt);
         }
         new AlertDialog.Builder(this)
                 .setTitle(UiText.t(this, title))
                 .setMessage(message)
-                .setPositiveButton(UiText.t(this, "הפעל בדיקת רקע"), (dialog, which) -> enableBackgroundReliabilityCheck())
+                .setPositiveButton(UiText.t(this, "הפעל ניטור תזכורות"), (dialog, which) -> enableReminderMonitoring())
                 .setNegativeButton(UiText.t(this, "לא עכשיו"), null)
                 .show();
         return true;
     }
 
-    private void enableBackgroundReliabilityCheck() {
+    private void enableReminderMonitoring() {
         ReminderSettings settings = new ReminderSettings(this);
         settings.setServiceEnabled(true);
         ReminderScheduler.scheduleWatchdog(this);
-        ReminderForegroundService.start(this);
+        ReminderMonitoringService.start(this);
         Toast.makeText(
                 this,
-                UiText.t(this, "בדיקת רקע פעילה הופעלה. ניתן לשנות את מרווח הדקות בהגדרות המתקדמות."),
+                UiText.t(this, "ניטור התזכורות הופעל. בדיקת התקינות מתבצעת בערך פעם בשעה."),
                 Toast.LENGTH_LONG
         ).show();
         refreshVisibleScreen();
@@ -515,6 +526,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        closeRestoreProgress();
+        super.onDestroy();
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -524,6 +541,7 @@ public class MainActivity extends Activity {
         openPendingRestoreFromPhone();
         openPendingZmanimDay();
         openPendingFastingSettings();
+        openPendingWaterSettings();
     }
 
     @Override
@@ -658,6 +676,11 @@ public class MainActivity extends Activity {
         if (jewishMode) {
             LinearLayout jewishActions = actionRow();
             Button zmanimButton = pillButton("זמני היום", COLOR_EMERALD_DEEP);
+            if (AppLanguage.isEnglish(this)) {
+                clearButtonIcon(zmanimButton);
+                zmanimButton.setText(UiText.t(this, "זמני היום").replace(" ", "\n"));
+                zmanimButton.setTextSize(11);
+            }
             zmanimButton.setOnClickListener(v -> openZmanimDayFromMain());
             Button blessingButton = pillButton("תזכורת לברכה", COLOR_EMERALD_DEEP);
             blessingButton.setOnClickListener(v -> showBlessingReminder());
@@ -669,6 +692,11 @@ public class MainActivity extends Activity {
             Button fastingButton = pillButton("צום לסירוגין", COLOR_SURFACE_2);
             fastingButton.setOnClickListener(v -> showFastingSettings());
             content.addView(fastingButton, matchParams());
+        }
+        if (new ReminderSettings(this).waterRemindersEnabled()) {
+            Button waterButton = pillButton(getString(R.string.water_reminders_title), COLOR_SURFACE_2);
+            waterButton.setOnClickListener(v -> showWaterReminderSettings());
+            content.addView(waterButton, matchParams());
         }
         Button settingsButton = pillButton("הגדרות", COLOR_SURFACE_2);
         settingsButton.setOnClickListener(v -> showSettings());
@@ -809,6 +837,9 @@ public class MainActivity extends Activity {
         card.setPadding(dp(12), dp(9), dp(12), dp(9));
         card.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         card.setBackground(new GlowingReminderCardDrawable(dp(12), false));
+        boolean english = AppLanguage.isEnglish(this);
+        // Keep the physical columns stable across locales; set text alignment explicitly below.
+        card.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         card.setOnClickListener(v -> showEditor(item.reminder));
         card.setOnLongClickListener(v -> {
             showReminderActions(item.reminder);
@@ -818,14 +849,22 @@ public class MainActivity extends Activity {
         AppFont.bold(time);
         LinearLayout textColumn = new LinearLayout(this);
         textColumn.setOrientation(LinearLayout.VERTICAL);
-        textColumn.setGravity(Gravity.CENTER);
+        textColumn.setGravity(Gravity.CENTER_VERTICAL | (english ? Gravity.LEFT : Gravity.RIGHT));
         TextView name = text(item.next.reminderName, 14, COLOR_TEXT);
         AppFont.bold(name);
+        name.setGravity(english ? Gravity.LEFT : Gravity.RIGHT);
         TextView date = text(homeDateLabel(item.next.scheduledAt), 10, COLOR_MUTED);
+        date.setGravity(english ? Gravity.LEFT : Gravity.RIGHT);
+        time.setGravity((english ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
         textColumn.addView(name);
         textColumn.addView(date);
-        card.addView(time, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.34f));
-        card.addView(textColumn, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.66f));
+        if (english) {
+            card.addView(textColumn, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.66f));
+            card.addView(time, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.34f));
+        } else {
+            card.addView(time, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.34f));
+            card.addView(textColumn, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.66f));
+        }
         return card;
     }
 
@@ -877,6 +916,11 @@ public class MainActivity extends Activity {
 
         if (jewishMode) {
             Button zmanimButton = pillButton("זמני היום בהלכה", COLOR_SURFACE_2);
+            if (AppLanguage.isEnglish(this)) {
+                clearButtonIcon(zmanimButton);
+                zmanimButton.setText(UiText.t(this, "זמני היום בהלכה").replace(" ", "\n"));
+                zmanimButton.setTextSize(11);
+            }
             zmanimButton.setOnClickListener(v -> openZmanimDayFromMain());
             content.addView(zmanimButton, matchParams());
 
@@ -1131,7 +1175,7 @@ public class MainActivity extends Activity {
             String eventDescription = historyDescription(event);
             TextView description = text(eventDescription, 12, COLOR_MUTED);
             description.setPadding(dp(8), dp(2), dp(8), 0);
-            TextView status = text(event.status, 14, eventStatusColor(event.status));
+            TextView status = text(UiText.t(this, event.status), 14, eventStatusColor(event.status));
             TextView time = text(event.displayTime() + (event.note.isEmpty() ? "" : " | " + UiText.t(this, event.note)), 12, COLOR_MUTED);
             card.addView(name);
             if (!eventDescription.isEmpty()) {
@@ -1505,7 +1549,7 @@ public class MainActivity extends Activity {
         content.addView(dismissCard, cardParams());
 
         LinearLayout wakeCheckCard = card();
-        TextView wakeCheckTitle = text("בדיקת ערנות", 15, COLOR_CARD_TEXT);
+        TextView wakeCheckTitle = text(UiText.t(this, "בדיקת ערנות"), 15, COLOR_CARD_TEXT);
         AppFont.bold(wakeCheckTitle); wakeCheckCard.addView(wakeCheckTitle);
         Switch wakeCheckSwitch = new Switch(this);
         setSwitchText(wakeCheckSwitch, "בדיקת ערנות לאחר הכיבוי");
@@ -1520,10 +1564,10 @@ public class MainActivity extends Activity {
         content.addView(wakeCheckCard, cardParams());
 
         LinearLayout systemTimerCard = card();
-        TextView systemTimerTitle = text("גיבוי רטט של השעון", 15, COLOR_CARD_TEXT);
+        TextView systemTimerTitle = text(UiText.t(this, "גיבוי רטט של השעון"), 15, COLOR_CARD_TEXT);
         AppFont.bold(systemTimerTitle);
         systemTimerCard.addView(systemTimerTitle);
-        TextView systemTimerHint = text("אם לא תתעוררו עד סוף ההתראה, האפליקציה תנסה להפעיל טיימר חד־פעמי בשעון המערכת. הצליל והרטט יפעלו לפי הגדרות השעון, ולא לפי הגדרות האפליקציה.", 11, COLOR_CARD_MUTED);
+        TextView systemTimerHint = text(UiText.t(this, "אם לא תתעוררו עד סוף ההתראה, האפליקציה תנסה להפעיל טיימר חד־פעמי בשעון המערכת. הצליל והרטט יפעלו לפי הגדרות השעון, ולא לפי הגדרות האפליקציה."), 11, COLOR_CARD_MUTED);
         systemTimerCard.addView(systemTimerHint);
         Switch systemTimerFallbackSwitch = new Switch(this);
         setSwitchText(systemTimerFallbackSwitch, "הפעלת גיבוי שעון מערכת");
@@ -1759,6 +1803,7 @@ public class MainActivity extends Activity {
                     TekufaScheduler.cancel(MainActivity.this);
                     TekufaReceiver.cancelNotification(MainActivity.this);
                 }
+                ComplicationRefresh.requestAll(MainActivity.this);
                 recreate();
             }
 
@@ -1797,6 +1842,10 @@ public class MainActivity extends Activity {
         fastingSettings.setOnClickListener(v -> showFastingSettings());
         content.addView(fastingSettings, matchParams());
 
+        Button waterSettings = pillButton(getString(R.string.water_reminders_title), COLOR_SURFACE_2);
+        waterSettings.setOnClickListener(v -> showWaterReminderSettings());
+        content.addView(waterSettings, matchParams());
+
         QuietTimeRuleStore quietStore = new QuietTimeRuleStore(this);
         LinearLayout quietCard = card();
         Switch quietSwitch = new Switch(this);
@@ -1821,6 +1870,23 @@ public class MainActivity extends Activity {
         });
         content.addView(quietCard, cardParams());
 
+        LinearLayout logsCard = card();
+        TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
+        AppFont.bold(logsTitle);
+        logsCard.addView(logsTitle);
+        TextView logsHint = text("לבדיקת תזכורות שלא קופצות בזמן", 11, COLOR_MUTED);
+        logsHint.setPadding(0, dp(3), 0, dp(6));
+        logsCard.addView(logsHint);
+        LinearLayout logsActions = actionRow();
+        Button sendLogs = pillButton("לוגים לטלפון", COLOR_ACCENT_DARK);
+        sendLogs.setOnClickListener(v -> sendLogsToPhone());
+        Button clearLogs = pillButton("ניקוי לוגים", COLOR_SURFACE_2);
+        clearLogs.setOnClickListener(v -> confirmClearLogs());
+        logsActions.addView(sendLogs);
+        logsActions.addView(clearLogs);
+        logsCard.addView(logsActions);
+        content.addView(logsCard, cardParams());
+
         LinearLayout backupCard = card();
         TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
         AppFont.bold(backupTitle);
@@ -1830,14 +1896,17 @@ public class MainActivity extends Activity {
         backupCard.addView(backupHint);
         LinearLayout backupActions = actionRow();
         Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
-        setBackupPhoneButtonSize(backupToPhone);
         backupToPhone.setText(AppLanguage.isEnglish(this) ? "Back Up\nto Phone" : "גיבוי\nלטלפון");
         backupToPhone.setOnClickListener(v -> sendBackupToPhone());
         Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
-        setBackupPhoneButtonSize(restoreFromPhone);
+        restoreFromPhone.setText(AppLanguage.isEnglish(this) ? "Restore\nfrom Phone" : "שחזור\nמהטלפון");
+        clearButtonIcon(restoreFromPhone);
         restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
         backupActions.addView(backupToPhone);
         backupActions.addView(restoreFromPhone);
+        setBackupPhoneButtonSize(backupToPhone);
+        setBackupPhoneButtonSize(restoreFromPhone);
+        restoreFromPhone.setTextSize(9);
         backupCard.addView(backupActions);
         content.addView(backupCard, cardParams());
 
@@ -1847,20 +1916,14 @@ public class MainActivity extends Activity {
         content.addView(licenses, matchParams());
 
         LinearLayout actions = actionRow();
+        actions.setPadding(dp(4), 0, dp(4), dp(8));
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
         back.setOnClickListener(v -> showList());
         actions.addView(back);
         content.addView(actions);
 
-        FrameLayout settingsRoot = setScrollableContent(content);
-        TextView appVersion = text(getString(R.string.app_name) + " · גרסה " + installedVersionName(),
-                10, COLOR_MUTED);
-        appVersion.setGravity(Gravity.CENTER);
-        appVersion.setPadding(0, dp(2), 0, dp(2));
-        FrameLayout.LayoutParams versionParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, dp(22), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        versionParams.bottomMargin = dp(4);
-        settingsRoot.addView(appVersion, versionParams);
+        content.setPadding(dp(12), dp(22), dp(12), dp(16));
+        setScrollableContent(content);
     }
 
     private String installedVersionName() {
@@ -2011,12 +2074,35 @@ public class MainActivity extends Activity {
                 "Google Play services wearable APIs\nGoogle APIs Terms of Service",
                 "https://developers.google.com/terms", "licenses/google_play_services_notice.txt");
 
+        TextView appVersion = text(getString(R.string.app_name) + " · " + UiText.t(this, "גרסה") + " " + installedVersionName(),
+                10, COLOR_MUTED);
+        appVersion.setGravity(Gravity.CENTER);
+        appVersion.setPadding(0, dp(4), 0, dp(4));
+        content.addView(appVersion, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(24)));
+
+        Button updateButton = pillButton("בדוק אם יש עדכון", COLOR_EMERALD_DEEP);
+        updateButton.setOnClickListener(v -> openPlayStoreForUpdate());
+        content.addView(updateButton, matchParams());
+
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
         back.setOnClickListener(v -> showSettings());
         content.addView(back, matchParams());
         View bottomSafeArea = new View(this);
         content.addView(bottomSafeArea, new LinearLayout.LayoutParams(dp(1), dp(6)));
         setScrollableContent(content);
+    }
+
+    private void openPlayStoreForUpdate() {
+        String packageName = getPackageName();
+        try {
+            Intent market = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + packageName));
+            startActivity(market);
+        } catch (ActivityNotFoundException ignored) {
+            Intent web = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://play.google.com/store/apps/details?id=" + packageName));
+            startActivity(web);
+        }
     }
 
     private void addLicenseCard(LinearLayout content, String titleValue, String detailsValue,
@@ -2302,7 +2388,11 @@ public class MainActivity extends Activity {
         currentScreen = "alert_settings";
         ReminderSettings settings = new ReminderSettings(this);
         LinearLayout content = baseContent();
-        addTitle(content, "רטט וצלילים", "");
+        TextView alertScreenTitle = text("רטט וצלילים", 18, COLOR_TEXT);
+        AppFont.bold(alertScreenTitle);
+        alertScreenTitle.setMaxLines(2);
+        alertScreenTitle.setPadding(0, 0, 0, dp(12));
+        content.addView(alertScreenTitle);
 
         LinearLayout vibrationCard = card();
         TextView vibrationTitle = text("התראה", 15, COLOR_TEXT);
@@ -2433,30 +2523,22 @@ public class MainActivity extends Activity {
 
         LinearLayout serviceCard = card();
         Switch serviceSwitch = new Switch(this);
-        setSwitchText(serviceSwitch, "בדיקת רקע פעילה");
+        setSwitchText(serviceSwitch, "ניטור תזכורות פעיל");
         serviceSwitch.setChecked(settings.serviceEnabled());
         serviceSwitch.setOnClickListener(v -> {
             settings.setServiceEnabled(serviceSwitch.isChecked());
             if (settings.serviceEnabled()) {
                 ReminderScheduler.scheduleWatchdog(this);
-                ReminderForegroundService.start(this);
+                ReminderMonitoringService.start(this);
             } else {
-                ReminderForegroundService.stop(this);
+                ReminderMonitoringService.stop(this);
                 ReminderScheduler.scheduleWatchdog(this);
             }
         });
         serviceCard.addView(serviceSwitch);
-        TextView serviceHint = text("אם ההתראות לא מתקבלות בזמן, אפשר להפעיל בדיקת רקע ולבחור כל כמה דקות לדגום. הגדרה זו עלולה לצרוך יותר סוללה.", 11, COLOR_MUTED);
+        TextView serviceHint = text("הניטור שומר על שירות תזכורות פעיל ומבצע בדיקת תקינות קלה בערך פעם בשעה. ההתראות עצמן עדיין נמסרות באמצעות AlarmClock.", 11, COLOR_MUTED);
         serviceHint.setPadding(0, dp(4), 0, dp(4));
         serviceCard.addView(serviceHint);
-        int intervalSeconds = settings.checkIntervalSeconds();
-        LinearLayout intervalRow = new LinearLayout(this);
-        intervalRow.setGravity(Gravity.CENTER);
-        NumberPicker intervalMinutesPicker = numberPicker(0, 60, intervalSeconds / 60);
-        NumberPicker intervalSecondsPicker = numberPicker(0, 59, intervalSeconds % 60);
-        intervalRow.addView(pickerColumn("דקות", intervalMinutesPicker));
-        intervalRow.addView(pickerColumn("שניות", intervalSecondsPicker));
-        serviceCard.addView(intervalRow);
         content.addView(serviceCard, cardParams());
 
         LinearLayout autoCard = card();
@@ -2476,15 +2558,13 @@ public class MainActivity extends Activity {
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
         save.setOnClickListener(v -> {
             settings.setServiceEnabled(serviceSwitch.isChecked());
-            int seconds = intervalMinutesPicker.getValue() * 60 + intervalSecondsPicker.getValue();
-            settings.setCheckIntervalSeconds(seconds);
             settings.setAutoSnoozeDelaySeconds(autoDelayPicker.getValue());
             settings.setAutoSnoozeMinutes(autoSnoozePicker.getValue());
             if (settings.serviceEnabled()) {
                 ReminderScheduler.scheduleWatchdog(this);
-                ReminderForegroundService.start(this);
+                ReminderMonitoringService.start(this);
             } else {
-                ReminderForegroundService.stop(this);
+                ReminderMonitoringService.stop(this);
                 ReminderScheduler.scheduleWatchdog(this);
             }
             showSettings();
@@ -2582,6 +2662,176 @@ public class MainActivity extends Activity {
         setScrollableContent(content);
     }
 
+    private void showWaterReminderSettings() {
+        currentScreen = "water_settings";
+        ReminderSettings settings = new ReminderSettings(this);
+        LinearLayout content = baseContent();
+        addTitle(content, getString(R.string.water_reminders_title), getString(R.string.water_reminders_subtitle));
+
+        if (settings.waterRemindersEnabled()
+                && ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())) {
+            LinearLayout progressCard = card(true);
+            TextView progress = text(getString(R.string.water_today_progress,
+                    new WaterReminderStore(this).consumedTodayMl(), settings.waterDailyTargetMl()), 13, COLOR_CARD_TEXT);
+            AppFont.bold(progress);
+            progress.setGravity(Gravity.CENTER);
+            progressCard.addView(progress);
+            Button reset = pillButton(getString(R.string.water_reset_today), COLOR_SURFACE_2);
+            clearButtonIcon(reset);
+            reset.setTextSize(11);
+            reset.setOnClickListener(v -> {
+                new WaterReminderStore(this).resetToday();
+                WaterReminderScheduler.schedule(this);
+                ComplicationRefresh.requestWater(this);
+                showWaterReminderSettings();
+            });
+            progressCard.addView(reset, matchParams());
+            content.addView(progressCard, cardParams());
+        }
+
+        LinearLayout enabledCard = card();
+        Switch enabled = new Switch(this);
+        setSwitchText(enabled, "פעיל");
+        enabled.setChecked(settings.waterRemindersEnabled());
+        enabledCard.addView(enabled);
+        content.addView(enabledCard, cardParams());
+
+        LinearLayout planCard = card();
+        TextView planTitle = text(getString(R.string.water_plan_title), 15, COLOR_TEXT);
+        AppFont.bold(planTitle);
+        planCard.addView(planTitle);
+        Spinner mode = new Spinner(this);
+        String[] modeLabels = {
+                getString(R.string.water_mode_daily_target),
+                getString(R.string.water_mode_fixed_amount)
+        };
+        mode.setAdapter(spinnerAdapter(modeLabels));
+        mode.setSelection(ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode()) ? 1 : 0);
+        planCard.addView(mode, matchParams());
+        content.addView(planCard, cardParams());
+
+        LinearLayout targetCard = card();
+        NumberPicker targetPicker = steppedNumberPicker(500, 5000, 100, settings.waterDailyTargetMl());
+        targetCard.addView(pickerColumn(getString(R.string.water_daily_target), targetPicker));
+        content.addView(targetCard, cardParams());
+
+        LinearLayout fixedCard = card();
+        NumberPicker amountPicker = steppedNumberPicker(50, 1000, 50, settings.waterAmountMl());
+        fixedCard.addView(pickerColumn(getString(R.string.water_amount_each), amountPicker));
+        content.addView(fixedCard, cardParams());
+
+        LinearLayout scheduleCard = card();
+        TextView scheduleTitle = text(getString(R.string.water_schedule_title), 15, COLOR_TEXT);
+        AppFont.bold(scheduleTitle);
+        scheduleCard.addView(scheduleTitle);
+        NumberPicker intervalPicker = steppedNumberPicker(30, 240, 15, settings.waterIntervalMinutes());
+        scheduleCard.addView(pickerColumn(getString(R.string.water_interval), intervalPicker));
+
+        NumberPicker startHour = numberPicker(0, 23, settings.waterStartHour());
+        NumberPicker startMinute = steppedNumberPicker(0, 55, 5, settings.waterStartMinute());
+        TextView startLabel = text(getString(R.string.water_start_time), 12, COLOR_MUTED);
+        startLabel.setGravity(Gravity.CENTER);
+        scheduleCard.addView(startLabel);
+        scheduleCard.addView(timePickerRow(startHour, startMinute));
+
+        NumberPicker endHour = numberPicker(0, 23, settings.waterEndHour());
+        NumberPicker endMinute = steppedNumberPicker(0, 55, 5, settings.waterEndMinute());
+        TextView endLabel = text(getString(R.string.water_end_time), 12, COLOR_MUTED);
+        endLabel.setGravity(Gravity.CENTER);
+        scheduleCard.addView(endLabel);
+        scheduleCard.addView(timePickerRow(endHour, endMinute));
+
+        TextView summary = text("", 12, COLOR_ACCENT);
+        summary.setGravity(Gravity.CENTER);
+        summary.setPadding(dp(2), dp(6), dp(2), dp(2));
+        scheduleCard.addView(summary);
+        content.addView(scheduleCard, cardParams());
+
+        Runnable updatePlan = () -> {
+            boolean targetMode = mode.getSelectedItemPosition() == 0;
+            targetCard.setVisibility(targetMode ? View.VISIBLE : View.GONE);
+            fixedCard.setVisibility(targetMode ? View.GONE : View.VISIBLE);
+            int start = startHour.getValue() * 60 + steppedPickerValue(startMinute, 0, 5);
+            int end = endHour.getValue() * 60 + steppedPickerValue(endMinute, 0, 5);
+            int interval = steppedPickerValue(intervalPicker, 30, 15);
+            int reminders = WaterReminderScheduler.remindersPerDay(start, end, interval);
+            if (reminders <= 0) {
+                summary.setText(getString(R.string.water_invalid_window));
+                return;
+            }
+            if (targetMode) {
+                int target = steppedPickerValue(targetPicker, 500, 100);
+                int each = ((int) Math.ceil(target / (double) reminders) + 9) / 10 * 10;
+                summary.setText(getString(R.string.water_plan_summary_target, reminders, each));
+            } else {
+                int each = steppedPickerValue(amountPicker, 50, 50);
+                summary.setText(getString(R.string.water_plan_summary_fixed, reminders, each, reminders * each));
+            }
+        };
+        mode.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                updatePlan.run();
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+        NumberPicker.OnValueChangeListener planChanged = (picker, oldValue, newValue) -> updatePlan.run();
+        targetPicker.setOnValueChangedListener(planChanged);
+        amountPicker.setOnValueChangedListener(planChanged);
+        intervalPicker.setOnValueChangedListener(planChanged);
+        startHour.setOnValueChangedListener(planChanged);
+        startMinute.setOnValueChangedListener(planChanged);
+        endHour.setOnValueChangedListener(planChanged);
+        endMinute.setOnValueChangedListener(planChanged);
+        updatePlan.run();
+
+        LinearLayout actions = actionRow();
+        Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
+        save.setOnClickListener(v -> {
+            int start = startHour.getValue() * 60 + steppedPickerValue(startMinute, 0, 5);
+            int end = endHour.getValue() * 60 + steppedPickerValue(endMinute, 0, 5);
+            if (end <= start) {
+                Toast.makeText(this, getString(R.string.water_invalid_window), Toast.LENGTH_LONG).show();
+                return;
+            }
+            String oldMode = settings.waterMode();
+            int oldTarget = settings.waterDailyTargetMl();
+            boolean wasEnabled = settings.waterRemindersEnabled();
+            String selectedMode = mode.getSelectedItemPosition() == 0
+                    ? ReminderSettings.WATER_MODE_DAILY_TARGET : ReminderSettings.WATER_MODE_FIXED_AMOUNT;
+            int selectedTarget = steppedPickerValue(targetPicker, 500, 100);
+            settings.setWaterRemindersEnabled(enabled.isChecked());
+            settings.setWaterMode(selectedMode);
+            settings.setWaterDailyTargetMl(selectedTarget);
+            settings.setWaterAmountMl(steppedPickerValue(amountPicker, 50, 50));
+            settings.setWaterIntervalMinutes(steppedPickerValue(intervalPicker, 30, 15));
+            settings.setWaterWindow(startHour.getValue(), steppedPickerValue(startMinute, 0, 5),
+                    endHour.getValue(), steppedPickerValue(endMinute, 0, 5));
+            WaterReminderReceiver.cancelNotification(this);
+            if (!enabled.isChecked()) {
+                WaterReminderScheduler.cancel(this);
+            } else {
+                if (!wasEnabled || !oldMode.equals(selectedMode) || oldTarget != selectedTarget) {
+                    new WaterReminderStore(this).resetToday();
+                }
+                WaterReminderScheduler.schedule(this);
+            }
+            ComplicationRefresh.requestWater(this);
+            Toast.makeText(this, getString(R.string.water_settings_saved), Toast.LENGTH_SHORT).show();
+            showSettings();
+        });
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showSettings());
+        actions.addView(save);
+        actions.addView(back);
+        content.addView(actions);
+        content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(12)));
+        setScrollableContent(content);
+    }
+
     private LinearLayout fastingActionRow() {
         LinearLayout actions = actionRow();
         actions.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
@@ -2591,7 +2841,23 @@ public class MainActivity extends Activity {
         startNow.setOnClickListener(v -> markFastingStartedNow());
         actions.addView(finishNow);
         actions.addView(startNow);
+        compactFastingActionButton(finishNow, "סיימתי לאכול");
+        compactFastingActionButton(startNow, "התחלתי לאכול");
         return actions;
+    }
+
+    private void compactFastingActionButton(Button button, String value) {
+        clearButtonIcon(button);
+        String localized = UiText.t(this, value);
+        String[] words = localized.split(" ");
+        if (AppLanguage.isEnglish(this) && words.length > 2 && "I".equalsIgnoreCase(words[0])) {
+            localized = words[1] + "\n" + words[2];
+        } else if (words.length == 2) {
+            localized = words[0] + "\n" + words[1];
+        }
+        button.setText(localized);
+        button.setTextSize(11);
+        button.setPadding(dp(2), 0, dp(2), 0);
     }
 
     private void markFastingStartedNow() {
@@ -2645,6 +2911,8 @@ public class MainActivity extends Activity {
         manualStart.setOnClickListener(v -> showFastingManualTimeDialog(true));
         row.addView(manualFinish);
         row.addView(manualStart);
+        compactFastingActionButton(manualFinish, "זמן סיום");
+        compactFastingActionButton(manualStart, "זמן התחלה");
         section.addView(row);
         return section;
     }
@@ -2789,7 +3057,7 @@ public class MainActivity extends Activity {
             TekufaScheduler.schedule(this);
         }
         store.rescheduleAll();
-        ComplicationRefresh.request(this);
+        ComplicationRefresh.requestAll(this);
         if (enabled && requestLocationAccessIfNeeded()) {
             return;
         }
@@ -3170,7 +3438,7 @@ public class MainActivity extends Activity {
         QuietTimeRuleStore.Rule initial = isNew
                 ? new QuietTimeRuleStore.Rule(
                 UUID.randomUUID().toString(),
-                "זמן שקט",
+                "",
                 true,
                 QuietTimeRuleStore.Rule.MODE_FIXED,
                 13,
@@ -3715,51 +3983,74 @@ public class MainActivity extends Activity {
     }
 
     private void restoreBackup(String backupText) {
-        try {
-            int count = ReminderBackup.importText(this, backupText);
-            store = new ReminderStore(this);
-            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
-            showList();
-        } catch (Exception exception) {
-            AppLog.e(this, "backup import failed", exception);
-            Toast.makeText(this, UiText.t(this, "הגיבוי לא תקין"), Toast.LENGTH_SHORT).show();
-        }
+        runRestoreAsync("backup import", () -> ReminderBackup.importText(this, backupText), "הגיבוי לא תקין");
     }
 
     private void restoreBackupFile(File file) {
-        try {
-            int count = ReminderBackup.importFile(this, file);
-            store = new ReminderStore(this);
-            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
-            showList();
-        } catch (Exception exception) {
-            AppLog.e(this, "backup file import failed", exception);
-            Toast.makeText(this, UiText.t(this, "הקובץ לא תקין"), Toast.LENGTH_SHORT).show();
-        }
+        runRestoreAsync("backup file import", () -> ReminderBackup.importFile(this, file), "הקובץ לא תקין");
     }
 
     private void restoreBackupEntry(ReminderBackup.BackupEntry entry) {
-        try {
-            int count = ReminderBackup.importEntry(this, entry);
-            store = new ReminderStore(this);
-            Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
-            showList();
-        } catch (Exception exception) {
-            AppLog.e(this, "backup entry import failed", exception);
-            Toast.makeText(this, UiText.t(this, "הקובץ לא תקין"), Toast.LENGTH_SHORT).show();
-        }
+        runRestoreAsync("backup entry import", () -> ReminderBackup.importEntry(this, entry), "הקובץ לא תקין");
     }
 
     private void restoreBackupUri(Uri uri) {
-        try {
-            int count = ReminderBackup.importUri(this, uri);
+        runRestoreAsync("backup uri import", () -> ReminderBackup.importUri(this, uri), "הקובץ לא תקין");
+    }
+
+    private interface RestoreOperation {
+        int run() throws Exception;
+    }
+
+    private void runRestoreAsync(String operationName, RestoreOperation operation, String errorText) {
+        runRestoreAsync(operationName, operation, errorText, count -> {
             store = new ReminderStore(this);
             Toast.makeText(this, restoredReminderCount(count), Toast.LENGTH_SHORT).show();
             showList();
-        } catch (Exception exception) {
-            AppLog.e(this, "backup uri import failed", exception);
-            Toast.makeText(this, UiText.t(this, "הקובץ לא תקין"), Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void runRestoreAsync(String operationName, RestoreOperation operation, String errorText,
+                                 java.util.function.IntConsumer onSuccess) {
+        if (restoreProgress != null) return;
+        restoreProgress = new ProgressDialog(this);
+        restoreProgress.setIndeterminate(true);
+        restoreProgress.setMessage(UiText.t(this, "משחזר נתונים מהטלפון..."));
+        restoreProgress.setCancelable(false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) setTurnScreenOn(true);
+        restoreProgress.show();
+        AppLog.d(this, operationName + " started on background thread");
+        RESTORE_EXECUTOR.execute(() -> {
+            try {
+                int count = operation.run();
+                runOnUiThread(() -> finishRestore(operationName, count, onSuccess));
+            } catch (Exception exception) {
+                AppLog.e(this, operationName + " failed", exception);
+                runOnUiThread(() -> failRestore(errorText));
+            }
+        });
+    }
+
+    private void finishRestore(String operationName, int count, java.util.function.IntConsumer onSuccess) {
+        if (isFinishing() || isDestroyed()) return;
+        closeRestoreProgress();
+        AppLog.d(this, operationName + " finished count=" + count);
+        onSuccess.accept(count);
+    }
+
+    private void failRestore(String errorText) {
+        if (isFinishing() || isDestroyed()) return;
+        closeRestoreProgress();
+        Toast.makeText(this, UiText.t(this, errorText), Toast.LENGTH_SHORT).show();
+    }
+
+    private void closeRestoreProgress() {
+        if (restoreProgress != null) {
+            restoreProgress.dismiss();
+            restoreProgress = null;
         }
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private String restoreFileConfirmation(String fileName) {
@@ -4378,7 +4669,7 @@ public class MainActivity extends Activity {
         editorHelp.setBackgroundColor(Color.TRANSPARENT);
         editorHelp.setStateListAnimator(null);
         FrameLayout.LayoutParams helpParams = new FrameLayout.LayoutParams(dp(28), dp(28));
-        helpParams.gravity = Gravity.TOP | Gravity.LEFT;
+        helpParams.gravity = Gravity.TOP | (AppLanguage.isEnglish(this) ? Gravity.RIGHT : Gravity.LEFT);
         helpParams.setMargins(0, dp(8), 0, 0);
         editorHeader.addView(editorHelp, helpParams);
         content.addView(editorHeader, matchParams());
@@ -5103,9 +5394,6 @@ public class MainActivity extends Activity {
         if (requestBodySensorsIfNeeded()) {
             return;
         }
-        if (requestBatteryOptimizationExemptionIfNeeded()) {
-            return;
-        }
         if (requestExactAlarmAccessIfNeeded(false)) {
             return;
         }
@@ -5192,57 +5480,6 @@ public class MainActivity extends Activity {
             return true;
         }
         return false;
-    }
-
-    private boolean requestBatteryOptimizationExemptionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
-                || isIgnoringBatteryOptimizations()
-                || askedBatteryOptimizationThisSession
-                || !hasBatteryOptimizationExemptionSettings()
-                || getSharedPreferences(PERMISSION_PREFS_NAME, MODE_PRIVATE)
-                .getBoolean(KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN, false)) {
-            return false;
-        }
-        askedBatteryOptimizationThisSession = true;
-        getSharedPreferences(PERMISSION_PREFS_NAME, MODE_PRIVATE).edit()
-                .putBoolean(KEY_BATTERY_OPTIMIZATION_PROMPT_SHOWN, true)
-                .apply();
-        showPermissionExplanation(
-                R.string.ui_permission_battery_optimization_title,
-                R.string.ui_permission_battery_optimization_message,
-                this::openBatteryOptimizationExemptionRequest);
-        return true;
-    }
-
-    private boolean isIgnoringBatteryOptimizations() {
-        PowerManager manager = (PowerManager) getSystemService(POWER_SERVICE);
-        return manager != null && manager.isIgnoringBatteryOptimizations(getPackageName());
-    }
-
-    private void openBatteryOptimizationExemptionRequest() {
-        batteryOptimizationRequestStarted = true;
-        AppLog.w(this, "request setting IGNORE_BATTERY_OPTIMIZATIONS");
-        Intent request = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                .setData(Uri.parse("package:" + getPackageName()));
-        try {
-            startActivity(request);
-        } catch (Exception error) {
-            AppLog.w(this, "direct battery optimization request unavailable: "
-                    + error.getClass().getSimpleName());
-            Intent fallback = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-            try {
-                startActivity(fallback);
-            } catch (Exception fallbackError) {
-                batteryOptimizationRequestStarted = false;
-                AppLog.e(this, "battery optimization settings unavailable", fallbackError);
-            }
-        }
-    }
-
-    private boolean hasBatteryOptimizationExemptionSettings() {
-        Intent request = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                .setData(Uri.parse("package:" + getPackageName()));
-        return request.resolveActivity(getPackageManager()) != null;
     }
 
     private boolean requestNotificationPolicyAccessIfNeeded() {
@@ -5727,8 +5964,10 @@ public class MainActivity extends Activity {
     }
 
     private FrameLayout setScrollableContent(LinearLayout content) {
-        int period = homeIllustrationPeriod();
-        return setScrollableContent(content, homeIllustrationResource(period));
+        // Keep the illustrated bitmap on the home (and explicitly designed Zmanim) screens.
+        // Loading a full-screen bitmap for every settings/editor page added avoidable texture
+        // uploads and made navigation feel sluggish on Wear OS.
+        return setScrollableContent(content, 0);
     }
 
     private FrameLayout setScrollableContent(LinearLayout content, int backgroundDrawableRes) {
@@ -5909,6 +6148,10 @@ public class MainActivity extends Activity {
             showSettings();
             return true;
         }
+        if ("water_settings".equals(currentScreen)) {
+            showSettings();
+            return true;
+        }
         if ("daf_yomi".equals(currentScreen)) {
             showJewishSettings();
             return true;
@@ -6020,20 +6263,31 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra(EXTRA_OPEN_FASTING_SETTINGS, false)) {
             pendingFastingSettings = true;
         }
+        if (intent.getBooleanExtra(EXTRA_OPEN_WATER_SETTINGS, false)) {
+            pendingWaterSettings = true;
+        }
     }
 
     private void openPendingBlessingReminder() {
         if (pendingBlessingReminder) {
             pendingBlessingReminder = false;
-            showBlessingReminder();
+            if (new ReminderSettings(this).jewishMode()) {
+                showBlessingReminder();
+            } else {
+                startActivity(JewishModeComplicationConfigActivity.createIntent(this));
+            }
         }
     }
 
     private void openPendingZmanimDay() {
         if (pendingZmanimDay) {
             pendingZmanimDay = false;
-            zmanimBackToSettings = false;
-            showZmanimDay(System.currentTimeMillis());
+            if (new ReminderSettings(this).jewishMode()) {
+                zmanimBackToSettings = false;
+                showZmanimDay(System.currentTimeMillis());
+            } else {
+                startActivity(JewishModeComplicationConfigActivity.createIntent(this));
+            }
         }
     }
 
@@ -6041,6 +6295,13 @@ public class MainActivity extends Activity {
         if (pendingFastingSettings) {
             pendingFastingSettings = false;
             showFastingSettings();
+        }
+    }
+
+    private void openPendingWaterSettings() {
+        if (pendingWaterSettings) {
+            pendingWaterSettings = false;
+            showWaterReminderSettings();
         }
     }
 
@@ -6079,15 +6340,12 @@ public class MainActivity extends Activity {
     }
 
     private void applyPhonePatch(String patchText) {
-        try {
-            int count = ReminderPatchApplier.apply(this, patchText);
-            store = new ReminderStore(this);
-            Toast.makeText(this, getString(R.string.ui_reminder_changes_applied, count), Toast.LENGTH_SHORT).show();
-            showList();
-        } catch (Exception exception) {
-            AppLog.e(this, "phone patch failed", exception);
-            Toast.makeText(this, getString(R.string.ui_phone_changes_invalid), Toast.LENGTH_LONG).show();
-        }
+        runRestoreAsync("phone patch", () -> ReminderPatchApplier.apply(this, patchText),
+                "הקובץ לא תקין", count -> {
+                    store = new ReminderStore(this);
+                    Toast.makeText(this, getString(R.string.ui_reminder_changes_applied, count), Toast.LENGTH_SHORT).show();
+                    showList();
+                });
     }
 
     private void refreshVisibleScreen() {
@@ -6104,6 +6362,8 @@ public class MainActivity extends Activity {
             showHistory(scrollY);
         } else if ("fasting_settings".equals(currentScreen)) {
             showFastingSettings();
+        } else if ("water_settings".equals(currentScreen)) {
+            showWaterReminderSettings();
         }
     }
 
@@ -6122,7 +6382,8 @@ public class MainActivity extends Activity {
             refreshVisibleScreenIfRemindersChanged();
             return;
         }
-        if ("history".equals(currentScreen) || "fasting_settings".equals(currentScreen)) {
+        if ("history".equals(currentScreen) || "fasting_settings".equals(currentScreen)
+                || "water_settings".equals(currentScreen)) {
             refreshVisibleScreen();
         }
     }
@@ -6305,7 +6566,6 @@ public class MainActivity extends Activity {
         button.setText(UiText.t(this, value));
         button.setTextColor(Color.WHITE);
         button.setTextSize(13);
-        button.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         button.setBackground(new ElegantButtonDrawable(color, dp(18)));
         button.setAllCaps(false);
         button.setMinHeight(dp(38));
@@ -6329,7 +6589,8 @@ public class MainActivity extends Activity {
         }
         AppButtonIconDrawable.Kind kind = buttonIconKind(value);
         if (kind == null) return;
-        AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, 0xFFFFD3BD, dp(2));
+        int iconColor = kind == AppButtonIconDrawable.Kind.WATER ? 0xFF8BE9FF : 0xFFFFD3BD;
+        AppButtonIconDrawable icon = new AppButtonIconDrawable(kind, iconColor, dp(2));
         icon.setBounds(0, 0, dp(13), dp(13));
         button.setCompoundDrawables(null, null, null, null);
         if (button instanceof IconButton) {
@@ -6361,7 +6622,7 @@ public class MainActivity extends Activity {
     }
 
     private void setBackupPhoneButtonSize(Button button) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(108), dp(44));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(46), 1f);
         params.setMargins(dp(3), dp(4), dp(3), dp(4));
         button.setLayoutParams(params);
     }
@@ -6370,6 +6631,7 @@ public class MainActivity extends Activity {
         String v = value == null ? "" : value;
         if (v.equals("גיבוי לטלפון")) return AppButtonIconDrawable.Kind.PHONE_IN;
         if (v.equals("שחזור מהטלפון")) return AppButtonIconDrawable.Kind.PHONE_OUT;
+        if (v.equals("תזכורת לשתיית מים") || v.equalsIgnoreCase("Water Reminder")) return AppButtonIconDrawable.Kind.WATER;
         if (v.equals("תזכורת")) return AppButtonIconDrawable.Kind.PLUS;
         if ((v.contains("תזכורת") && (v.contains("+") || v.contains("הוס") || v.contains("חדש")))
                 || (v.contains("שעון מעורר") && (v.contains("הוס") || v.contains("חדש")))) return AppButtonIconDrawable.Kind.ADD;
@@ -6377,6 +6639,8 @@ public class MainActivity extends Activity {
         if (v.contains("היסטוריה")) return AppButtonIconDrawable.Kind.HISTORY;
         if (v.contains("כל התזכורות")) return AppButtonIconDrawable.Kind.LIST;
         if (v.contains("שעון מעורר")) return AppButtonIconDrawable.Kind.ALARM;
+        if (v.equals("זמנים יהודיים")) return AppButtonIconDrawable.Kind.STAR_OF_DAVID;
+        if (v.equals("זמני היום") || v.equals("זמני היום בהלכה")) return AppButtonIconDrawable.Kind.SUNRISE;
         if (v.contains("זמני") || v.contains("זמן ") || v.contains("דקות") || v.equals("שעה") || v.equals("שעתיים") || v.contains("דחייה")) return AppButtonIconDrawable.Kind.CLOCK;
         if (v.contains("ברכה")) return AppButtonIconDrawable.Kind.BELL;
         if (v.contains("הגדרות")) return AppButtonIconDrawable.Kind.SETTINGS;
@@ -6621,6 +6885,24 @@ public class MainActivity extends Activity {
             picker.invalidate();
         });
         return picker;
+    }
+
+    private NumberPicker steppedNumberPicker(int min, int max, int step, int value) {
+        int count = Math.max(0, (max - min) / step);
+        int normalized = Math.max(min, Math.min(max, value));
+        int index = Math.round((normalized - min) / (float) step);
+        NumberPicker picker = numberPicker(0, count, index);
+        String[] displayed = new String[count + 1];
+        for (int i = 0; i <= count; i++) {
+            displayed[i] = String.format(Locale.US, "%02d", min + i * step);
+        }
+        picker.setDisplayedValues(null);
+        picker.setDisplayedValues(displayed);
+        return picker;
+    }
+
+    private int steppedPickerValue(NumberPicker picker, int min, int step) {
+        return min + picker.getValue() * step;
     }
 
     private NumberPicker compactDateNumberPicker(int min, int max, int value) {
@@ -7142,15 +7424,31 @@ public class MainActivity extends Activity {
         JewishCalendar jewishCalendar = JewishCalendarHelper.calendar(this, shabbos);
         HebrewDateFormatter formatter = JewishCalendarHelper.formatter(this);
         JewishCalendar.Parsha parsha = jewishCalendar.getParshah();
-        if (parsha == JewishCalendar.Parsha.NONE) {
-            parsha = jewishCalendar.getUpcomingParshah();
-        }
         if (parsha != JewishCalendar.Parsha.NONE) {
             timesCard.addView(zmanimTimeRow("פרשת השבוע", formatter.formatParsha(jewishCalendar)));
         }
         JewishCalendar.Parsha special = jewishCalendar.getSpecialShabbos();
         if (special != JewishCalendar.Parsha.NONE) {
             timesCard.addView(zmanimTimeRow("שבת מיוחדת", formatter.formatSpecialParsha(jewishCalendar)));
+        }
+        if (parsha == JewishCalendar.Parsha.NONE) {
+            int yomTovIndex = jewishCalendar.getYomTovIndex();
+            if (yomTovIndex != -1) {
+                timesCard.addView(zmanimTimeRow(getString(R.string.shabbat_holiday_label),
+                        formatter.formatYomTov(jewishCalendar)));
+            } else {
+                JewishCalendar upcomingParshaCalendar = (JewishCalendar) jewishCalendar.clone();
+                for (int week = 0; week < 12 && upcomingParshaCalendar.getParshah() == JewishCalendar.Parsha.NONE; week++) {
+                    upcomingParshaCalendar.forward(Calendar.DATE, 7);
+                }
+                if (upcomingParshaCalendar.getParshah() != JewishCalendar.Parsha.NONE) {
+                    timesCard.addView(zmanimTimeRow(getString(R.string.shabbat_fallback_label),
+                            formatter.formatParsha(upcomingParshaCalendar)));
+                } else {
+                    timesCard.addView(zmanimTimeRow(getString(R.string.shabbat_fallback_label),
+                            getString(R.string.regular_shabbat)));
+                }
+            }
         }
     }
 

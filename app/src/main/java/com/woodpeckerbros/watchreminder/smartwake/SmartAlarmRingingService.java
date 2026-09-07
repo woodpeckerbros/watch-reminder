@@ -36,7 +36,7 @@ public final class SmartAlarmRingingService extends Service {
                     .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt));
             return true;
         } catch (RuntimeException error) {
-            AppLog.w(context, "SmartAlarm ringing service unavailable; full-screen activity will own feedback: "
+            AppLog.w(context, "SmartAlarm ringing service start rejected; full-screen activity must own feedback: "
                     + error.getClass().getSimpleName());
             return false;
         }

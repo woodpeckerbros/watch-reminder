@@ -22,6 +22,11 @@ public class ReminderSettings {
     public static final int DEFAULT_SHEMA_ON_TIME_OFFSET_MINUTES = 10;
     public static final int DEFAULT_ALERT_VOLUME_PERCENT = 80;
     public static final int DEFAULT_FASTING_HOURS = 16;
+    public static final String WATER_MODE_DAILY_TARGET = "daily_target";
+    public static final String WATER_MODE_FIXED_AMOUNT = "fixed_amount";
+    public static final int DEFAULT_WATER_DAILY_TARGET_ML = 2000;
+    public static final int DEFAULT_WATER_AMOUNT_ML = 250;
+    public static final int DEFAULT_WATER_INTERVAL_MINUTES = 120;
 
     private static final String PREFS_NAME = "reminder_settings";
     private static final String KEY_SERVICE_ENABLED = "service_enabled";
@@ -55,6 +60,15 @@ public class ReminderSettings {
     private static final String KEY_FASTING_HOURS = "fasting_hours";
     private static final String KEY_FASTING_START_HOUR = "fasting_start_hour";
     private static final String KEY_FASTING_START_MINUTE = "fasting_start_minute";
+    private static final String KEY_WATER_REMINDERS_ENABLED = "water_reminders_enabled";
+    private static final String KEY_WATER_MODE = "water_mode";
+    private static final String KEY_WATER_DAILY_TARGET_ML = "water_daily_target_ml";
+    private static final String KEY_WATER_AMOUNT_ML = "water_amount_ml";
+    private static final String KEY_WATER_INTERVAL_MINUTES = "water_interval_minutes";
+    private static final String KEY_WATER_START_HOUR = "water_start_hour";
+    private static final String KEY_WATER_START_MINUTE = "water_start_minute";
+    private static final String KEY_WATER_END_HOUR = "water_end_hour";
+    private static final String KEY_WATER_END_MINUTE = "water_end_minute";
 
     private final SharedPreferences prefs;
     private final boolean defaultJewishMode;
@@ -303,6 +317,73 @@ public class ReminderSettings {
         prefs.edit()
                 .putInt(KEY_FASTING_START_HOUR, clamp(hour, 0, 23))
                 .putInt(KEY_FASTING_START_MINUTE, clamp(minute, 0, 59))
+                .apply();
+    }
+
+    public boolean waterRemindersEnabled() {
+        return prefs.getBoolean(KEY_WATER_REMINDERS_ENABLED, false);
+    }
+
+    public void setWaterRemindersEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_WATER_REMINDERS_ENABLED, enabled).apply();
+    }
+
+    public String waterMode() {
+        String value = prefs.getString(KEY_WATER_MODE, WATER_MODE_DAILY_TARGET);
+        return WATER_MODE_FIXED_AMOUNT.equals(value) ? WATER_MODE_FIXED_AMOUNT : WATER_MODE_DAILY_TARGET;
+    }
+
+    public void setWaterMode(String mode) {
+        prefs.edit().putString(KEY_WATER_MODE,
+                WATER_MODE_FIXED_AMOUNT.equals(mode) ? WATER_MODE_FIXED_AMOUNT : WATER_MODE_DAILY_TARGET).apply();
+    }
+
+    public int waterDailyTargetMl() {
+        return clamp(prefs.getInt(KEY_WATER_DAILY_TARGET_ML, DEFAULT_WATER_DAILY_TARGET_ML), 500, 5000);
+    }
+
+    public void setWaterDailyTargetMl(int milliliters) {
+        prefs.edit().putInt(KEY_WATER_DAILY_TARGET_ML, clamp(milliliters, 500, 5000)).apply();
+    }
+
+    public int waterAmountMl() {
+        return clamp(prefs.getInt(KEY_WATER_AMOUNT_ML, DEFAULT_WATER_AMOUNT_ML), 50, 1000);
+    }
+
+    public void setWaterAmountMl(int milliliters) {
+        prefs.edit().putInt(KEY_WATER_AMOUNT_ML, clamp(milliliters, 50, 1000)).apply();
+    }
+
+    public int waterIntervalMinutes() {
+        return clamp(prefs.getInt(KEY_WATER_INTERVAL_MINUTES, DEFAULT_WATER_INTERVAL_MINUTES), 30, 240);
+    }
+
+    public void setWaterIntervalMinutes(int minutes) {
+        prefs.edit().putInt(KEY_WATER_INTERVAL_MINUTES, clamp(minutes, 30, 240)).apply();
+    }
+
+    public int waterStartHour() {
+        return clamp(prefs.getInt(KEY_WATER_START_HOUR, 8), 0, 23);
+    }
+
+    public int waterStartMinute() {
+        return clamp(prefs.getInt(KEY_WATER_START_MINUTE, 0), 0, 59);
+    }
+
+    public int waterEndHour() {
+        return clamp(prefs.getInt(KEY_WATER_END_HOUR, 22), 0, 23);
+    }
+
+    public int waterEndMinute() {
+        return clamp(prefs.getInt(KEY_WATER_END_MINUTE, 0), 0, 59);
+    }
+
+    public void setWaterWindow(int startHour, int startMinute, int endHour, int endMinute) {
+        prefs.edit()
+                .putInt(KEY_WATER_START_HOUR, clamp(startHour, 0, 23))
+                .putInt(KEY_WATER_START_MINUTE, clamp(startMinute, 0, 59))
+                .putInt(KEY_WATER_END_HOUR, clamp(endHour, 0, 23))
+                .putInt(KEY_WATER_END_MINUTE, clamp(endMinute, 0, 59))
                 .apply();
     }
 

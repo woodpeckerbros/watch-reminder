@@ -8,6 +8,7 @@ public class WearStateStore {
     private static final String KEY_ASLEEP = "asleep";
     private static final String KEY_OFF_BODY = "off_body";
     private static final String KEY_UPDATED_AT = "updated_at";
+    private static final String KEY_USER_ACTIVITY_STATE = "user_activity_state";
     private static final long STATE_TTL_MS = 6 * 60 * 60_000L;
 
     private final SharedPreferences prefs;
@@ -26,6 +27,18 @@ public class WearStateStore {
 
     public boolean shouldDeferAlerts() {
         return asleep() || offBody();
+    }
+
+    public String userActivityState() {
+        return fresh() ? prefs.getString(KEY_USER_ACTIVITY_STATE, "UNKNOWN") : "UNKNOWN";
+    }
+
+    /** Stores the public Health Services activity state for Smart Wake scoring. */
+    public void setUserActivityState(String state) {
+        prefs.edit()
+                .putString(KEY_USER_ACTIVITY_STATE, state == null ? "UNKNOWN" : state)
+                .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
+                .apply();
     }
 
     public void setAsleep(boolean asleep) {

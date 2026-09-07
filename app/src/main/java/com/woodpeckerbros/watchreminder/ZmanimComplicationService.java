@@ -31,6 +31,9 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
     }
 
     private ComplicationData createData(ComplicationType type) {
+        if (!new ReminderSettings(this).jewishMode()) {
+            return jewishModeOffData(type);
+        }
         String description = UiText.t(this, "פתיחת זמני ההלכה של היום");
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
@@ -54,6 +57,32 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
         return new NoDataComplicationData();
     }
 
+    private ComplicationData jewishModeOffData(ComplicationType type) {
+        String title = getString(R.string.ui_jewish_mode);
+        String text = getString(R.string.ui_enable_mode);
+        String description = getString(R.string.ui_enable_jewish_mode_halachic);
+        if (type.equals(ComplicationType.SHORT_TEXT)) {
+            return new ShortTextComplicationData.Builder(
+                    new PlainComplicationText.Builder(text).build(),
+                    new PlainComplicationText.Builder(description).build()
+            )
+                    .setTitle(new PlainComplicationText.Builder(title).build())
+                    .setMonochromaticImage(image())
+                    .setTapAction(openJewishModeIntent())
+                    .build();
+        }
+        if (type.equals(ComplicationType.LONG_TEXT)) {
+            return new LongTextComplicationData.Builder(
+                    new PlainComplicationText.Builder(title + ": " + text).build(),
+                    new PlainComplicationText.Builder(description).build()
+            )
+                    .setMonochromaticImage(image())
+                    .setTapAction(openJewishModeIntent())
+                    .build();
+        }
+        return new NoDataComplicationData();
+    }
+
     private MonochromaticImage image() {
         return new MonochromaticImage.Builder(
                 Icon.createWithResource(this, R.drawable.ic_complication_clock)
@@ -71,6 +100,15 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
                 8341,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
+    private PendingIntent openJewishModeIntent() {
+        return PendingIntent.getActivity(
+                this,
+                8343,
+                JewishModeComplicationConfigActivity.createIntent(this),
+                PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
     }
 }

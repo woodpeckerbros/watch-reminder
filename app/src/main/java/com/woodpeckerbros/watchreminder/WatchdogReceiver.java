@@ -20,7 +20,7 @@ public class WatchdogReceiver extends BroadcastReceiver {
         ReminderReceiver.dispatchNextQueued(context);
         ReminderScheduler.scheduleWatchdog(context);
         if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderForegroundService.start(context);
+            ReminderMonitoringService.start(context);
         }
     }
 }

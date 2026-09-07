@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.os.RemoteException;
@@ -30,7 +31,10 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     }
 
     private ComplicationData createData(ComplicationType type) {
-        FastingComplicationText text = fastingText();
+        // Complication services receive the device context directly. Wrap it so the app's
+        // selected language is respected even when the watch system uses another locale.
+        Context localizedContext = AppLanguage.wrap(this);
+        FastingComplicationText text = fastingText(localizedContext);
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
                     new PlainComplicationText.Builder(text.time).build(),
@@ -53,19 +57,19 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
         return new NoDataComplicationData();
     }
 
-    private FastingComplicationText fastingText() {
-        ReminderSettings settings = new ReminderSettings(this);
+    private FastingComplicationText fastingText(Context localizedContext) {
+        ReminderSettings settings = new ReminderSettings(localizedContext);
         if (!settings.intermittentFastingEnabled()) {
             int startMinutes = settings.fastingStartHour() * 60 + settings.fastingStartMinute();
-            return new FastingComplicationText(UiText.t(this, "הצום נגמר ב:"), formatClock(startMinutes));
+            return new FastingComplicationText(UiText.t(localizedContext, "הצום נגמר ב:"), formatClock(startMinutes));
         }
         long now = System.currentTimeMillis();
-        IntermittentFastingStore.Window window = new IntermittentFastingStore(this).window();
+        IntermittentFastingStore.Window window = new IntermittentFastingStore(localizedContext).window();
         if (window.eatingOpen(now)) {
-            return new FastingComplicationText(UiText.t(this, "הצום מתחיל ב:"), NextReminderCalculator.formatTime(window.endAt));
+            return new FastingComplicationText(UiText.t(localizedContext, "הצום מתחיל ב:"), NextReminderCalculator.formatTime(window.endAt));
         }
         long startsAt = window.finished ? window.nextStartAt : window.startAt;
-        return new FastingComplicationText(UiText.t(this, "הצום נגמר ב:"), NextReminderCalculator.formatTime(startsAt));
+        return new FastingComplicationText(UiText.t(localizedContext, "הצום נגמר ב:"), NextReminderCalculator.formatTime(startsAt));
     }
 
     private String formatClock(int minutesOfDay) {

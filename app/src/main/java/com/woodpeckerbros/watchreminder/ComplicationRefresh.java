@@ -12,6 +12,7 @@ public class ComplicationRefresh {
     private static final int NEXT_REMINDER = 1;
     private static final int FASTING = 1 << 1;
     private static final int STATIC_AND_DATE = 1 << 2;
+    private static final int WATER = 1 << 3;
     private static final Handler HANDLER = new Handler(Looper.getMainLooper());
     private static boolean pending;
     private static int pendingTargets;
@@ -31,8 +32,12 @@ public class ComplicationRefresh {
         request(context, NEXT_REMINDER | FASTING);
     }
 
+    public static synchronized void requestWater(Context context) {
+        request(context, WATER);
+    }
+
     public static synchronized void requestAll(Context context) {
-        request(context, NEXT_REMINDER | FASTING | STATIC_AND_DATE);
+        request(context, NEXT_REMINDER | FASTING | STATIC_AND_DATE | WATER);
     }
 
     private static synchronized void request(Context context, int targets) {
@@ -65,6 +70,9 @@ public class ComplicationRefresh {
                 update(context, ZmanimComplicationService.class);
                 update(context, HebrewDateComplicationService.class);
                 update(context, BlessingReminderComplicationService.class);
+            }
+            if ((targets & WATER) != 0) {
+                update(context, WaterReminderComplicationService.class);
             }
         } catch (Exception ignored) {
         }

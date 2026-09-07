@@ -15,6 +15,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        Context localizedContext = AppLanguage.wrap(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.intermittentFastingEnabled()) {
             AppLog.d(context, "fasting receiver skipped disabled");
@@ -37,23 +38,26 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
             if (!retry) {
                 store.startEatingAt(triggerAt);
             }
-            String message = AppLanguage.isEnglish(context)
-                    ? "Your eating window is open now. It will last " + settings.fastingEatingHours() + " hours."
-                    : "חלון האכילה שלך נפתח עכשיו. הוא יימשך " + settings.fastingEatingHours() + " שעות.";
-            showNotification(context, eventType, triggerAt, UiText.t(context, "אפשר להתחיל לאכול"), message);
+            String message = localizedContext.getString(R.string.fasting_start_message, settings.fastingEatingHours());
+            showNotification(localizedContext, eventType, triggerAt,
+                    UiText.t(localizedContext, "אפשר להתחיל לאכול"), message);
         } else if (IntermittentFastingScheduler.EVENT_END_WARNING.equals(eventType)) {
             if (!retry && !window.eatingOpen(System.currentTimeMillis())) {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, eventType, triggerAt, UiText.t(context, "עוד חצי שעה לסיום"), UiText.t(context, "חלון האכילה ייסגר בעוד חצי שעה."));
+            showNotification(localizedContext, eventType, triggerAt,
+                    localizedContext.getString(R.string.ui_legacy_104),
+                    localizedContext.getString(R.string.ui_legacy_105));
         } else if (IntermittentFastingScheduler.EVENT_END.equals(eventType)) {
             window = store.window(System.currentTimeMillis());
             if (!retry && window.finished) {
                 IntermittentFastingScheduler.schedule(context);
                 return;
             }
-            showNotification(context, eventType, triggerAt, UiText.t(context, "חלון האכילה נסגר"), UiText.t(context, "נגמר חלון זמן האכילה להיום."));
+            showNotification(localizedContext, eventType, triggerAt,
+                    localizedContext.getString(R.string.ui_legacy_106),
+                    localizedContext.getString(R.string.ui_legacy_107));
         } else {
             AppLog.w(context, "fasting receiver skipped unknown type=" + eventType);
             IntermittentFastingScheduler.schedule(context);

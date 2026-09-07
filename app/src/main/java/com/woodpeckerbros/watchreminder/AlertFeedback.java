@@ -17,13 +17,23 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class AlertFeedback {
     private static final Object VIBRATION_LOCK = new Object();
+    private static final Object SOUND_LOCK = new Object();
     private static final AtomicLong NEXT_VIBRATION_OWNER = new AtomicLong();
+    /** A hardware vibration must never rely on a later cancel() call to end. */
+    private static final int MAX_VIBRATION_CHUNK_MS = 2_000;
     private static long activeVibrationOwner;
+    private static MediaPlayer activeSoundPlayer;
+    private static long activeSoundOwner;
 
     private final Context context;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaPlayer player;
+    private long soundOwner;
+    private long soundDeadlineAt;
     private long vibrationOwner;
+    private long vibrationDeadlineAt;
+    private String vibrationStyle;
+    private int vibrationStrength;
 
     private AlertFeedback(Context context) {
         this.context = context.getApplicationContext();
@@ -72,32 +82,63 @@ public class AlertFeedback {
     private void startConfigured(int durationMs, boolean vibrationEnabled, String vibrationStyle, int vibrationStrength,
                                  boolean soundEnabled, int volumePercent, String soundUri) {
         if (vibrationEnabled) startVibration(vibrationStyle, vibrationStrength, durationMs);
-        if (soundEnabled && volumePercent > 0) startSound(soundUri, volumePercent);
+        if (soundEnabled && volumePercent > 0) startSound(soundUri, volumePercent, durationMs);
         handler.postDelayed(this::stop, durationMs);
     }
 
-    private void startSound(String savedUri, int volumePercent) {
+    private void startSound(String savedUri, int volumePercent, int durationMs) {
+        final long owner = NEXT_VIBRATION_OWNER.incrementAndGet();
         try {
             Uri uri = soundUri(savedUri);
             if (uri == null) {
                 return;
             }
-            player = new MediaPlayer();
+            MediaPlayer nextPlayer = new MediaPlayer();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                player.setAudioAttributes(new AudioAttributes.Builder()
+                nextPlayer.setAudioAttributes(new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build());
             }
             float volume = volumePercent / 100f;
-            player.setVolume(volume, volume);
-            player.setLooping(true);
-            player.setDataSource(context, uri);
-            player.prepare();
-            player.start();
+            nextPlayer.setVolume(volume, volume);
+            // Do not give MediaPlayer an infinite loop. If the process dies or an action races,
+            // the current file still ends naturally instead of continuing forever.
+            nextPlayer.setLooping(false);
+            nextPlayer.setDataSource(context, uri);
+            nextPlayer.setOnCompletionListener(ignored -> replaySoundIfStillActive(owner));
+            nextPlayer.prepare();
+            synchronized (SOUND_LOCK) {
+                stopActiveSoundLocked();
+                player = nextPlayer;
+                soundOwner = owner;
+                soundDeadlineAt = android.os.SystemClock.uptimeMillis() + Math.max(1, durationMs);
+                activeSoundPlayer = nextPlayer;
+                activeSoundOwner = owner;
+            }
+            nextPlayer.start();
+            AppLog.d(context, "alert sound started owner=" + owner);
         } catch (Exception exception) {
             AppLog.e(context, "alert sound failed", exception);
             stopSound();
+        }
+    }
+
+    private void replaySoundIfStillActive(long owner) {
+        synchronized (SOUND_LOCK) {
+            if (owner != soundOwner || owner != activeSoundOwner || player == null
+                    || android.os.SystemClock.uptimeMillis() >= soundDeadlineAt) {
+                return;
+            }
+            try {
+                player.seekTo(0);
+                player.start();
+            } catch (Exception error) {
+                AppLog.e(context, "alert sound replay failed", error);
+                stopActiveSoundLocked();
+                player = null;
+                soundOwner = 0;
+            }
         }
     }
 
@@ -110,20 +151,25 @@ public class AlertFeedback {
     }
 
     private void stopSound() {
-        if (player == null) {
-            return;
-        }
-        try {
-            if (player.isPlaying()) {
-                player.stop();
+        synchronized (SOUND_LOCK) {
+            if (soundOwner != 0 && soundOwner == activeSoundOwner) {
+                long stoppedOwner = soundOwner;
+                stopActiveSoundLocked();
+                AppLog.d(context, "alert sound stopped owner=" + stoppedOwner);
             }
-        } catch (Exception ignored) {
+            player = null;
+            soundOwner = 0;
+            soundDeadlineAt = 0;
         }
-        try {
-            player.release();
-        } catch (Exception ignored) {
+    }
+
+    private static void stopActiveSoundLocked() {
+        if (activeSoundPlayer != null) {
+            try { activeSoundPlayer.stop(); } catch (Exception ignored) {}
+            try { activeSoundPlayer.release(); } catch (Exception ignored) {}
         }
-        player = null;
+        activeSoundPlayer = null;
+        activeSoundOwner = 0;
     }
 
     private void startVibration(String style, int strength, int durationMs) {
@@ -136,11 +182,31 @@ public class AlertFeedback {
             owner = NEXT_VIBRATION_OWNER.incrementAndGet();
             vibrationOwner = owner;
             activeVibrationOwner = owner;
+            vibrationDeadlineAt = android.os.SystemClock.uptimeMillis() + Math.max(1, durationMs);
+            vibrationStyle = style;
+            vibrationStrength = strength;
         }
-        // Repeat a short style-specific cycle until the same timeout that owns the sound.
-        // Building one finite waveform used to cap vibration at ten seconds (and some Wear
-        // devices stopped it even earlier), while the ringtone continued to play.
-        long[] pattern = ReminderSettings.vibrationPattern(style, Math.min(durationMs, 2_000));
+        playVibrationChunk(owner);
+    }
+
+    /**
+     * Wear OS receives only a finite waveform. The next chunk is scheduled by the app while the
+     * alert is still active; if the process or cancellation path fails, hardware stops by itself.
+     */
+    private void playVibrationChunk(long owner) {
+        final long now = android.os.SystemClock.uptimeMillis();
+        final long remaining;
+        final String style;
+        final int strength;
+        synchronized (VIBRATION_LOCK) {
+            if (vibrationOwner != owner || activeVibrationOwner != owner || now >= vibrationDeadlineAt) {
+                return;
+            }
+            remaining = Math.min(MAX_VIBRATION_CHUNK_MS, vibrationDeadlineAt - now);
+            style = vibrationStyle;
+            strength = vibrationStrength;
+        }
+        long[] pattern = ReminderSettings.vibrationPattern(style, (int) remaining);
         int normalizedStrength = Math.max(1, Math.min(10, strength));
         int amplitude = Math.round(normalizedStrength * 255f / 10f);
         int[] amplitudes = new int[pattern.length];
@@ -156,10 +222,10 @@ public class AlertFeedback {
                     Vibrator vibrator = manager.getDefaultVibrator();
                     if (vibrator != null && vibrator.hasVibrator()) {
                         VibrationEffect effect = vibrator.hasAmplitudeControl()
-                                ? VibrationEffect.createWaveform(pattern, amplitudes, 0)
-                                : VibrationEffect.createWaveform(pattern, 0);
+                                ? VibrationEffect.createWaveform(pattern, amplitudes, -1)
+                                : VibrationEffect.createWaveform(pattern, -1);
                         vibrator.vibrate(effect, alarmAttributes);
-                        AppLog.d(context, "alert vibration started owner=" + owner);
+                        AppLog.d(context, "alert vibration chunk owner=" + owner + " durationMs=" + remaining);
                     } else {
                         AppLog.w(context, "alert vibration unavailable: no default vibrator");
                     }
@@ -167,17 +233,25 @@ public class AlertFeedback {
             } catch (Exception error) {
                 AppLog.e(context, "alert vibration failed", error);
             }
+            scheduleNextVibrationChunk(owner, remaining);
             return;
         }
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         if (vibrator != null && vibrator.hasVibrator()) {
             VibrationEffect effect = vibrator.hasAmplitudeControl()
-                    ? VibrationEffect.createWaveform(pattern, amplitudes, 0)
-                    : VibrationEffect.createWaveform(pattern, 0);
-            vibrator.vibrate(effect, alarmAttributes);
-            AppLog.d(context, "alert vibration started owner=" + owner);
+                ? VibrationEffect.createWaveform(pattern, amplitudes, -1)
+                : VibrationEffect.createWaveform(pattern, -1);
+        vibrator.vibrate(effect, alarmAttributes);
+            AppLog.d(context, "alert vibration chunk owner=" + owner + " durationMs=" + remaining);
         } else {
             AppLog.w(context, "alert vibration unavailable: no vibrator");
+        }
+        scheduleNextVibrationChunk(owner, remaining);
+    }
+
+    private void scheduleNextVibrationChunk(long owner, long chunkDurationMs) {
+        if (chunkDurationMs >= MAX_VIBRATION_CHUNK_MS) {
+            handler.postDelayed(() -> playVibrationChunk(owner), chunkDurationMs);
         }
     }
 
@@ -193,9 +267,12 @@ public class AlertFeedback {
             if (vibrationOwner == 0 || activeVibrationOwner != vibrationOwner) {
                 return;
             }
+            long stoppedOwner = vibrationOwner;
             activeVibrationOwner = 0;
             vibrationOwner = 0;
+            vibrationDeadlineAt = 0;
             cancelVibration(context);
+            AppLog.d(context, "alert vibration stopped owner=" + stoppedOwner);
         }
     }
 

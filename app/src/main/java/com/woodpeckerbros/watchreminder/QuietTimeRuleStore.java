@@ -140,7 +140,7 @@ public class QuietTimeRuleStore {
                     String startMode, int startHour, int startMinute, String startZmanimKey, int startOffsetMinutes,
                     String endMode, int endHour, int endMinute, String endZmanimKey, int endOffsetMinutes) {
             this.id = id == null || id.isEmpty() ? UUID.randomUUID().toString() : id;
-            this.name = name == null || name.trim().isEmpty() ? "זמן שקט" : name.trim();
+            this.name = name == null ? "" : name.trim();
             this.enabled = enabled;
             this.startMode = MODE_ZMANIM.equals(startMode) ? MODE_ZMANIM : MODE_FIXED;
             this.startHour = clamp(startHour, 0, 23);
@@ -178,7 +178,7 @@ public class QuietTimeRuleStore {
         public static Rule fromJson(JSONObject json) {
             return new Rule(
                     json.optString("id", UUID.randomUUID().toString()),
-                    json.optString("name", "זמן שקט"),
+                    json.optString("name", ""),
                     json.optBoolean("enabled", true),
                     json.optString("startMode", MODE_FIXED),
                     json.optInt("startHour", 0),

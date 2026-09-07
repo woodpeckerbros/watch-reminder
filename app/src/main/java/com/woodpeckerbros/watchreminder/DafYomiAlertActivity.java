@@ -50,7 +50,7 @@ public class DafYomiAlertActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(12), dp(14), dp(12), dp(14));
+        content.setPadding(dp(8), dp(12), dp(8), dp(12));
         content.setBackgroundColor(COLOR_BG);
 
         LinearLayout textArea = new LinearLayout(this);
@@ -214,7 +214,7 @@ public class DafYomiAlertActivity extends Activity {
         button.setAllCaps(false);
         button.setBackground(rounded(color));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        params.setMargins(dp(10), dp(5), dp(10), dp(5));
+        params.setMargins(dp(3), dp(4), dp(3), dp(4));
         button.setLayoutParams(params);
         return button;
     }

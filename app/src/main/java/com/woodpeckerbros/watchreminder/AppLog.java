@@ -57,8 +57,8 @@ public class AppLog {
         builder.append("Exact alarms: ").append(ReminderScheduler.canScheduleExactAlarms(context)).append('\n');
         builder.append("Notifications: ").append(notificationPermissionAllowed(context)).append('\n');
         builder.append("Full screen intent: ").append(fullScreenIntentAllowed(context)).append('\n');
-        builder.append("Battery optimization ignored: ").append(batteryOptimizationIgnored(context)).append('\n');
         builder.append("Foreground service enabled: ").append(new ReminderSettings(context).serviceEnabled()).append('\n');
+        builder.append(ReminderMonitoringService.diagnosticSummary(context));
         builder.append('\n').append("Logs:\n");
         builder.append(text(context));
         builder.append('\n').append("Computed reminder state:\n");
@@ -67,6 +67,7 @@ public class AppLog {
         builder.append('\n').append("Events:\n").append(pref(context, "reminder_events"));
         builder.append('\n').append("Snoozes:\n").append(pref(context, "reminder_snoozes"));
         builder.append('\n').append("Due checker:\n").append(pref(context, "reminder_due_checker"));
+        builder.append('\n').append("Reminder monitoring:\n").append(pref(context, "reminder_monitoring"));
         builder.append('\n').append("Alert queue:\n").append(pref(context, "reminder_alert_queue"));
         builder.append('\n').append("Wear state:\n").append(pref(context, "wear_state"));
         builder.append('\n').append("Settings:\n").append(pref(context, "reminder_settings"));
@@ -147,14 +148,6 @@ public class AppLog {
         }
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         return manager != null && manager.canUseFullScreenIntent();
-    }
-
-    private static boolean batteryOptimizationIgnored(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return true;
-        }
-        android.os.PowerManager powerManager = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        return powerManager != null && powerManager.isIgnoringBatteryOptimizations(context.getPackageName());
     }
 
     private static String computedReminderState(Context context) {

@@ -318,6 +318,8 @@ public final class SmartAlarmAlertActivity extends Activity {
         activity.handler.post(() -> {
             if (!activity.explicitlyHandled && activity.alarmId == alarmId && activity.targetAt == targetAt) {
                 activity.explicitlyHandled = true;
+                activity.stopFeedback();
+                AppLog.d(activity, "SmartAlarm auto-snooze stopped activity feedback id=" + alarmId);
                 activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 activity.finishAndRemoveTask();
             }

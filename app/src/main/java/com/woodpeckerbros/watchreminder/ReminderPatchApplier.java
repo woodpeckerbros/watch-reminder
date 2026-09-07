@@ -56,7 +56,7 @@ public class ReminderPatchApplier {
             }
         }
         ReminderScheduler.scheduleWatchdog(context);
-        ComplicationRefresh.requestNextAndFasting(context);
+        ComplicationRefresh.requestAll(context);
         return applied;
     }
 
@@ -98,6 +98,20 @@ public class ReminderPatchApplier {
                         values.optInt("fastingStartMinute", settings.fastingStartMinute())
                 );
             }
+            if (values.has("waterRemindersEnabled")) settings.setWaterRemindersEnabled(values.optBoolean("waterRemindersEnabled", settings.waterRemindersEnabled()));
+            if (values.has("waterMode")) settings.setWaterMode(values.optString("waterMode", settings.waterMode()));
+            if (values.has("waterDailyTargetMl")) settings.setWaterDailyTargetMl(values.optInt("waterDailyTargetMl", settings.waterDailyTargetMl()));
+            if (values.has("waterAmountMl")) settings.setWaterAmountMl(values.optInt("waterAmountMl", settings.waterAmountMl()));
+            if (values.has("waterIntervalMinutes")) settings.setWaterIntervalMinutes(values.optInt("waterIntervalMinutes", settings.waterIntervalMinutes()));
+            if (values.has("waterStartHour") || values.has("waterStartMinute")
+                    || values.has("waterEndHour") || values.has("waterEndMinute")) {
+                settings.setWaterWindow(
+                        values.optInt("waterStartHour", settings.waterStartHour()),
+                        values.optInt("waterStartMinute", settings.waterStartMinute()),
+                        values.optInt("waterEndHour", settings.waterEndHour()),
+                        values.optInt("waterEndMinute", settings.waterEndMinute())
+                );
+            }
             if (values.has("language")) settings.setLanguage(values.optString("language", settings.language()));
             if (values.has("jewishMode")) settings.setJewishMode(values.optBoolean("jewishMode", settings.jewishMode()));
             MoonBlessingScheduler.schedule(context);
@@ -106,6 +120,7 @@ public class ReminderPatchApplier {
             JewishDayScheduler.schedule(context);
             TekufaScheduler.schedule(context);
             IntermittentFastingScheduler.schedule(context);
+            WaterReminderScheduler.schedule(context);
         }
         JSONArray quietRules = operation.optJSONArray("quietTimeRules");
         if (quietRules != null) {
@@ -123,9 +138,9 @@ public class ReminderPatchApplier {
             ZmanimRescheduler.schedule(context);
         }
         if (settings.serviceEnabled()) {
-            ReminderForegroundService.start(context);
+            ReminderMonitoringService.start(context);
         } else {
-            ReminderForegroundService.stop(context);
+            ReminderMonitoringService.stop(context);
         }
         DafYomiScheduler.schedule(context);
         OmerScheduler.schedule(context);

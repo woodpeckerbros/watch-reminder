@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
@@ -37,12 +36,12 @@
             android:value="true" />
 
         <service
-            android:name=".ReminderForegroundService"
+            android:name=".ReminderMonitoringService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keeps user-created reminder alarms reliable on Wear OS by periodically checking and dispatching due reminders when exact alarm delivery is delayed." />
+                android:value="wear_os_active_reminder_monitoring_and_delivery" />
         </service>
 
         <service
@@ -132,6 +131,9 @@
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="0" />
+            <meta-data
+                android:name="android.support.wearable.complications.PROVIDER_CONFIG_ACTION"
+                android:value="com.woodpeckerbros.watchreminder.CONFIGURE_JEWISH_MODE_COMPLICATION" />
         </service>
 
         <service
@@ -150,6 +152,9 @@
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="0" />
+            <meta-data
+                android:name="android.support.wearable.complications.PROVIDER_CONFIG_ACTION"
+                android:value="com.woodpeckerbros.watchreminder.CONFIGURE_JEWISH_MODE_COMPLICATION" />
         </service>
 
         <service
@@ -168,7 +173,20 @@
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="0" />
+            <meta-data
+                android:name="android.support.wearable.complications.PROVIDER_CONFIG_ACTION"
+                android:value="com.woodpeckerbros.watchreminder.CONFIGURE_JEWISH_MODE_COMPLICATION" />
         </service>
+
+        <activity
+            android:name=".JewishModeComplicationConfigActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.woodpeckerbros.watchreminder.CONFIGURE_JEWISH_MODE_COMPLICATION" />
+                <category android:name="android.support.wearable.complications.category.PROVIDER_CONFIG" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".IntermittentFastingComplicationService"
@@ -176,6 +194,24 @@
             android:exported="true"
             android:icon="@drawable/ic_complication_clock"
             android:label="@string/complication_intermittent_fasting"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0" />
+        </service>
+
+        <service
+            android:name=".WaterReminderComplicationService"
+            android:directBootAware="true"
+            android:exported="true"
+            android:icon="@drawable/ic_water_drop_notification"
+            android:label="@string/complication_water_reminder"
             android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <intent-filter>
                 <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
@@ -223,6 +259,14 @@
 
         <activity
             android:name=".IntermittentFastingAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@style/AppTheme" />
+
+        <activity
+            android:name=".WaterReminderAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -298,6 +342,10 @@
 
         <receiver
             android:name=".IntermittentFastingReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".WaterReminderReceiver"
             android:exported="false" />
 
         <receiver

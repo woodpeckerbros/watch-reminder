@@ -51,13 +51,21 @@ public class IntermittentFastingAlertActivity extends Activity {
             return;
         }
 
-        String titleText = getIntent().getStringExtra("fasting_alert_title");
-        String messageText = getIntent().getStringExtra("fasting_alert_message");
-        if (titleText == null || titleText.trim().isEmpty()) {
-            titleText = "צום לסירוגין";
-        }
-        if (messageText == null || messageText.trim().isEmpty()) {
-            messageText = "יש לך תזכורת לצום לסירוגין.";
+        String titleText;
+        String messageText;
+        if (IntermittentFastingScheduler.EVENT_START.equals(eventType)) {
+            titleText = getString(R.string.ui_legacy_103);
+            messageText = getString(R.string.fasting_start_message,
+                    new ReminderSettings(this).fastingEatingHours());
+        } else if (IntermittentFastingScheduler.EVENT_END_WARNING.equals(eventType)) {
+            titleText = getString(R.string.ui_legacy_104);
+            messageText = getString(R.string.ui_legacy_105);
+        } else if (IntermittentFastingScheduler.EVENT_END.equals(eventType)) {
+            titleText = getString(R.string.ui_legacy_106);
+            messageText = getString(R.string.ui_legacy_107);
+        } else {
+            titleText = getString(R.string.ui_legacy_081);
+            messageText = getString(R.string.ui_legacy_108);
         }
         AppLog.d(this, "fasting alert open type=" + eventType + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
 

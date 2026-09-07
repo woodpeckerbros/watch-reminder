@@ -29,10 +29,15 @@ public class ReminderScheduler {
     }
 
     public static synchronized void scheduleNearest(Context context) {
+        ensureNearestScheduled(context);
+    }
+
+    /**
+     * Reconciles the one AlarmClock used for the next reminder without replacing an already
+     * correct registration. Returns true only when an alarm had to be created or replaced.
+     */
+    public static synchronized boolean ensureNearestScheduled(Context context) {
         java.util.List<Reminder> reminders = new ReminderStore(context).getAll();
-        for (Reminder reminder : reminders) {
-            cancel(context, reminder);
-        }
         ScheduledCandidate nearest = null;
         ReminderEventStore eventStore = new ReminderEventStore(context);
         for (Reminder reminder : reminders) {
@@ -41,15 +46,28 @@ public class ReminderScheduler {
                 nearest = candidate;
             }
         }
+        ReminderMonitoringState state = new ReminderMonitoringState(context);
         if (nearest == null) {
+            cancelRecordedNearest(context, state);
             AppLog.d(context, "scheduleNearest no enabled future reminder");
-            return;
+            return false;
         }
+        boolean unchanged = state.alarmRequestCode() == nearest.requestCode
+                && state.alarmTriggerAt() == nearest.triggerAt
+                && pendingIntentExists(context, nearest.requestCode);
+        if (unchanged) {
+            AppLog.d(context, "scheduleNearest already registered id=" + nearest.reminder.id
+                    + " at=" + NextReminderCalculator.formatDateTime(nearest.triggerAt));
+            return false;
+        }
+        cancelRecordedNearest(context, state);
         AppLog.d(context, "scheduleNearest id=" + nearest.reminder.id
                 + " name=" + nearest.reminder.name
                 + " at=" + NextReminderCalculator.formatDateTime(nearest.triggerAt));
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         setBestAvailableAlarm(context, alarmManager, nearest.triggerAt, nearest.pendingIntent, true);
+        state.recordScheduledAlarm(nearest.requestCode, nearest.triggerAt);
+        return true;
     }
 
     private static ScheduledCandidate candidateFor(Context context, Reminder reminder, ReminderEventStore eventStore) {
@@ -67,6 +85,7 @@ public class ReminderScheduler {
                 return null;
             }
             pendingIntent = oneTimeIntent(context, reminder, triggerAt, originalAt);
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent, (reminder.id + ":once").hashCode());
         } else if (reminder.isPeriodic()) {
             PeriodicReminderHelper.Occurrence occurrence = PeriodicReminderHelper.next(context, reminder, eventStore, true);
             if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
@@ -74,6 +93,7 @@ public class ReminderScheduler {
             }
             triggerAt = occurrence.scheduledAt;
             pendingIntent = periodicIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent, (reminder.id + ":periodic").hashCode());
         } else if (reminder.isAnnualEvent()) {
             AnnualReminderHelper.Occurrence occurrence = AnnualReminderHelper.next(context, reminder, eventStore, true);
             if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
@@ -81,6 +101,7 @@ public class ReminderScheduler {
             }
             triggerAt = occurrence.scheduledAt;
             pendingIntent = annualIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent, (reminder.id + ":annual").hashCode());
         } else {
             RegularTrigger trigger = nextRegularTrigger(context, reminder);
             if (trigger == null || trigger.scheduledAt == Long.MAX_VALUE) {
@@ -88,8 +109,29 @@ public class ReminderScheduler {
             }
             triggerAt = trigger.scheduledAt;
             pendingIntent = regularIntent(context, reminder, trigger.day, trigger.scheduledAt, trigger.originalAt);
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent, (reminder.id + ":regular").hashCode());
         }
-        return new ScheduledCandidate(reminder, triggerAt, pendingIntent);
+    }
+
+    private static boolean pendingIntentExists(Context context, int requestCode) {
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, requestCode,
+                new Intent(context, ReminderReceiver.class),
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+        return pendingIntent != null;
+    }
+
+    private static void cancelRecordedNearest(Context context, ReminderMonitoringState state) {
+        int requestCode = state.alarmRequestCode();
+        if (requestCode != Integer.MIN_VALUE) {
+            AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (alarmManager != null) {
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, requestCode,
+                        new Intent(context, ReminderReceiver.class),
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                alarmManager.cancel(pendingIntent);
+            }
+        }
+        state.clearScheduledAlarm();
     }
 
     public static long scheduleSnooze(Context context, String reminderId, String reminderName, int minutes) {
@@ -378,11 +420,13 @@ public class ReminderScheduler {
         final Reminder reminder;
         final long triggerAt;
         final PendingIntent pendingIntent;
+        final int requestCode;
 
-        ScheduledCandidate(Reminder reminder, long triggerAt, PendingIntent pendingIntent) {
+        ScheduledCandidate(Reminder reminder, long triggerAt, PendingIntent pendingIntent, int requestCode) {
             this.reminder = reminder;
             this.triggerAt = triggerAt;
             this.pendingIntent = pendingIntent;
+            this.requestCode = requestCode;
         }
     }
 

@@ -16,7 +16,9 @@ import java.util.Date;
 import java.util.Locale;
 
 public class TopArcClockView extends View {
-    private static final long REFRESH_INTERVAL_MS = 5_000L;
+    // The visible value has minute precision. Updating more often only redraws a software
+    // layer without changing anything on screen, which is especially wasteful on a watch.
+    private static final long REFRESH_INTERVAL_MS = 60_000L;
     private static final int OVERLAY_HEIGHT_DP = 30;
     private static final int CLOCK_TEXT_COLOR = 0xFFE6E6E6;
     private static final int CLOCK_BORDER_COLOR = 0xFF000000;
@@ -31,7 +33,9 @@ public class TopArcClockView extends View {
         @Override
         public void run() {
             invalidate();
-            handler.postDelayed(this, REFRESH_INTERVAL_MS);
+            long now = System.currentTimeMillis();
+            long delay = REFRESH_INTERVAL_MS - (now % REFRESH_INTERVAL_MS) + 25L;
+            handler.postDelayed(this, delay);
         }
     };
 
@@ -67,7 +71,7 @@ public class TopArcClockView extends View {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        handler.post(tick);
+        tick.run();
     }
 
     @Override

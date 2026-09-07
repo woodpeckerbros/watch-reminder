@@ -33,7 +33,10 @@ public class ReminderRecoveryJobService extends JobService {
         AppLog.d(this, "recovery job started");
         new Thread(() -> {
             try {
-                BootReceiver.recover(this);
+                // A periodic JobService has no foreground-service start exemption. It recovers
+                // AlarmManager entries only; the monitoring FGS starts from visible UI or the
+                // original boot receiver path.
+                BootReceiver.recover(this, false);
             } catch (RuntimeException error) {
                 AppLog.e(this, "recovery job failed", error);
             } finally {

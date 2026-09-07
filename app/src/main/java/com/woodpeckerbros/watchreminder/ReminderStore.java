@@ -70,9 +70,9 @@ public class ReminderStore {
         }
         ReminderScheduler.scheduleNearest(context);
         if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderForegroundService.start(context);
+            ReminderMonitoringService.start(context);
         } else {
-            ReminderForegroundService.stop(context);
+            ReminderMonitoringService.stop(context);
         }
         ComplicationRefresh.request(context);
     }
@@ -90,9 +90,9 @@ public class ReminderStore {
         save(reminders);
         ReminderScheduler.scheduleNearest(context);
         if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderForegroundService.start(context);
+            ReminderMonitoringService.start(context);
         } else {
-            ReminderForegroundService.stop(context);
+            ReminderMonitoringService.stop(context);
         }
         ComplicationRefresh.request(context);
     }

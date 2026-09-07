@@ -40,6 +40,9 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
     }
 
     private ComplicationData createData(ComplicationType type) {
+        if (!new ReminderSettings(this).jewishMode()) {
+            return jewishModeOffData(type);
+        }
         return createData(type, halachicDateCalendar());
     }
 
@@ -69,6 +72,9 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
     }
 
     private ComplicationDataTimeline createTimeline(ComplicationType type) {
+        if (!new ReminderSettings(this).jewishMode()) {
+            return new ComplicationDataTimeline(jewishModeOffData(type), new ArrayList<>());
+        }
         ComplicationData current = createData(type);
         List<TimelineEntry> entries = new ArrayList<>();
         Calendar civilDay = Calendar.getInstance();
@@ -109,6 +115,30 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
         return new ComplicationDataTimeline(current, entries);
     }
 
+    private ComplicationData jewishModeOffData(ComplicationType type) {
+        String title = getString(R.string.ui_jewish_mode);
+        String text = getString(R.string.ui_enable_mode);
+        String description = getString(R.string.ui_enable_jewish_mode_hebrew_date);
+        if (type.equals(ComplicationType.SHORT_TEXT)) {
+            return new ShortTextComplicationData.Builder(
+                    new PlainComplicationText.Builder(text).build(),
+                    new PlainComplicationText.Builder(description).build()
+            )
+                    .setTitle(new PlainComplicationText.Builder(title).build())
+                    .setTapAction(openJewishModeIntent())
+                    .build();
+        }
+        if (type.equals(ComplicationType.LONG_TEXT)) {
+            return new LongTextComplicationData.Builder(
+                    new PlainComplicationText.Builder(title + ": " + text).build(),
+                    new PlainComplicationText.Builder(description).build()
+            )
+                    .setTapAction(openJewishModeIntent())
+                    .build();
+        }
+        return new NoDataComplicationData();
+    }
+
     private Calendar halachicDateCalendar() {
         Calendar calendar = Calendar.getInstance();
         long now = System.currentTimeMillis();
@@ -138,6 +168,15 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
                 8342,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
+    private PendingIntent openJewishModeIntent() {
+        return PendingIntent.getActivity(
+                this,
+                8344,
+                JewishModeComplicationConfigActivity.createIntent(this),
+                PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
     }
 

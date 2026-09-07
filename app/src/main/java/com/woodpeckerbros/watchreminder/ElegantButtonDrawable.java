@@ -8,7 +8,7 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 
-/** Opaque, softly elevated button surface shared by the regular watch UI. */
+/** Opaque button surface shared by the regular watch UI. */
 final class ElegantButtonDrawable extends Drawable {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int baseColor;
@@ -38,17 +38,6 @@ final class ElegantButtonDrawable extends Drawable {
         RectF face = new RectF(bounds.left + 2f, bounds.top + 2f + pressOffset,
                 bounds.right - 2f, bounds.bottom - 5f + pressOffset);
 
-        if (!pressed) {
-            paint.setStyle(Paint.Style.FILL);
-            paint.setShader(null);
-            paint.setColor(0x52000000);
-            paint.setShadowLayer(6f, 0f, 3f, 0xA0000000);
-            RectF shadow = new RectF(face);
-            shadow.offset(0f, 2f);
-            canvas.drawRoundRect(shadow, radius, radius, paint);
-            paint.clearShadowLayer();
-        }
-
         int top = blend(baseColor, Color.WHITE, pressed ? 0.08f : 0.20f);
         int bottom = blend(baseColor, Color.BLACK, pressed ? 0.20f : 0.13f);
         paint.setStyle(Paint.Style.FILL);
@@ -70,12 +59,9 @@ final class ElegantButtonDrawable extends Drawable {
             paint.setStrokeWidth(1.4f + 1.8f * selectionStrength);
             paint.setColor(withAlpha(GlowingReminderCardDrawable.PROMINENT_BORDER_COLOR,
                     Math.round(180 + 75 * selectionStrength)));
-            paint.setShadowLayer(2f + 5f * selectionStrength, 0f, 0f,
-                    withAlpha(0xFFFFB98F, Math.round(120 + 112 * selectionStrength)));
             RectF selectedRim = new RectF(face);
             selectedRim.inset(1.8f, 1.8f);
             canvas.drawRoundRect(selectedRim, radius - 1f, radius - 1f, paint);
-            paint.clearShadowLayer();
             paint.setStrokeWidth(1f);
             paint.setColor(withAlpha(0xFFFFFFFF, Math.round(125 + 130 * selectionStrength)));
             selectedRim.inset(2.2f, 2.2f);

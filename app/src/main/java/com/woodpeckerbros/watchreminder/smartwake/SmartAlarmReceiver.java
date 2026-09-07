@@ -91,6 +91,13 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         AppLog.d(context, "SmartAlarm notified id=" + alarmId
                 + " fullScreen=" + AppLog.fullScreenIntentAllowed(context)
                 + " notifications=" + AppLog.notificationPermissionAllowed(context));
+        // Request the ringing foreground service while this exact-alarm receiver still owns
+        // Android's temporary background-start exemption. Starting it later from a Handler can
+        // be rejected after onReceive returns, precisely when Wear OS suppresses the full-screen
+        // intent in Bedtime/DND mode.
+        boolean ringingServiceRequested = SmartAlarmRingingService.start(context, alarmId, targetAt);
+        AppLog.d(context, "SmartAlarm immediate ringing service requested id=" + alarmId
+                + " accepted=" + ringingServiceRequested);
         // Use the same proven full-screen notification path as regular reminders. Explicitly
         // sending the same PendingIntent here can create/reuse a background task before Wear OS
         // processes the full-screen intent, leaving sound active without presenting the screen.
@@ -100,12 +107,12 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         Context appContext = context.getApplicationContext();
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
-                AppLog.d(appContext, "SmartAlarm ringing fallback skipped; activity visible id=" + alarmId);
+                AppLog.d(appContext, "SmartAlarm full-screen activity confirmed id=" + alarmId);
             } else {
-                SmartAlarmRingingService.start(appContext, alarmId, targetAt);
-                AppLog.w(appContext, "SmartAlarm ringing fallback started id=" + alarmId);
+                AppLog.w(appContext, "SmartAlarm full-screen activity not visible id=" + alarmId
+                        + " ringingServiceRequested=" + ringingServiceRequested);
             }
-        }, 900L);
+        }, 2_000L);
         AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason);
     }
 

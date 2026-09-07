@@ -20,14 +20,14 @@ public class BootReceiver extends BroadcastReceiver {
         Context appContext = context.getApplicationContext();
         new Thread(() -> {
             try {
-                recover(appContext);
+                recover(appContext, true);
             } finally {
                 pendingResult.finish();
             }
         }, "wr-boot-recovery").start();
     }
 
-    static void recover(Context context) {
+    static void recover(Context context, boolean mayStartMonitoringService) {
         AlarmScheduleMigration.clearLegacyAlarmsOnce(context);
         new ReminderSettings(context).applyPowerSaveDefaultOnce();
         long now = System.currentTimeMillis();
@@ -43,14 +43,16 @@ public class BootReceiver extends BroadcastReceiver {
         JewishDayScheduler.schedule(context);
         TekufaScheduler.schedule(context);
         IntermittentFastingScheduler.schedule(context);
+        WaterReminderScheduler.schedule(context);
         SmartAlarmScheduler.recover(context);
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.requestAll(context);
         ReminderReceiver.dispatchNextQueued(context);
-        if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderForegroundService.start(context);
-        } else {
-            ReminderForegroundService.stop(context);
+        if (mayStartMonitoringService && new ReminderSettings(context).serviceEnabled()) {
+            AppLog.d(context, "ReminderMonitoring boot recovery start");
+            ReminderMonitoringService.start(context);
+        } else if (!new ReminderSettings(context).serviceEnabled()) {
+            ReminderMonitoringService.stop(context);
         }
     }
 }
