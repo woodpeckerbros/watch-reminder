@@ -176,14 +176,12 @@ public final class ReminderMonitoringService extends Service {
     }
 
     @Override public void onTaskRemoved(Intent rootIntent) {
-        // Some OEM launchers treat clearing recents as a service hint. Reassert all independent
-        // recovery paths while callbacks are still allowed. A true force-stop remains blocked,
-        // which is why the guardian lives in a separate package.
+        // Some OEM launchers treat clearing recents as a service hint. Reassert all available
+        // in-package recovery paths while callbacks are still allowed.
         AppLog.w(this, "ReminderMonitoringService task removed; reasserting recovery paths");
         ReminderScheduler.scheduleNearest(this);
         ReminderScheduler.scheduleWatchdog(this);
         ReminderRecoveryJobService.schedule(this);
-        GuardianBridge.sync(this, true);
         super.onTaskRemoved(rootIntent);
     }
     @Override public IBinder onBind(Intent intent) { return null; }

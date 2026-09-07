@@ -23,9 +23,5 @@
                 <action android:name="com.woodpeckerbros.watchreminder.DEBUG_REMINDER_ALERT" />
             </intent-filter>
         </receiver>
-        <receiver
-            android:name=".GuardianWakeProbeReceiver"
-            android:exported="true"
-            android:permission="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL" />
     </application>
 </manifest>

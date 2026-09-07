@@ -7,8 +7,6 @@ import android.content.Intent;
 import android.os.Build;
 
 import java.util.Calendar;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ReminderScheduler {
     public static final String EXTRA_REMINDER_ID = "reminder_id";
@@ -36,20 +34,6 @@ public class ReminderScheduler {
 
     public static synchronized void scheduleNearest(Context context) {
         ensureNearestScheduled(context);
-        GuardianBridge.sync(context, false);
-    }
-
-    static synchronized List<FallbackOccurrence> guardianOccurrences(Context context) {
-        List<FallbackOccurrence> occurrences = new ArrayList<>();
-        ReminderEventStore eventStore = new ReminderEventStore(context);
-        for (Reminder reminder : new ReminderStore(context).getAll()) {
-            ScheduledCandidate candidate = candidateFor(context, reminder, eventStore);
-            if (candidate != null) {
-                occurrences.add(new FallbackOccurrence(reminder.id, reminder.name,
-                        candidate.triggerAt, candidate.originalAt, candidate.day, false));
-            }
-        }
-        return occurrences;
     }
 
     /**
@@ -107,8 +91,8 @@ public class ReminderScheduler {
                 return null;
             }
             pendingIntent = oneTimeIntent(context, reminder, triggerAt, originalAt);
-            return new ScheduledCandidate(reminder, triggerAt, originalAt, -1,
-                    pendingIntent, (reminder.id + ":once").hashCode());
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent,
+                    (reminder.id + ":once").hashCode());
         } else if (reminder.isPeriodic()) {
             PeriodicReminderHelper.Occurrence occurrence = PeriodicReminderHelper.next(context, reminder, eventStore, true);
             if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
@@ -116,8 +100,8 @@ public class ReminderScheduler {
             }
             triggerAt = occurrence.scheduledAt;
             pendingIntent = periodicIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
-            return new ScheduledCandidate(reminder, triggerAt, occurrence.originalAt, -1,
-                    pendingIntent, (reminder.id + ":periodic").hashCode());
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent,
+                    (reminder.id + ":periodic").hashCode());
         } else if (reminder.isAnnualEvent()) {
             AnnualReminderHelper.Occurrence occurrence = AnnualReminderHelper.next(context, reminder, eventStore, true);
             if (occurrence == null || occurrence.scheduledAt == Long.MAX_VALUE) {
@@ -125,8 +109,8 @@ public class ReminderScheduler {
             }
             triggerAt = occurrence.scheduledAt;
             pendingIntent = annualIntent(context, reminder, occurrence.scheduledAt, occurrence.originalAt);
-            return new ScheduledCandidate(reminder, triggerAt, occurrence.originalAt, -1,
-                    pendingIntent, (reminder.id + ":annual").hashCode());
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent,
+                    (reminder.id + ":annual").hashCode());
         } else {
             RegularTrigger trigger = nextRegularTrigger(context, reminder);
             if (trigger == null || trigger.scheduledAt == Long.MAX_VALUE) {
@@ -134,8 +118,8 @@ public class ReminderScheduler {
             }
             triggerAt = trigger.scheduledAt;
             pendingIntent = regularIntent(context, reminder, trigger.day, trigger.scheduledAt, trigger.originalAt);
-            return new ScheduledCandidate(reminder, triggerAt, trigger.originalAt, trigger.day,
-                    pendingIntent, (reminder.id + ":regular").hashCode());
+            return new ScheduledCandidate(reminder, triggerAt, pendingIntent,
+                    (reminder.id + ":regular").hashCode());
         }
     }
 
@@ -186,7 +170,6 @@ public class ReminderScheduler {
         AppLog.d(context, "scheduleSnooze id=" + reminderId + " at=" + NextReminderCalculator.formatDateTime(triggerAt));
         cancelLegacyActivity(context, alarmManager, (reminderId + ":snooze").hashCode());
         setBestAvailableAlarm(context, alarmManager, triggerAt, pendingIntent, false);
-        GuardianBridge.sync(context, false);
         return triggerAt;
     }
 
@@ -446,38 +429,15 @@ public class ReminderScheduler {
     private static class ScheduledCandidate {
         final Reminder reminder;
         final long triggerAt;
-        final long originalAt;
-        final int day;
         final PendingIntent pendingIntent;
         final int requestCode;
 
-        ScheduledCandidate(Reminder reminder, long triggerAt, long originalAt, int day,
+        ScheduledCandidate(Reminder reminder, long triggerAt,
                            PendingIntent pendingIntent, int requestCode) {
             this.reminder = reminder;
             this.triggerAt = triggerAt;
-            this.originalAt = originalAt;
-            this.day = day;
             this.pendingIntent = pendingIntent;
             this.requestCode = requestCode;
-        }
-    }
-
-    static final class FallbackOccurrence {
-        final String reminderId;
-        final String reminderName;
-        final long scheduledAt;
-        final long originalAt;
-        final int day;
-        final boolean snooze;
-
-        FallbackOccurrence(String reminderId, String reminderName, long scheduledAt,
-                           long originalAt, int day, boolean snooze) {
-            this.reminderId = reminderId;
-            this.reminderName = reminderName;
-            this.scheduledAt = scheduledAt;
-            this.originalAt = originalAt;
-            this.day = day;
-            this.snooze = snooze;
         }
     }
 

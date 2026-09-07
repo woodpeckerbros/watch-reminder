@@ -1,8 +1,0 @@
-<resources>
-    <style name="GuardianTheme" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#C77B58</item>
-        <item name="android:navigationBarColor">#091C2B</item>
-        <item name="android:windowBackground">#091C2B</item>
-    </style>
-</resources>

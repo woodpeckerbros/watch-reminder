@@ -20,4 +20,3 @@ dependencyResolutionManagement {
 rootProject.name = "WatchReminder"
 include(":app")
 include(":phone")
-include(":guardian")

@@ -215,7 +215,6 @@ public class ReminderReceiver extends BroadcastReceiver {
     static void showNotification(Context context, String occurrenceId, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze) {
         createChannel(context);
         AppLog.d(context, "showNotification occurrence=" + occurrenceId + " name=" + reminderName + " at=" + NextReminderCalculator.formatDateTime(scheduledAt));
-        GuardianBridge.acknowledgePopup(context, reminderId, scheduledAt);
         ReminderAlertQueueStore.QueuedAlert activeAlert = new ReminderAlertQueueStore(context).getActiveAlert(occurrenceId);
         int alertCount = activeAlert == null ? 1 : activeAlert.count();
         AppLog.d(context, "showNotification activeAlert=" + (activeAlert != null)

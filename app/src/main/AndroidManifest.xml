@@ -1,11 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <queries>
-        <package android:name="com.woodpeckerbros.watchreminder.guardian" />
-    </queries>
     <uses-feature android:name="android.hardware.type.watch" android:required="true" />
-
-    <uses-permission android:name="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
@@ -357,16 +352,6 @@
         <receiver
             android:name=".WatchdogReceiver"
             android:exported="false" />
-
-        <receiver
-            android:name=".GuardianPlanRequestReceiver"
-            android:exported="true"
-            android:permission="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL" />
-
-        <receiver
-            android:name=".GuardianRecoveryReceiver"
-            android:exported="true"
-            android:permission="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL" />
 
         <receiver
             android:name=".BootReceiver"
