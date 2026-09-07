@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Zmanio Guardian</string>
+    <string name="guardian_title">Reminder protection is active</string>
+    <string name="guardian_message">The independent on-watch guardian is ready to show a fallback alert if Zmanio does not confirm delivery.</string>
+    <string name="guardian_alert_title">Fallback reminder</string>
+    <string name="guardian_no_confirmation">Zmanio did not confirm that the alert was shown</string>
+    <string name="close">Close</string>
+</resources>

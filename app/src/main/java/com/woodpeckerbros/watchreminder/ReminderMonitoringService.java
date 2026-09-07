@@ -94,11 +94,17 @@ public final class ReminderMonitoringService extends Service {
     @Override public void onCreate() {
         super.onCreate();
         createChannel();
-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+        Notification.Builder notificationBuilder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(UiText.t(this, "ניטור תזכורות פעיל"))
-                .setOngoing(true).setShowWhen(false).setOnlyAlertOnce(true).build();
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setOngoing(true).setShowWhen(false).setOnlyAlertOnce(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            notificationBuilder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
+        }
+        Notification notification = notificationBuilder.build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else startForeground(NOTIFICATION_ID, notification);
@@ -167,6 +173,18 @@ public final class ReminderMonitoringService extends Service {
             foregroundStarted = false;
         }
         super.onDestroy();
+    }
+
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        // Some OEM launchers treat clearing recents as a service hint. Reassert all independent
+        // recovery paths while callbacks are still allowed. A true force-stop remains blocked,
+        // which is why the guardian lives in a separate package.
+        AppLog.w(this, "ReminderMonitoringService task removed; reasserting recovery paths");
+        ReminderScheduler.scheduleNearest(this);
+        ReminderScheduler.scheduleWatchdog(this);
+        ReminderRecoveryJobService.schedule(this);
+        GuardianBridge.sync(this, true);
+        super.onTaskRemoved(rootIntent);
     }
     @Override public IBinder onBind(Intent intent) { return null; }
 

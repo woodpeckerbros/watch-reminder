@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.woodpeckerbros.watchreminder" />
+    </queries>
+    <uses-feature android:name="android.hardware.type.watch" android:required="true" />
+    <permission
+        android:name="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL" />
+
+    <application android:allowBackup="false" android:icon="@drawable/ic_guardian"
+        android:label="@string/app_name" android:theme="@style/GuardianTheme">
+        <activity android:name=".GuardianActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".GuardianAlertActivity" android:excludeFromRecents="true"
+            android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true" />
+        <receiver android:name=".GuardianPlanReceiver" android:exported="true"
+            android:permission="com.woodpeckerbros.watchreminder.permission.GUARDIAN_INTERNAL" />
+        <receiver android:name=".GuardianFallbackReceiver" android:exported="false" />
+        <receiver android:name=".GuardianAlertReceiver" android:exported="false" />
+        <receiver android:name=".GuardianBootReceiver" android:directBootAware="true" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

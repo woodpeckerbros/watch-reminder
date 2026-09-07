@@ -1,5 +1,7 @@
 # QUICK RESUME
 
+- הגנת force-stop עצמאית 07/09: נוסף מודול שעון נפרד `:guardian` בחבילה/UID נפרדים, ללא טלפון וללא רשת. האפליקציה הראשית שולחת אליו תוכנית חתומה של 29 המופעים הקרובים; לכל מופע הוא רושם `AlarmClock` עצמאי 15 שניות אחרי המועד. ACK מהמסך הראשי מבטל את הגיבוי. ללא ACK ה־Guardian שולח explicit broadcast עם `FLAG_INCLUDE_STOPPED_PACKAGES` שמקים מחדש את החבילה הראשית, ולאחר 8 שניות מציג התראת full-screen משלו אם עדיין לא התקבל ACK. התקשורת מוגנת ב־signature permission שבבעלות חבילת ה־Guardian, כדי שעדכון ה־APK הראשי לא יעצור אותה.
+- אימות פיזי 07/09 על OnePlus Watch 3: אחרי `force-stop` יזום אזעקת 17:00 של החבילה הראשית נמחקה, בעוד 29 אזעקות ה־Guardian נשארו, כולל 17:00:15. בדיקת Debug חתומה העבירה את הראשית מ־`stopped=true` ל־`false`, הקימה process וקיבלה לוג במקלט הראשי. לאחר פתיחה מחדש נרשמו שוב גם 17:00 וגם 17:00:15. עדכון חוזר של ה־APK הראשי השאיר את ה־Guardian `stopped=false` ואת כל 29 אזעקותיו. תוקן גם cold-start bug: PendingIntent ישן יכול להישאר אף שה־Alarm נמחק, ולכן הרישום הראשון בכל process נבנה מחדש ללא הסתמכות על המטמון. build ו־unit tests עברו; app ‏1.23 ו־guardian ‏1.0 מותקנים ופעילים בשעון.
 - אבחון 07/09 (פער התראות עד פתיחה סביב 13:00): `ApplicationExitInfo` בשעון קבע שב־11:49:20 המערכת ביצעה `FORCE STOP` לחבילה (`reason=USER_REQUESTED`, `subreason=FORCE_STOP`, יוזם pid 1290/ActivityManager). עד אז נמסרו התראות ב־11:15, 11:35 ו־11:40; ה־snooze של 11:50 וההתראה של 13:00 לא יכלו להימסר, מפני ש־force-stop מבטל את כל AlarmManager entries וחוסם הפעלה של רכיבי האפליקציה. פתיחת האפליקציה ב־13:08 הסירה `stopped`, הפעילה מחדש את FGS ושחזרה/מסרה את שתי ההתראות בפספוס; מאז alarmClock של 17:00 והתראות נוספות עובדים. זו אינה בעיית Doze או הרשאות התראה. נדרש איתור מקור ה־force-stop של OnePlus/system או הימנעות מהפעולה; קוד לא שונה באבחון זה.
 - תגובתיות 07/09: פעולות „בוצע”/דחייה במסך הבית ובמסך ההתראה הרגיל סוגרות את הממשק מיד ומבצעות את עיבוד היסטוריית התזכורות, ביטולי AlarmManager ורענון complications ב־worker יחיד. כך נמנעת חסימת UI על היסטוריה גדולה. רענון השעון המעוגל מתוזמן לגבול הדקה הבא (אחרי שניות `00`) ולאחר מכן כל דקה. כפתורי „לוגים לטלפון” ו„ניקוי לוגים” הוגדרו לשתי שורות, ללא אייקון. build/tests עברו והגרסה הותקנה; אימות פעולת התראה פיזית עדיין דרוש.
 - שיפור ביצועים 07/09: הוסר רענון חסר־תועלת של השעון המעוגל כל 5 שניות (כעת מתעדכן בתחילת כל דקה), והוסרו צללי software יקרים מהכפתורים. כרטיסי התזכורות הזוהרים נשארו בדיוק בעיצוב המקורי שלהם, כולל blur ושכבת software. רק מסך הבית וזמני היום טוענים את רקע ה־bitmap; מסכי הגדרות ועורך משתמשים ברקע רגיל. build ו־unit tests עברו; הגרסה הותקנה על OnePlus Watch 3. מדידת post-install הראתה 27 Views, ללא slow bitmap upload; השירות נשאר FGS ב־adj=50 ו־cached=false לאחר יציאה למסך השעון.
@@ -37,14 +39,14 @@
 
 - פרויקט: WatchReminder / Zmanio — אפליקציית Wear OS לתזכורות, זמני הלכה וגיבוי מול טלפון.
 - נתיב פעיל: `/Users/refaelnakar/Documents/Work/TEMP/Android Temp AI Workspace/WatchReminder`
-- מודולים: `:app` לשעון ו־`:phone` לטלפון.
+- מודולים: `:app` הראשי לשעון, `:guardian` fail-safe עצמאי על אותו שעון, ו־`:phone` לגיבוי/שחזור בלבד (אינו משתתף במסירת תזכורות).
 - מצב נוכחי: תזכורות רגילות, AlarmManager, Smart Alarm, נודניק, גיבוי ו־complications פעילים.
 - מכשיר בדיקה: OnePlus Watch 3 פיזי ב־ADB אלחוטי; אמולטור Wear זמין לפי הצורך.
 - שורש תקלה קריטית 01–02/09: לאחר שחזור כ־35 תזכורות, `MainActivity` ביצעה catch-up כבד על ה־UI thread. במקביל עבר הפוקוס מ־`ReminderAlertActivity` לדף היומי, נוצר ANR של 5 שניות, ואז Android ביצע `FORCE STOP` שמחק את כל ה־alarms.
 - תיקון 02/09: בדיקת foreground הועברה ל־worker, `BootReceiver` משתמש ב־`goAsync`, ודף יומי/עומר נדחים בדקה כאשר תזכורת רגילה פעילה. בכך נמנעים main-thread ANR ומסכי full-screen מתחרים.
 - מצב השעון: גרסת debug ‏1.16 מותקנת, `stopped=false`, Full-Screen Intent=`allow`, והחבילה ב־Doze allowlist. הנתונים ו־35 התזכורות נשמרו.
 - אימות פיזי 02/09: שתי תזכורות catch-up הוצגו ברצף; בדיקת `setAlarmClock` העירה את השעון משינה עמוקה ב־00:42:09 ופתחה את מסך ההתראה. אין ANR חדש; תזכורת 07:15 ו־watchdog 07:17 רשומים.
-- סיכון מרכזי: force-stop אמיתי עדיין חוסם את כל מנגנוני Android עד פתיחת האפליקציה, אך האירוע שנצפה נגרם מ־ANR באפליקציה ולא מהגדרת OnePlus מסתורית. OnePlus עדיין עלול לחסום רטט בזמן Bedtime/DND.
+- סיכון מרכזי: force-stop אמיתי חוסם את החבילה הראשית ואת ה־FGS שלה; `:guardian` מקטין את הסיכון באמצעות UID ו־AlarmManager נפרדים ואף הוכח שמעיר את הראשית ב־OnePlus Watch 3. force-stop ידני של שתי החבילות יחד עדיין אינו ניתן לעקיפה. OnePlus עדיין עלול לחסום רטט בזמן Bedtime/DND.
 - החרגת סוללה: קיימת בקשת Android בקוד; ב־OnePlus `FakeSettingsActivity` אינה מציגה אישור. בשעון הבדיקה ההחרגה הוחזרה דרך Doze allowlist של ADB.
 - Build: `./gradlew :app:testDebugUnitTest :app:assembleDebug`; לטלפון `./gradlew :phone:assembleDebug`.
 - התקנה: `adb install -r app/build/outputs/apk/debug/app-debug.apk`, ואז לפתוח את `com.woodpeckerbros.watchreminder/.MainActivity`.
@@ -113,7 +115,7 @@ Smart Alarm נמצא תחת `app/src/main/java/com/woodpeckerbros/watchreminder/
 ## שבור, לא גמור או מסוכן
 
 - אירוע ה־force-stop שנחקר ב־02/09 נבע מ־ANR: בדיקת foreground סינכרונית ארכה כחמש שניות בזמן מעבר בין מסך תזכורת רגילה לדף היומי. Android סגר את האפליקציה ומחק את ה־alarms. הבדיקה וה־BootReceiver הועברו לעבודה אסינכרונית, ומסכי דף יומי/עומר נדחים מאחורי תזכורת רגילה פעילה.
-- אין API שמאפשר לאפליקציה להתאושש מ־force-stop אמיתי לפני שהמשתמש פותח אותה; יש להמשיך לעקוב אחר `ApplicationExitInfo` אם החבילה שוב תופיע כ־stopped.
+- החבילה הראשית לבדה אינה יכולה להתאושש מ־force-stop; מודול `:guardian` הנפרד משתמש ב־explicit signed broadcast עם `FLAG_INCLUDE_STOPPED_PACKAGES`, ובבדיקה פיזית הצליח להסיר את מצב stopped ולהקים את הראשית. אם גם ה־Guardian נעצר ידנית, Android אינו מאפשר לאף אחת מהן להתאושש לבדה.
 - reboot מוחק רשומות AlarmManager. USER_UNLOCKED ו־JobScheduler persisted נוספו כגיבוי, אך אינם יכולים לרוץ כאשר OnePlus מסמן את החבילה stopped אחרי boot.
 - שחזור טלפון→שעון: `BIND_LISTENER` הופרד ל־intent-filter ללא data constraints, בעוד `MESSAGE_RECEIVED` נשאר ב־filter של path. שני המודולים נבנו, וה־APK המתוקן הותקן ואומת בשעון; נדרש ניסיון שליחה נוסף מהטלפון.
 - אבחון restore 01/09: לוג WearableService בשעון מדווח `Mismatched certificate` ואז `Failed to deliver message` עבור `/watch_reminder_restore`. הטלפון הוא Play-signed והשעון debug-signed; Google Data Layer דוחה את ההודעה לפני שהשירות מופעל. אין בפרויקט keystore של Play. פתרון: להתקין את שני הצדדים חתומים באותו מפתח (העלאה משותפת ל־Play), או להתקין את שני APK-ה־debug המקומיים לאחר גיבוי נתוני הטלפון.

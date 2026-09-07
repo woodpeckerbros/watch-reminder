@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Zmanio Guardian</string>
+    <string name="guardian_title">הגנת תזכורות פעילה</string>
+    <string name="guardian_message">השומר העצמאי מותקן בשעון ומוכן להציג התראת גיבוי אם Zmanio לא יאשר מסירה.</string>
+    <string name="guardian_alert_title">תזכורת גיבוי</string>
+    <string name="guardian_no_confirmation">Zmanio לא אישר שההתראה הוצגה</string>
+    <string name="close">סגירה</string>
+</resources>
