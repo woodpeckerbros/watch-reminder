@@ -69,7 +69,6 @@ public class ReminderAlertActivity extends Activity {
         activeActivity = new WeakReference<>(this);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         String reminderName = getIntent().getStringExtra(ReminderScheduler.EXTRA_REMINDER_NAME);
         if (reminderName == null || reminderName.trim().isEmpty()) {
@@ -249,7 +248,6 @@ public class ReminderAlertActivity extends Activity {
     protected void onDestroy() {
         requestComplicationRefreshOnce();
         stopVibration();
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         handler.removeCallbacksAndMessages(null);
         ReminderAlertActivity active = activeActivity == null ? null : activeActivity.get();
         if (active == this) {
@@ -413,7 +411,6 @@ public class ReminderAlertActivity extends Activity {
     private void closeAfterAction() {
         stopVibration();
         actionClosed = true;
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         new ReminderAlertQueueStore(this).complete(activeOccurrenceId);
         requestComplicationRefreshOnce();
         finishAndRemoveTask();
@@ -430,7 +427,6 @@ public class ReminderAlertActivity extends Activity {
         }
         actionClosed = true;
         handler.removeCallbacksAndMessages(null);
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         finishAndRemoveTask();
         ALERT_ACTION_EXECUTOR.execute(() -> {
             try {

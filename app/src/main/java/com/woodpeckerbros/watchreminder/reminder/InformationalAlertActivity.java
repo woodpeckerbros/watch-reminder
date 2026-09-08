@@ -30,7 +30,6 @@ public class InformationalAlertActivity extends Activity {
         super.onCreate(state);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         key = getIntent().getStringExtra(InformationalAlertReceiver.EXTRA_KEY);
         title = getIntent().getStringExtra(InformationalAlertReceiver.EXTRA_TITLE);
         message = getIntent().getStringExtra(InformationalAlertReceiver.EXTRA_MESSAGE);
@@ -93,7 +92,7 @@ public class InformationalAlertActivity extends Activity {
     }
 
     private void autoClose() { if (!closed) { InformationalAlertReceiver.dismissNotification(this, key); finish(); } }
-    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); stopFeedback(); getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); super.onDestroy(); }
+    @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); stopFeedback(); super.onDestroy(); }
     private void stopFeedback() { if (feedback != null) { feedback.stop(); feedback = null; } }
     private Button button(String label) { Button b = new Button(this); AppFont.apply(b); b.setText(UiText.t(this, label)); b.setTextColor(0xFFF4EBDD); b.setTextSize(14); b.setAllCaps(false); b.setBackground(rounded(0xFF66745D)); b.setLayoutParams(new LinearLayout.LayoutParams(dp(160), dp(42))); return b; }
     private TextView text(String value, int size, int color) { TextView v = new TextView(this); AppFont.apply(v); v.setText(value); v.setTextSize(size); v.setTextColor(color); v.setGravity(Gravity.CENTER); return v; }

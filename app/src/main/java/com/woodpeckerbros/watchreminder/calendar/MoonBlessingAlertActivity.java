@@ -46,7 +46,6 @@ public class MoonBlessingAlertActivity extends Activity {
         super.onCreate(savedInstanceState);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         MoonBlessingReceiver.cancelNotification(this);
 
         monthKey = getIntent().getStringExtra(MoonBlessingScheduler.EXTRA_MONTH_KEY);
@@ -196,7 +195,6 @@ public class MoonBlessingAlertActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         stopFeedback();
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onDestroy();
     }
 

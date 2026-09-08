@@ -4187,8 +4187,6 @@ public class MainActivity extends Activity {
         restoreProgress.setIndeterminate(true);
         restoreProgress.setMessage(UiText.t(this, "משחזר נתונים מהטלפון..."));
         restoreProgress.setCancelable(false);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) setTurnScreenOn(true);
         restoreProgress.show();
         AppLog.d(this, operationName + " started on background thread");
         RESTORE_EXECUTOR.execute(() -> {
@@ -4220,7 +4218,6 @@ public class MainActivity extends Activity {
             restoreProgress.dismiss();
             restoreProgress = null;
         }
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private String restoreFileConfirmation(String fileName) {

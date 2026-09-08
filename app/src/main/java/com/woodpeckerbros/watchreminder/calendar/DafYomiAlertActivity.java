@@ -41,7 +41,6 @@ public class DafYomiAlertActivity extends Activity {
         super.onCreate(savedInstanceState);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         AppLog.d(this, "daf yomi alert open");
         DafYomiReceiver.cancelNotification(this);
         dueItems = new DafYomiStore(this).dueItems(this);

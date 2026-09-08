@@ -38,7 +38,6 @@ public class IntermittentFastingAlertActivity extends Activity {
         super.onCreate(savedInstanceState);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         IntermittentFastingReceiver.cancelNotification(this);
 
         eventType = getIntent().getStringExtra(IntermittentFastingScheduler.EXTRA_EVENT_TYPE);
@@ -125,7 +124,6 @@ public class IntermittentFastingAlertActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         stopVibration();
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onDestroy();
     }
 

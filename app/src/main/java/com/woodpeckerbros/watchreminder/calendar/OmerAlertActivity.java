@@ -39,7 +39,6 @@ public class OmerAlertActivity extends Activity {
         super.onCreate(savedInstanceState);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         AppLog.d(this, "omer alert open");
         OmerReceiver.cancelNotification(this);
 

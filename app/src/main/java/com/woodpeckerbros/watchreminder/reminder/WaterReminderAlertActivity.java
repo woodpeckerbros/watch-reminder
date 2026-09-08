@@ -41,7 +41,6 @@ public final class WaterReminderAlertActivity extends Activity {
         super.onCreate(savedInstanceState);
         setShowWhenLocked(true);
         setTurnScreenOn(true);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         WaterReminderReceiver.cancelNotification(this);
 
         triggerAt = getIntent().getLongExtra(WaterReminderScheduler.EXTRA_TRIGGER_AT, 0L);
@@ -119,7 +118,6 @@ public final class WaterReminderAlertActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         stopFeedback();
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onDestroy();
     }
 
