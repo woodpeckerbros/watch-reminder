@@ -44,6 +44,7 @@ public class SmartWakeDetectorTest {
         SmartWakeDetector.Decision decision = detector.evaluate(675_000);
         assertTrue(decision.immediateCandidate);
         assertTrue(decision.shouldWake);
+        assertEquals("SMART_SCORE", decision.wakeReason);
     }
 
     @Test public void accelerometerAndGyroscopeAreOneMovementEvidenceGroup() {
@@ -55,14 +56,47 @@ public class SmartWakeDetectorTest {
         assertTrue(decision.immediateCandidate); // Immediate now needs these exact two groups.
     }
 
-    @Test public void stepsAndPassiveDoNotCreateWakeScore() {
+    @Test public void persistentSystemNonAsleepWakesEvenWithoutSmartScore() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 610_000);
         detector.addStep(620_000);
         SmartWakeDetector.Decision decision = detector.evaluate(675_000);
         assertEquals(0, decision.score);
         assertTrue(decision.lateAwakeConfirmation);
-        assertFalse(decision.shouldWake);
+        assertTrue(decision.systemAwakePersistent);
+        assertEquals("SYSTEM_AWAKE_PERSISTENT", decision.wakeReason);
+        assertTrue(decision.shouldWake);
+    }
+
+    @Test public void oneBriefSystemNonAsleepSampleDoesNotWakeBeforeItPersists() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 610_000);
+
+        SmartWakeDetector.Decision pending = detector.evaluate(625_000);
+        assertFalse(pending.systemAwakePersistent);
+        assertFalse(pending.shouldWake);
+        assertEquals("SYSTEM_AWAKE_NOT_YET_PERSISTENT", pending.continueReason);
+
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 626_000);
+        SmartWakeDetector.Decision returnedToSleep = detector.evaluate(660_000);
+        assertFalse(returnedToSleep.systemAwakePersistent);
+        assertFalse(returnedToSleep.shouldWake);
+        assertEquals("NO_WAKE_SIGNAL", returnedToSleep.continueReason);
+    }
+
+    @Test public void secondSystemNonAsleepObservationConfirmsWakeWithoutWaitingForNextInterval() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 610_000);
+        SmartWakeDetector.Decision pending = detector.evaluate(620_000);
+        assertFalse(pending.systemAwakePersistent);
+
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 625_000);
+        SmartWakeDetector.Decision confirmed = detector.evaluate(626_000);
+        assertTrue(confirmed.systemAwakePersistent);
+        assertEquals(2, confirmed.systemNonAsleepObservations);
+        assertEquals("SYSTEM_AWAKE_PERSISTENT", confirmed.wakeReason);
+        assertTrue(confirmed.shouldWake);
     }
 
     @Test public void deepSleepSingleTurnOverDoesNotWake() {
@@ -134,11 +168,16 @@ public class SmartWakeDetectorTest {
         assertTrue(summary.contains("HR_SAMPLE_AGE="));
         assertTrue(summary.contains("HRV_SAMPLE_AGE="));
         assertTrue(summary.contains("MOVEMENT_WINDOW_COVERAGE="));
+        assertTrue(summary.contains("SLEEP_STATE="));
+        assertTrue(summary.contains("SYSTEM_NON_ASLEEP_DURATION="));
+        assertTrue(summary.contains("SYSTEM_NON_ASLEEP_OBSERVATIONS="));
+        assertTrue(summary.contains("SYSTEM_AWAKE_PERSISTENT="));
         assertTrue(summary.contains("WAKE_SCORE=0"));
         assertTrue(summary.contains("EVIDENCE_GROUPS=0"));
         assertTrue(summary.contains("CANDIDATE=false"));
         assertTrue(summary.contains("CLEARLY_AWAKE=false"));
         assertTrue(summary.contains("DECISION=CONTINUE"));
+        assertTrue(summary.contains("CONTINUE_REASON=NO_WAKE_SIGNAL"));
         String telemetry = decision.telemetry();
         assertTrue(telemetry.contains("WAKE_SCORE="));
         assertTrue(telemetry.contains("EVIDENCE_GROUPS="));
@@ -150,6 +189,7 @@ public class SmartWakeDetectorTest {
         assertTrue(telemetry.contains("MOVEMENT_SPAN="));
         assertTrue(telemetry.contains("STEPS="));
         assertTrue(telemetry.contains("FRESH_USER_ACTIVITY_TRANSITION="));
+        assertTrue(telemetry.contains("SYSTEM_AWAKE_PERSISTENT="));
     }
 
     @Test public void baselineIsRequiredBeforeEarlyWake() {

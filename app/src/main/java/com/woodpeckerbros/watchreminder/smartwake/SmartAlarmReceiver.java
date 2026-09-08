@@ -110,7 +110,8 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                         + " ringingServiceRequested=" + ringingServiceRequested);
             }
         }, 2_000L);
-        AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason);
+        AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason
+                + ("deadline".equals(reason) ? " WAKE_REASON=FINAL_DEADLINE" : ""));
     }
 
 }

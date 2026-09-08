@@ -22,6 +22,10 @@ public final class SmartWakeDetector {
     public static final long CANDIDATE_MEMORY_MS = 90_000L;
     private static final long CLEARLY_AWAKE_WINDOW_MS = 90_000L;
     private static final long FRESH_ACTIVITY_TRANSITION_MS = 120_000L;
+    // Health Services activity updates can be brief while a user turns over.  Thirty seconds is
+    // one normal scoring interval: prompt after a sustained state, without trusting one sample.
+    private static final long SYSTEM_AWAKE_PERSISTENCE_MS = 30_000L;
+    private static final long SYSTEM_AWAKE_OBSERVATION_WINDOW_MS = 90_000L;
     private static final long MOVEMENT_BUCKET_MS = 15_000L;
     private static final long COVERAGE_BUCKET_MS = 5_000L;
 
@@ -34,6 +38,9 @@ public final class SmartWakeDetector {
     private final long startedAt;
     private UserActivity userActivity = UserActivity.UNKNOWN;
     private long awakeTransitionAt = Long.MIN_VALUE;
+    private long systemNonAsleepStartedAt = Long.MIN_VALUE;
+    private long lastSystemNonAsleepAt = Long.MIN_VALUE;
+    private int systemNonAsleepObservations;
     private long candidateStartedAt = Long.MIN_VALUE;
 
     public SmartWakeDetector(long startedAt) { this.startedAt = startedAt; }
@@ -53,6 +60,24 @@ public final class SmartWakeDetector {
         if (value == null) value = UserActivity.UNKNOWN;
         if (userActivity == UserActivity.ASLEEP
                 && (value == UserActivity.PASSIVE || value == UserActivity.EXERCISE)) awakeTransitionAt = receivedAt;
+        if (isSystemNonAsleep(value)) {
+            boolean continuing = systemNonAsleepStartedAt != Long.MIN_VALUE
+                    && receivedAt >= lastSystemNonAsleepAt
+                    && receivedAt - lastSystemNonAsleepAt <= SYSTEM_AWAKE_OBSERVATION_WINDOW_MS;
+            if (!continuing) {
+                systemNonAsleepStartedAt = receivedAt;
+                systemNonAsleepObservations = 0;
+            }
+            if (receivedAt >= lastSystemNonAsleepAt) {
+                systemNonAsleepObservations++;
+                lastSystemNonAsleepAt = receivedAt;
+            }
+        } else {
+            // An explicit ASLEEP (or an unavailable/unknown state) breaks the persistence run.
+            systemNonAsleepStartedAt = Long.MIN_VALUE;
+            lastSystemNonAsleepAt = Long.MIN_VALUE;
+            systemNonAsleepObservations = 0;
+        }
         userActivity = value;
     }
 
@@ -83,6 +108,14 @@ public final class SmartWakeDetector {
         MovementPattern movementPattern = movementPattern(now);
         int steps60Seconds = countStepsSince(now - 60_000L);
         int steps90Seconds = countStepsSince(now - CLEARLY_AWAKE_WINDOW_MS);
+        boolean systemNonAsleep = isSystemNonAsleep(userActivity);
+        long systemNonAsleepDurationMs = systemNonAsleep && systemNonAsleepStartedAt != Long.MIN_VALUE
+                ? Math.max(0L, now - systemNonAsleepStartedAt) : 0L;
+        boolean repeatedSystemNonAsleep = systemNonAsleepObservations >= 2
+                && lastSystemNonAsleepAt != Long.MIN_VALUE
+                && now - lastSystemNonAsleepAt <= SYSTEM_AWAKE_OBSERVATION_WINDOW_MS;
+        boolean systemAwakePersistent = systemNonAsleep && (systemNonAsleepDurationMs >= SYSTEM_AWAKE_PERSISTENCE_MS
+                || repeatedSystemNonAsleep);
 
         double hrAboveBaseline = recentHr.count >= 2 && baselineHr.count >= 4 ? recentHr.mean - baselineHr.mean : 0;
         double hrvAboveBaseline = recentHr.count >= 3 && baselineHr.count >= 4
@@ -126,7 +159,13 @@ public final class SmartWakeDetector {
 
         ClearlyAwakeResult clearlyAwake = clearlyAwake(movementPattern, steps60Seconds,
                 steps90Seconds, transitionRecent, cardiovascularEvidence);
-        boolean shouldWake = immediateCandidate || candidateConfirmed || clearlyAwake.detected;
+        boolean smartScoreWake = immediateCandidate || candidateConfirmed;
+        boolean shouldWake = systemAwakePersistent || smartScoreWake || clearlyAwake.detected;
+        String wakeReason = systemAwakePersistent ? "SYSTEM_AWAKE_PERSISTENT"
+                : smartScoreWake ? "SMART_SCORE"
+                : clearlyAwake.detected ? "CLEARLY_AWAKE" : "NONE";
+        String continueReason = shouldWake ? "NONE"
+                : systemNonAsleep ? "SYSTEM_AWAKE_NOT_YET_PERSISTENT" : "NO_WAKE_SIGNAL";
 
         return new Decision(shouldWake, score, baselineReady, moderateCandidate, immediateCandidate,
                 candidateActive, candidateConfirmed, candidateAge, evidenceGroups, recentHr, baselineHr,
@@ -135,7 +174,12 @@ public final class SmartWakeDetector {
                 lateAwakeConfirmation, hrRisePoints, hrvRisePoints, accelPoints, gyroPoints,
                 combinedMotionPoints, transitionPoints, clearlyAwake, movementPattern, transitionRecent,
                 now, baselineStatus, baselineHrQuality, baselineAccelQuality, baselineGyroQuality,
-                recentHrQuality, movementCoverage);
+                recentHrQuality, movementCoverage, systemAwakePersistent, systemNonAsleepDurationMs,
+                systemNonAsleepObservations, wakeReason, continueReason);
+    }
+
+    private static boolean isSystemNonAsleep(UserActivity activity) {
+        return activity == UserActivity.PASSIVE || activity == UserActivity.EXERCISE;
     }
 
     private ClearlyAwakeResult clearlyAwake(MovementPattern movement, int steps60Seconds,
@@ -386,8 +430,11 @@ public final class SmartWakeDetector {
     public static final class Decision {
         public final boolean shouldWake, candidate, immediateCandidate, baselineReady, lateAwakeConfirmation;
         public final boolean candidateActive, candidateConfirmed, clearlyAwake, freshUserActivityTransition;
+        public final boolean systemAwakePersistent;
         public final int score, evidenceGroups, steps, steps60Seconds;
-        public final long candidateAgeMs, movementSpanMs;
+        public final long candidateAgeMs, movementSpanMs, systemNonAsleepDurationMs;
+        public final int systemNonAsleepObservations;
+        public final String wakeReason, continueReason;
         public final int activeMovementBuckets, accelActiveBuckets, gyroActiveBuckets;
         public final int accelStrongBuckets, gyroStrongBuckets, dualStrongBuckets;
         public final String clearlyAwakeReason;
@@ -411,7 +458,8 @@ public final class SmartWakeDetector {
                  MovementPattern movementPattern, boolean freshUserActivityTransition,
                  long evaluatedAt, String baselineStatus, SampleQuality baselineHrQuality, SampleQuality baselineAccelQuality,
                  SampleQuality baselineGyroQuality, SampleQuality recentHrQuality,
-                 MovementCoverage movementCoverage) {
+                 MovementCoverage movementCoverage, boolean systemAwakePersistent, long systemNonAsleepDurationMs,
+                 int systemNonAsleepObservations, String wakeReason, String continueReason) {
             this.shouldWake = shouldWake; this.score = score; this.baselineReady = baselineReady; this.candidate = candidate;
             this.immediateCandidate = immediateCandidate; this.candidateActive = candidateActive;
             this.candidateConfirmed = candidateConfirmed; this.candidateAgeMs = candidateAgeMs;
@@ -441,6 +489,11 @@ public final class SmartWakeDetector {
             this.hrvSampleAgeMs = recentHr.count >= 3 ? ageAt(evaluatedAt, recentHrQuality.latestAt) : -1L;
             this.movementCoverageBuckets = movementCoverage.coveredBuckets;
             this.movementCoverageTotalBuckets = movementCoverage.totalBuckets;
+            this.systemAwakePersistent = systemAwakePersistent;
+            this.systemNonAsleepDurationMs = systemNonAsleepDurationMs;
+            this.systemNonAsleepObservations = systemNonAsleepObservations;
+            this.wakeReason = wakeReason;
+            this.continueReason = continueReason;
         }
 
         private long ageAt(long evaluatedAt, long timestamp) { return timestamp == Long.MIN_VALUE ? -1L : Math.max(0L, evaluatedAt - timestamp); }
@@ -448,11 +501,12 @@ public final class SmartWakeDetector {
         /** One persisted debug record per 30-second scoring evaluation. */
         public String summary(long timestamp) {
             return String.format(Locale.US,
-                    "timestamp=%d BASELINE_READY=%s BASELINE_STATUS=%s BASELINE_SAMPLES[HR=%d,ACCEL=%d,GYRO=%d] HR_SAMPLE_AGE=%dms HRV_SAMPLE_AGE=%dms MOVEMENT_WINDOW_COVERAGE=%d/%d WAKE_SCORE=%d EVIDENCE_GROUPS=%d CANDIDATE=%s CLEARLY_AWAKE=%s DECISION=%s",
+                    "timestamp=%d BASELINE_READY=%s BASELINE_STATUS=%s BASELINE_SAMPLES[HR=%d,ACCEL=%d,GYRO=%d] HR_SAMPLE_AGE=%dms HRV_SAMPLE_AGE=%dms MOVEMENT_WINDOW_COVERAGE=%d/%d SLEEP_STATE=%s SYSTEM_NON_ASLEEP_DURATION=%dms SYSTEM_NON_ASLEEP_OBSERVATIONS=%d SYSTEM_AWAKE_PERSISTENT=%s WAKE_SCORE=%d EVIDENCE_GROUPS=%d CANDIDATE=%s CLEARLY_AWAKE=%s DECISION=%s WAKE_REASON=%s CONTINUE_REASON=%s",
                     timestamp, baselineReady, baselineStatus, baselineHeartRateSamples,
                     baselineAccelerometerSamples, baselineGyroscopeSamples, heartRateSampleAgeMs, hrvSampleAgeMs,
-                    movementCoverageBuckets, movementCoverageTotalBuckets, score, evidenceGroups,
-                    candidateActive, clearlyAwake, shouldWake ? "WAKE" : "CONTINUE");
+                    movementCoverageBuckets, movementCoverageTotalBuckets, userActivity, systemNonAsleepDurationMs,
+                    systemNonAsleepObservations, systemAwakePersistent, score, evidenceGroups,
+                    candidateActive, clearlyAwake, shouldWake ? "WAKE" : "CONTINUE", wakeReason, continueReason);
         }
 
         /** One persisted debug record per 30-second scoring evaluation. */
@@ -462,7 +516,7 @@ public final class SmartWakeDetector {
                             + "HRV=%.1f BASELINE=%.1f DELTA=%+.1f (+%d)\n"
                             + "ACCEL_ACTIVITY=%.3f/s BASELINE=%.3f/s bursts=%d (+%d)\n"
                             + "WRIST_MOVEMENT=%.3f/s BASELINE=%.3f/s bursts=%d (+%d)\n"
-                            + "MOTION_CONFIRMATION=%s (+%d)\nUSER_ACTIVITY=%s (+0)\n"
+                            + "MOTION_CONFIRMATION=%s (+%d)\nUSER_ACTIVITY=%s (+0) SYSTEM_NON_ASLEEP_DURATION=%dms SYSTEM_NON_ASLEEP_OBSERVATIONS=%d SYSTEM_AWAKE_PERSISTENT=%s\n"
                             + "ASLEEP_TO_NON_ASLEEP=%s (+%d)\nSTEP_DETECTOR=%d (confirmation=%s, +0)\n"
                             + "WAKE_SCORE=%d\nEVIDENCE_GROUPS=%d\nCANDIDATE_ACTIVE=%s\nCANDIDATE_AGE=%dms\n"
                             + "CANDIDATE_CONFIRMED=%s\nCLEARLY_AWAKE=%s\nCLEARLY_AWAKE_REASON=%s\n"
@@ -470,7 +524,7 @@ public final class SmartWakeDetector {
                             + "ACCEL_STRONG_BUCKETS=%d GYRO_STRONG_BUCKETS=%d DUAL_STRONG_BUCKETS=%d\n"
                             + "MOVEMENT_SPAN=%dms\nSTEPS=%d STEPS_60S=%d\nFRESH_USER_ACTIVITY_TRANSITION=%s\n"
                             + "CANDIDATE_THRESHOLD=%d CANDIDATE_CONFIRMATION_THRESHOLD=%d IMMEDIATE_THRESHOLD=%d\n"
-                            + "CANDIDATE=%s IMMEDIATE=%s SHOULD_WAKE=%s",
+                            + "CANDIDATE=%s IMMEDIATE=%s SHOULD_WAKE=%s WAKE_REASON=%s CONTINUE_REASON=%s",
                     baselineReady, baselineStatus, baselineHeartRateSamples, baselineAccelerometerSamples,
                     baselineGyroscopeSamples, heartRateSampleAgeMs, hrvSampleAgeMs,
                     movementCoverageBuckets, movementCoverageTotalBuckets,
@@ -478,13 +532,14 @@ public final class SmartWakeDetector {
                     heartRateVariability, hrvBaseline, hrvAboveBaseline, hrvRisePoints,
                     accelerometer.energyPerSecond, accelerometerBaseline.energyPerSecond, accelerometer.bursts, accelPoints,
                     gyroscope.energyPerSecond, gyroscopeBaseline.energyPerSecond, gyroscope.bursts, gyroPoints,
-                    accelPoints >= 14 && gyroPoints >= 12, combinedMotionPoints, userActivity, transitionPoints > 0,
+                    accelPoints >= 14 && gyroPoints >= 12, combinedMotionPoints, userActivity, systemNonAsleepDurationMs,
+                    systemNonAsleepObservations, systemAwakePersistent, transitionPoints > 0,
                     transitionPoints, steps, lateAwakeConfirmation, score, evidenceGroups, candidateActive,
                     candidateAgeMs, candidateConfirmed, clearlyAwake, clearlyAwakeReason, activeMovementBuckets,
                     accelActiveBuckets, gyroActiveBuckets, accelStrongBuckets, gyroStrongBuckets,
                     dualStrongBuckets, movementSpanMs, steps, steps60Seconds, freshUserActivityTransition,
                     CONFIRMED_WAKE_THRESHOLD, CANDIDATE_CONFIRMATION_THRESHOLD, IMMEDIATE_WAKE_THRESHOLD,
-                    candidate, immediateCandidate, shouldWake);
+                    candidate, immediateCandidate, shouldWake, wakeReason, continueReason);
         }
     }
 }
