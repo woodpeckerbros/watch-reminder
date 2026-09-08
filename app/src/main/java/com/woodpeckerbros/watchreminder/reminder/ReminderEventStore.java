@@ -347,6 +347,7 @@ public class ReminderEventStore {
         clearGeneration = nextGeneration;
         rawCache = null;
         collapsedCache = null;
+        ReminderUiCache.invalidate();
         ReminderDueChecker.markCheckedNow(context);
         ReminderAudit.markAuditedNow(context);
     }
@@ -442,6 +443,7 @@ public class ReminderEventStore {
             prefs.edit().putString(KEY_ITEMS, array.toString()).apply();
             rawCache = null;
             collapsedCache = null;
+            ReminderUiCache.invalidate();
         } catch (JSONException ignored) {
         }
     }

@@ -85,6 +85,7 @@ public class ReminderSnoozeStore {
             }
             prefs.edit().putString(KEY_ITEMS, array.toString()).commit();
             cache = null;
+            ReminderUiCache.invalidate();
         } catch (JSONException ignored) {
         }
     }

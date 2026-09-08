@@ -222,7 +222,7 @@ public class MainActivity extends Activity {
     private boolean pendingWaterSettings;
     private boolean zmanimBackToSettings = true;
     private long lastForegroundDueCheckAt;
-    private String lastReminderListFingerprint = "";
+    private long lastReminderDataGeneration = -1L;
     private int lastHomeIllustrationPeriod = -1;
     private long createdAt;
     private boolean startupMaintenancePending;
@@ -234,7 +234,12 @@ public class MainActivity extends Activity {
     private int homeUpcomingLoadGeneration;
     private LinearLayout homeUpcomingContainer;
     private boolean initialHomeUpcomingLoadInFlight;
-    private int allRemindersLoadGeneration;
+    private long cachedReminderDataGeneration = -1L;
+    private List<HomeReminderItem> cachedHomeUpcoming;
+    private AllRemindersData cachedAllRemindersData;
+    private boolean allRemindersCacheLoadInFlight;
+    private long allRemindersCacheLoadGeneration = -1L;
+    private boolean renderAllRemindersAfterCacheLoad;
     private static final String[] BLESSING_NAMES = {
             "אשר יצר",
             "קריאת שמע בזמנה",
@@ -392,6 +397,7 @@ public class MainActivity extends Activity {
                 DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
                 OmerScheduler.dispatchIfDueNow(MainActivity.this);
                 refreshVisibleScreenAfterStartupMaintenance();
+                warmReminderPresentationCache();
                 if (!showMissedReminderReliabilityPromptIfNeeded()) {
                     requestMissingAccessIfNeeded();
                 }
@@ -783,6 +789,11 @@ public class MainActivity extends Activity {
     }
 
     private void loadHomeUpcomingAsync(LinearLayout container, int generation) {
+        long dataGeneration = ReminderUiCache.generation();
+        if (hasCachedReminderPresentation(dataGeneration) && cachedHomeUpcoming != null) {
+            renderHomeUpcoming(container, cachedHomeUpcoming);
+            return;
+        }
         boolean initialLoad = !startupMaintenanceDone && !startupMaintenanceRunning;
         if (initialLoad) initialHomeUpcomingLoadInFlight = true;
         new Thread(() -> {
@@ -796,6 +807,9 @@ public class MainActivity extends Activity {
             List<HomeReminderItem> loadedUpcoming = upcoming;
             mainHandler.post(() -> {
                 if (initialLoad) initialHomeUpcomingLoadInFlight = false;
+                if (dataGeneration == ReminderUiCache.generation()) {
+                    cacheHomeUpcoming(dataGeneration, loadedUpcoming);
+                }
                 if (!"list".equals(currentScreen)
                         || generation != homeUpcomingLoadGeneration
                         || container != homeUpcomingContainer
@@ -965,6 +979,76 @@ public class MainActivity extends Activity {
         return new AllRemindersData(reminders, snoozeStore, nextByReminder, nextReminder);
     }
 
+    private boolean hasCachedReminderPresentation(long generation) {
+        return cachedReminderDataGeneration == generation;
+    }
+
+    private void cacheHomeUpcoming(long generation, List<HomeReminderItem> upcoming) {
+        if (generation != ReminderUiCache.generation()) return;
+        cachedReminderDataGeneration = generation;
+        cachedHomeUpcoming = new java.util.ArrayList<>(upcoming);
+    }
+
+    private void cacheAllRemindersData(long generation, AllRemindersData data) {
+        if (generation != ReminderUiCache.generation()) return;
+        cachedReminderDataGeneration = generation;
+        cachedAllRemindersData = data;
+        List<HomeReminderItem> homeItems = new java.util.ArrayList<>();
+        for (Reminder reminder : data.reminders) {
+            NextReminderCalculator.NextReminder next = data.nextByReminder.get(reminder.id);
+            if (next != null) homeItems.add(new HomeReminderItem(reminder, next));
+        }
+        homeItems.sort((left, right) -> Long.compare(left.next.scheduledAt, right.next.scheduledAt));
+        if (homeItems.size() > 3) homeItems = new java.util.ArrayList<>(homeItems.subList(0, 3));
+        cachedHomeUpcoming = homeItems;
+    }
+
+    private void warmReminderPresentationCache() {
+        requestAllRemindersDataAsync(false);
+    }
+
+    private void requestAllRemindersDataAsync(boolean renderAllRemindersWhenReady) {
+        long dataGeneration = ReminderUiCache.generation();
+        if (hasCachedReminderPresentation(dataGeneration) && cachedAllRemindersData != null) {
+            if (renderAllRemindersWhenReady && "all_reminders".equals(currentScreen)) showAllReminders(cachedAllRemindersData);
+            return;
+        }
+        if (allRemindersCacheLoadInFlight && allRemindersCacheLoadGeneration == dataGeneration) {
+            renderAllRemindersAfterCacheLoad |= renderAllRemindersWhenReady;
+            return;
+        }
+        allRemindersCacheLoadInFlight = true;
+        allRemindersCacheLoadGeneration = dataGeneration;
+        renderAllRemindersAfterCacheLoad = renderAllRemindersWhenReady;
+        Context appContext = getApplicationContext();
+        REMINDER_LIST_EXECUTOR.execute(() -> {
+            try {
+                AllRemindersData loaded = loadAllRemindersData(appContext);
+                mainHandler.post(() -> {
+                    boolean renderWhenReady = renderAllRemindersAfterCacheLoad;
+                    allRemindersCacheLoadInFlight = false;
+                    renderAllRemindersAfterCacheLoad = false;
+                    if (dataGeneration != ReminderUiCache.generation()) {
+                        if (renderWhenReady && "all_reminders".equals(currentScreen)) requestAllRemindersDataAsync(true);
+                        return;
+                    }
+                    cacheAllRemindersData(dataGeneration, loaded);
+                    if (renderWhenReady && "all_reminders".equals(currentScreen)) showAllReminders(loaded);
+                });
+            } catch (RuntimeException exception) {
+                AppLog.e(appContext, "all reminders background load failed", exception);
+                mainHandler.post(() -> {
+                    allRemindersCacheLoadInFlight = false;
+                    boolean renderWhenReady = renderAllRemindersAfterCacheLoad;
+                    renderAllRemindersAfterCacheLoad = false;
+                    if (renderWhenReady && "all_reminders".equals(currentScreen)) {
+                        Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "לא הצלחתי לטעון את התזכורות"), Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        });
+    }
+
     private void showAllReminders() {
         showAllReminders(null);
     }
@@ -1036,31 +1120,16 @@ public class MainActivity extends Activity {
         }
 
         if (preloaded == null) {
+            long dataGeneration = ReminderUiCache.generation();
+            if (hasCachedReminderPresentation(dataGeneration) && cachedAllRemindersData != null) {
+                showAllReminders(cachedAllRemindersData);
+                return;
+            }
             TextView loading = infoPill("טוען תזכורות...", COLOR_MUTED);
             content.addView(loading);
             setScrollableContent(content, homeIllustrationResource(homeIllustrationPeriod()));
             rememberReminderListFingerprint();
-            int loadGeneration = ++allRemindersLoadGeneration;
-            Context appContext = getApplicationContext();
-            REMINDER_LIST_EXECUTOR.execute(() -> {
-                try {
-                    AllRemindersData loaded = loadAllRemindersData(appContext);
-                    runOnUiThread(() -> {
-                        if (!"all_reminders".equals(currentScreen) || loadGeneration != allRemindersLoadGeneration) {
-                            return;
-                        }
-                        showAllReminders(loaded);
-                    });
-                } catch (RuntimeException exception) {
-                    AppLog.e(appContext, "all reminders background load failed", exception);
-                    runOnUiThread(() -> {
-                        if (!"all_reminders".equals(currentScreen) || loadGeneration != allRemindersLoadGeneration) {
-                            return;
-                        }
-                        Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "לא הצלחתי לטעון את התזכורות"), Toast.LENGTH_LONG).show();
-                    });
-                }
-            });
+            requestAllRemindersDataAsync(true);
             return;
         }
 
@@ -6482,11 +6551,11 @@ public class MainActivity extends Activity {
     }
 
     private void refreshVisibleScreenIfRemindersChanged() {
-        String currentFingerprint = reminderListFingerprint();
-        if (currentFingerprint.equals(lastReminderListFingerprint)) {
+        long currentGeneration = ReminderUiCache.generation();
+        if (currentGeneration == lastReminderDataGeneration) {
             return;
         }
-        lastReminderListFingerprint = currentFingerprint;
+        lastReminderDataGeneration = currentGeneration;
         store = new ReminderStore(this);
         refreshVisibleScreen();
     }
@@ -6503,19 +6572,7 @@ public class MainActivity extends Activity {
     }
 
     private void rememberReminderListFingerprint() {
-        lastReminderListFingerprint = reminderListFingerprint();
-    }
-
-    private String reminderListFingerprint() {
-        StringBuilder builder = new StringBuilder();
-        for (Reminder reminder : new ReminderStore(this).getAll()) {
-            try {
-                builder.append(reminder.toJson()).append('\n');
-            } catch (Exception exception) {
-                builder.append(reminder.id).append('|').append(reminder.name).append('\n');
-            }
-        }
-        return builder.toString();
+        lastReminderDataGeneration = ReminderUiCache.generation();
     }
 
     private void addTitle(LinearLayout content, String title, String subtitle) {

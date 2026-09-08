@@ -125,6 +125,7 @@ public class ReminderStore {
             }
             prefs.edit().putString(KEY_ITEMS, array.toString()).apply();
             cache = null;
+            ReminderUiCache.invalidate();
         } catch (Exception ignored) {
         }
     }
