@@ -1,5 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +11,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.woodpeckerbros.watchreminder.calendar.*;
 
 /**
  * Configuration and recovery screen shared by complications that require Jewish Mode.

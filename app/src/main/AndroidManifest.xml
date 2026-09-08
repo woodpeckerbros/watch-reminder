@@ -36,7 +36,7 @@
             android:value="true" />
 
         <service
-            android:name=".ReminderMonitoringService"
+            android:name=".reminder.ReminderMonitoringService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
             android:stopWithTask="false">
@@ -46,12 +46,12 @@
         </service>
 
         <service
-            android:name=".ReminderRecoveryJobService"
+            android:name=".reminder.ReminderRecoveryJobService"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <service
-            android:name=".smartwake.SmartWakeMonitoringService"
+            android:name=".smartalarm.SmartWakeMonitoringService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -60,7 +60,7 @@
         </service>
 
         <service
-            android:name=".smartwake.SmartAlarmRingingService"
+            android:name=".smartalarm.SmartAlarmRingingService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -69,7 +69,7 @@
         </service>
 
         <service
-            android:name=".DeferredWearStateService"
+            android:name=".reminder.DeferredWearStateService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -78,12 +78,12 @@
         </service>
 
         <service
-            android:name=".ReminderHealthPassiveService"
+            android:name=".reminder.ReminderHealthPassiveService"
             android:exported="true"
             android:permission="com.google.android.wearable.healthservices.permission.PASSIVE_DATA_BINDING" />
 
         <service
-            android:name=".RestoreFromPhoneService"
+            android:name=".sync.RestoreFromPhoneService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.BIND_LISTENER"
@@ -138,7 +138,7 @@
         </service>
 
         <service
-            android:name=".ZmanimComplicationService"
+            android:name=".zmanim.ZmanimComplicationService"
             android:directBootAware="true"
             android:exported="true"
             android:icon="@drawable/ic_complication_clock"
@@ -190,7 +190,7 @@
         </activity>
 
         <service
-            android:name=".IntermittentFastingComplicationService"
+            android:name=".reminder.IntermittentFastingComplicationService"
             android:directBootAware="true"
             android:exported="true"
             android:icon="@drawable/ic_complication_clock"
@@ -208,7 +208,7 @@
         </service>
 
         <service
-            android:name=".WaterReminderComplicationService"
+            android:name=".reminder.WaterReminderComplicationService"
             android:directBootAware="true"
             android:exported="true"
             android:icon="@drawable/ic_water_drop_notification"
@@ -226,24 +226,24 @@
         </service>
 
         <activity
-            android:name=".ReminderAlertActivity"
+            android:name=".reminder.ReminderAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
             android:taskAffinity=""
             android:theme="@style/AppTheme" />
 
-        <activity android:name=".smartwake.SmartAlarmAlertActivity" android:excludeFromRecents="true" android:exported="false"
+        <activity android:name=".smartalarm.SmartAlarmAlertActivity" android:excludeFromRecents="true" android:exported="false"
             android:showWhenLocked="true" android:taskAffinity="" android:theme="@style/AppTheme" />
-        <activity android:name=".smartwake.SmartAlarmWakeCheckActivity" android:excludeFromRecents="true" android:exported="false"
+        <activity android:name=".smartalarm.SmartAlarmWakeCheckActivity" android:excludeFromRecents="true" android:exported="false"
             android:showWhenLocked="true" android:taskAffinity="" android:theme="@style/AppTheme" />
 
         <receiver
-            android:name=".smartwake.SmartAlarmActions"
+            android:name=".smartalarm.SmartAlarmActions"
             android:exported="false" />
 
         <activity
-            android:name=".DafYomiAlertActivity"
+            android:name=".calendar.DafYomiAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -251,7 +251,7 @@
             android:theme="@style/AppTheme" />
 
         <activity
-            android:name=".OmerAlertActivity"
+            android:name=".calendar.OmerAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -259,7 +259,7 @@
             android:theme="@style/AppTheme" />
 
         <activity
-            android:name=".IntermittentFastingAlertActivity"
+            android:name=".reminder.IntermittentFastingAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -267,7 +267,7 @@
             android:theme="@style/AppTheme" />
 
         <activity
-            android:name=".WaterReminderAlertActivity"
+            android:name=".reminder.WaterReminderAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -275,7 +275,7 @@
             android:theme="@style/AppTheme" />
 
         <activity
-            android:name=".MoonBlessingAlertActivity"
+            android:name=".calendar.MoonBlessingAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -283,7 +283,7 @@
             android:theme="@style/AppTheme" />
 
         <activity
-            android:name=".InformationalAlertActivity"
+            android:name=".reminder.InformationalAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:showWhenLocked="true"
@@ -301,60 +301,60 @@
         </activity>
 
         <receiver
-            android:name=".ReminderReceiver"
+            android:name=".reminder.ReminderReceiver"
             android:exported="false" />
 
-        <receiver android:name=".smartwake.SmartWakeWindowReceiver" android:exported="false" />
-        <receiver android:name=".smartwake.SmartAlarmReceiver" android:exported="false" />
-        <receiver android:name=".smartwake.SmartAlarmAutoSnoozeReceiver" android:exported="false" />
-        <receiver android:name=".smartwake.SmartAlarmWakeCheckReceiver" android:exported="false" />
+        <receiver android:name=".smartalarm.SmartWakeWindowReceiver" android:exported="false" />
+        <receiver android:name=".smartalarm.SmartAlarmReceiver" android:exported="false" />
+        <receiver android:name=".smartalarm.SmartAlarmAutoSnoozeReceiver" android:exported="false" />
+        <receiver android:name=".smartalarm.SmartAlarmWakeCheckReceiver" android:exported="false" />
 
         <receiver
-            android:name=".AutoSnoozeReceiver"
-            android:exported="false" />
-
-        <receiver
-            android:name=".DeferredWearRetryReceiver"
+            android:name=".reminder.AutoSnoozeReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".DafYomiReceiver"
+            android:name=".reminder.DeferredWearRetryReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".OmerReceiver"
+            android:name=".calendar.DafYomiReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".MoonBlessingReceiver"
+            android:name=".calendar.OmerReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".InformationalAlertReceiver"
+            android:name=".calendar.MoonBlessingReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".JewishDayReceiver"
+            android:name=".reminder.InformationalAlertReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".TekufaReceiver"
+            android:name=".calendar.JewishDayReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".IntermittentFastingReceiver"
+            android:name=".calendar.TekufaReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".WaterReminderReceiver"
+            android:name=".reminder.IntermittentFastingReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".WatchdogReceiver"
+            android:name=".reminder.WaterReminderReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".BootReceiver"
+            android:name=".reminder.WatchdogReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".reminder.BootReceiver"
             android:directBootAware="true"
             android:exported="false">
             <intent-filter>

@@ -1,5 +1,9 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+
+import com.woodpeckerbros.watchreminder.zmanim.*;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.Handler;

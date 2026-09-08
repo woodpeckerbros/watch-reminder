@@ -1,5 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;

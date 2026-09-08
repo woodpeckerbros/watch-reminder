@@ -1,5 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.zmanim.*;
+
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;

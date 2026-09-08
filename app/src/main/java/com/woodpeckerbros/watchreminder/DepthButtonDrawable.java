@@ -9,12 +9,12 @@ import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 
 /** Pill drawable with a lower bevel, soft highlight and pressed depth. */
-final class DepthButtonDrawable extends Drawable {
+public final class DepthButtonDrawable extends Drawable {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int baseColor;
     private final float radius;
 
-    DepthButtonDrawable(int baseColor, float radius) {
+    public DepthButtonDrawable(int baseColor, float radius) {
         this.baseColor = baseColor;
         this.radius = radius;
     }

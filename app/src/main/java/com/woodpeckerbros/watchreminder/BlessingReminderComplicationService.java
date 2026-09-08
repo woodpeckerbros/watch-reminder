@@ -1,5 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.graphics.drawable.Icon;

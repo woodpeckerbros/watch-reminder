@@ -1,5 +1,8 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+import com.woodpeckerbros.watchreminder.zmanim.*;
+
 import com.kosherjava.zmanim.util.GeoLocation;
 import com.kosherjava.zmanim.ComplexZmanimCalendar;
 

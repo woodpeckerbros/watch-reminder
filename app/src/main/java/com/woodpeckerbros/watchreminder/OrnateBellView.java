@@ -10,10 +10,10 @@ import android.graphics.Shader;
 import android.view.View;
 
 /** Compact bronze-and-patina bell drawn in code so it stays crisp on every Wear display. */
-final class OrnateBellView extends View {
+public final class OrnateBellView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    OrnateBellView(Context context) { super(context); }
+    public OrnateBellView(Context context) { super(context); }
 
     @Override protected void onDraw(Canvas canvas) {
         float s = Math.min(getWidth() / 72f, getHeight() / 66f);

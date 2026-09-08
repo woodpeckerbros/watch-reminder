@@ -1,5 +1,12 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+
+import com.woodpeckerbros.watchreminder.zmanim.*;
+import com.woodpeckerbros.watchreminder.sync.*;
+
+import com.woodpeckerbros.watchreminder.calendar.*;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -59,8 +66,8 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmScheduler;
-import com.woodpeckerbros.watchreminder.smartwake.SmartAlarmStore;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmStore;
 
 import com.kosherjava.zmanim.hebrewcalendar.HebrewDateFormatter;
 import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
@@ -137,6 +144,11 @@ public class MainActivity extends Activity {
     });
     private static final ExecutorService REMINDER_ACTION_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "wr-reminder-action");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private static final ExecutorService REMINDER_LIST_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "wr-reminder-list");
         thread.setDaemon(true);
         return thread;
     });
@@ -220,6 +232,7 @@ public class MainActivity extends Activity {
     private int startupListPass;
     private int homeUpcomingLoadGeneration;
     private LinearLayout homeUpcomingContainer;
+    private int allRemindersLoadGeneration;
     private static final String[] BLESSING_NAMES = {
             "אשר יצר",
             "קריאת שמע בזמנה",
@@ -898,7 +911,46 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static final class AllRemindersData {
+        final List<Reminder> reminders;
+        final ReminderSnoozeStore snoozeStore;
+        final java.util.Map<String, NextReminderCalculator.NextReminder> nextByReminder;
+        final NextReminderCalculator.NextReminder nextReminder;
+
+        AllRemindersData(List<Reminder> reminders,
+                        ReminderSnoozeStore snoozeStore,
+                        java.util.Map<String, NextReminderCalculator.NextReminder> nextByReminder,
+                        NextReminderCalculator.NextReminder nextReminder) {
+            this.reminders = reminders;
+            this.snoozeStore = snoozeStore;
+            this.nextByReminder = nextByReminder;
+            this.nextReminder = nextReminder;
+        }
+    }
+
+    private AllRemindersData loadAllRemindersData(Context context) {
+        ReminderStore backgroundStore = new ReminderStore(context);
+        List<Reminder> reminders = new java.util.ArrayList<>(backgroundStore.getAll());
+        ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(context);
+        ReminderEventStore eventStore = new ReminderEventStore(context);
+        java.util.Map<String, NextReminderCalculator.NextReminder> nextByReminder = new java.util.HashMap<>();
+        NextReminderCalculator.NextReminder nextReminder = null;
+        for (Reminder reminder : reminders) {
+            NextReminderCalculator.NextReminder candidate = NextReminderCalculator.nextForReminder(
+                    context, reminder, snoozeStore, eventStore, true);
+            nextByReminder.put(reminder.id, candidate);
+            if (candidate != null && (nextReminder == null || candidate.scheduledAt < nextReminder.scheduledAt)) {
+                nextReminder = candidate;
+            }
+        }
+        return new AllRemindersData(reminders, snoozeStore, nextByReminder, nextReminder);
+    }
+
     private void showAllReminders() {
+        showAllReminders(null);
+    }
+
+    private void showAllReminders(AllRemindersData preloaded) {
         currentScreen = "all_reminders";
         editingReminder = null;
         boolean jewishMode = new ReminderSettings(this).jewishMode();
@@ -964,20 +1016,39 @@ public class MainActivity extends Activity {
             return;
         }
 
-        List<Reminder> reminders = new java.util.ArrayList<>(store.getAll());
-        ReminderSnoozeStore snoozeStore = new ReminderSnoozeStore(this);
-        ReminderEventStore eventStore = new ReminderEventStore(this);
-        java.util.Map<String, NextReminderCalculator.NextReminder> nextByReminder = new java.util.HashMap<>();
-        NextReminderCalculator.NextReminder nextReminder = null;
-        if (!fastStartupList) {
-            for (Reminder reminder : reminders) {
-                NextReminderCalculator.NextReminder candidate = NextReminderCalculator.nextForReminder(this, reminder, snoozeStore, eventStore, true);
-                nextByReminder.put(reminder.id, candidate);
-                if (candidate != null && (nextReminder == null || candidate.scheduledAt < nextReminder.scheduledAt)) {
-                    nextReminder = candidate;
+        if (preloaded == null) {
+            TextView loading = infoPill("טוען תזכורות...", COLOR_MUTED);
+            content.addView(loading);
+            setScrollableContent(content, homeIllustrationResource(homeIllustrationPeriod()));
+            rememberReminderListFingerprint();
+            int loadGeneration = ++allRemindersLoadGeneration;
+            Context appContext = getApplicationContext();
+            REMINDER_LIST_EXECUTOR.execute(() -> {
+                try {
+                    AllRemindersData loaded = loadAllRemindersData(appContext);
+                    runOnUiThread(() -> {
+                        if (!"all_reminders".equals(currentScreen) || loadGeneration != allRemindersLoadGeneration) {
+                            return;
+                        }
+                        showAllReminders(loaded);
+                    });
+                } catch (RuntimeException exception) {
+                    AppLog.e(appContext, "all reminders background load failed", exception);
+                    runOnUiThread(() -> {
+                        if (!"all_reminders".equals(currentScreen) || loadGeneration != allRemindersLoadGeneration) {
+                            return;
+                        }
+                        Toast.makeText(MainActivity.this, UiText.t(MainActivity.this, "לא הצלחתי לטעון את התזכורות"), Toast.LENGTH_LONG).show();
+                    });
                 }
-            }
+            });
+            return;
         }
+
+        List<Reminder> reminders = new java.util.ArrayList<>(preloaded.reminders);
+        ReminderSnoozeStore snoozeStore = preloaded.snoozeStore;
+        java.util.Map<String, NextReminderCalculator.NextReminder> nextByReminder = preloaded.nextByReminder;
+        NextReminderCalculator.NextReminder nextReminder = preloaded.nextReminder;
         String nextReminderId = nextReminder == null ? null : nextReminder.reminderId;
         if (!fastStartupList && nextReminderId != null) {
             moveReminderToTop(reminders, nextReminderId);
@@ -1066,7 +1137,7 @@ public class MainActivity extends Activity {
         settingsButton.setOnClickListener(v -> showSettings());
         settingsRow.addView(settingsButton);
         content.addView(settingsRow);
-        setScrollableContent(content);
+        setScrollableContent(content, homeIllustrationResource(homeIllustrationPeriod()));
         if (shouldFocus) {
             scrollToFocusedReminder(focusTarget[0]);
         }
@@ -1702,7 +1773,7 @@ public class MainActivity extends Activity {
             preview.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
                     stepCount.getValue(), alternatingTaps.getValue(), multipleTaskMask[0],
                     false, wakeCheckDelay.getValue());
-            startActivity(new Intent(this, com.woodpeckerbros.watchreminder.smartwake.SmartAlarmAlertActivity.class)
+            startActivity(new Intent(this, com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmAlertActivity.class)
                     .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, SmartAlarmStore.PREVIEW_ALARM_ID)
                     .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, System.currentTimeMillis())
                     .putExtra("reason", "settings_preview").putExtra("preview_mode", true)

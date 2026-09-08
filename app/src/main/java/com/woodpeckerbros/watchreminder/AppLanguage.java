@@ -1,5 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
+import com.woodpeckerbros.watchreminder.reminder.*;
+
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
