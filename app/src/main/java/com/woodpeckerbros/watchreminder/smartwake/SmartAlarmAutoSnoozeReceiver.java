@@ -32,7 +32,7 @@ public final class SmartAlarmAutoSnoozeReceiver extends BroadcastReceiver {
         } else {
             AppLog.w(context, "SmartAlarm unanswered; snoozes exhausted id=" + alarmId);
             state.dismiss(targetAt);
-            SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId);
+            SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId, targetAt);
         }
     }
 }

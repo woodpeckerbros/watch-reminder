@@ -185,6 +185,11 @@ public final class SmartAlarmAlertActivity extends Activity {
     private void dismissAlarm() {
         if (previewMode) { closePreview(); return; }
         explicitlyHandled = true;
+        // Cancel all receivers for this occurrence before changing its state.  In particular,
+        // this prevents a pending SmartWakeWindowReceiver from restarting sensor sampling after
+        // the user has pressed "Dismiss".
+        SmartAlarmScheduler.cancel(this, alarmId);
+        SmartWakeMonitoringService.stop(this, alarmId);
         SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
         new SmartAlarmStateStore(this, alarmId).dismiss(targetAt);
         stopFeedback();
@@ -193,7 +198,7 @@ public final class SmartAlarmAlertActivity extends Activity {
         } else {
             SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
         }
-        SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId);
+        SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId, targetAt);
         close();
     }
 

@@ -74,9 +74,18 @@ public final class SmartAlarmScheduler {
     }
 
     private static void schedule(Context context, int alarmId) {
+        schedule(context, alarmId, System.currentTimeMillis());
+    }
+
+    /**
+     * Schedules the first calendar occurrence strictly after {@code notBefore}.
+     * This matters when Smart Wake fires before its configured deadline: dismissing at (for
+     * example) 06:59 must not create a fresh 07:10 occurrence for the same morning.
+     */
+    private static void schedule(Context context, int alarmId, long notBefore) {
         SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
         if (!store.enabled()) return;
-        long targetAt = nextTarget(store.hour(), store.minute(), store.daysMask(), System.currentTimeMillis());
+        long targetAt = nextTarget(store.hour(), store.minute(), store.daysMask(), notBefore);
         if (targetAt == Long.MAX_VALUE) return;
         long wakeWindowStartAt = targetAt - store.windowMinutes() * 60_000L;
         // Build a personal sleep baseline before the user-selected wake window, while keeping
@@ -107,7 +116,14 @@ public final class SmartAlarmScheduler {
         AppLog.d(context, "SmartAlarm snoozed id=" + alarmId + " original=" + originalTargetAt + " target=" + targetAt);
     }
 
-    public static void scheduleNextAfterHandled(Context context, int alarmId) { reschedule(context, alarmId); }
+    /**
+     * Ends the current occurrence and schedules only a later calendar occurrence.  Do not use a
+     * plain reschedule here: before the configured deadline it would recreate the same alarm.
+     */
+    public static void scheduleNextAfterHandled(Context context, int alarmId, long handledTargetAt) {
+        cancel(context, alarmId);
+        schedule(context, alarmId, Math.max(System.currentTimeMillis(), handledTargetAt));
+    }
 
     public static void scheduleDetectedFire(Context context, int alarmId, long targetAt) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);

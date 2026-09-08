@@ -14,14 +14,10 @@ import android.os.Looper;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
-import com.woodpeckerbros.watchreminder.ReminderSettings;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
     private static final String CHANNEL_PREFIX = "smart_alarm_alert_v8";
-    private static final String CHANNEL_VIBRATION = CHANNEL_PREFIX + "_vibration";
     private static final String CHANNEL_SILENT = CHANNEL_PREFIX + "_silent";
-    private static final long[] SYSTEM_ALARM_VIBRATION =
-            new long[]{0L, 350L, 180L, 350L, 180L, 350L, 180L, 350L};
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
@@ -47,9 +43,11 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
         SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
-        boolean systemVibrationEnabled = settings.vibrationEnabled()
-                && !ReminderSettings.VIBRATION_OFF.equals(settings.vibrationStyle());
-        String channelId = systemVibrationEnabled ? CHANNEL_VIBRATION : CHANNEL_SILENT;
+        // The notification is only the Android full-screen delivery transport.  Its own alarm
+        // vibration can arrive before the full-screen activity on Wear OS, which looks like a
+        // system alarm taking precedence over Zmanio.  The ringing service/activity owns the
+        // configured sound and vibration; this transport notification must stay silent.
+        String channelId = CHANNEL_SILENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             for (NotificationChannel existing : manager.getNotificationChannels()) {
                 if (existing.getId().startsWith("smart_alarm_alert")
@@ -63,8 +61,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build();
         channel.setSound(null, alarmAttributes);
-        channel.enableVibration(systemVibrationEnabled);
-        if (systemVibrationEnabled) channel.setVibrationPattern(SYSTEM_ALARM_VIBRATION);
+        channel.enableVibration(false);
         channel.setBypassDnd(manager.isNotificationPolicyAccessGranted());
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
@@ -85,7 +82,6 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
                 .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
-        if (systemVibrationEnabled) builder.setVibrate(SYSTEM_ALARM_VIBRATION);
         Notification notification = builder.build();
         manager.notify(0x534d5704 + alarmId, notification);
         AppLog.d(context, "SmartAlarm notified id=" + alarmId

@@ -42,6 +42,8 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
 
         SmartAlarmRingingService.stop(context);
+        SmartWakeMonitoringService.stop(context, alarmId);
+        SmartAlarmScheduler.cancel(context, alarmId);
         SmartAlarmScheduler.cancelAutoSnooze(context, alarmId);
         cancelNotification(context, alarmId);
         if (ACTION_SNOOZE.equals(intent.getAction())) {
@@ -59,7 +61,7 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         } else {
             SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
         }
-        SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId);
+        SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId, targetAt);
         AppLog.d(context, "SmartAlarm notification dismiss id=" + alarmId);
     }
 
