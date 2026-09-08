@@ -28,6 +28,8 @@ public final class SmartAlarmRingingService extends Service {
     private AlertFeedback feedback;
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private int activeAlarmId;
+    private long activeTargetAt;
 
     public static boolean start(Context context, int alarmId, long targetAt) {
         try {
@@ -50,26 +52,42 @@ public final class SmartAlarmRingingService extends Service {
         super.onCreate();
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Alarm ringing", NotificationManager.IMPORTANCE_LOW));
-        startForeground(NOTIFICATION_ID, new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Smart Alarm").setContentText("ההתראה פעילה").setOngoing(true).build());
+        startForeground(NOTIFICATION_ID, notification(1, 0L));
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         int alarmId = intent == null ? 1 : intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
         long targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
+        activeAlarmId = alarmId;
+        activeTargetAt = targetAt;
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) manager.notify(NOTIFICATION_ID, notification(alarmId, targetAt));
         if (feedback != null) feedback.stop();
         handler.removeCallbacksAndMessages(null);
-        if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
-            stopSelf();
-            return START_NOT_STICKY;
-        }
         SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
         int alertDurationMs = settings.alertDurationSeconds() * 1000;
         holdCpuWhileRinging(alertDurationMs);
-        feedback = AlertFeedback.startSmartAlarm(this, settings);
-        handler.postDelayed(() -> ensureAlertScreen(alarmId, targetAt), 1_200L);
+        // The full-screen notification can win the race and open the activity before this FGS
+        // reaches onStartCommand.  Keep the service in that case as the screen guard, but leave
+        // feedback to the already-visible activity so it is not started twice.
+        if (!SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
+            feedback = AlertFeedback.startSmartAlarm(this, settings);
+        }
+        handler.postDelayed(() -> guardAlertScreen(alarmId, targetAt), 1_200L);
         handler.postDelayed(this::stopSelf, alertDurationMs + 1_000L);
         return START_NOT_STICKY;
+    }
+
+    private Notification notification(int alarmId, long targetAt) {
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Smart Alarm").setContentText("ההתראה פעילה").setOngoing(true);
+        if (targetAt > 0L) {
+            builder.setContentIntent(SmartAlarmActions.openPendingIntent(this, alarmId, targetAt))
+                    .addAction(SmartAlarmActions.openAction(this, alarmId, targetAt))
+                    .addAction(SmartAlarmActions.snoozeAction(this, alarmId, targetAt))
+                    .addAction(SmartAlarmActions.dismissAction(this, alarmId, targetAt));
+        }
+        return builder.build();
     }
 
     private void holdCpuWhileRinging(int alertDurationMs) {
@@ -93,16 +111,26 @@ public final class SmartAlarmRingingService extends Service {
         wakeLock = null;
     }
 
-    private void ensureAlertScreen(int alarmId, long targetAt) {
+    private void guardAlertScreen(int alarmId, long targetAt) {
         if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
-            AppLog.d(this, "SmartAlarm screen fallback skipped; activity visible id=" + alarmId);
-            return;
+            // The activity now owns user feedback; the service stays alive only to guard its
+            // foreground state and to recover it if Wear OS sends it back to Home.
+            if (feedback != null) { feedback.stop(); feedback = null; }
+            AppLog.d(this, "SmartAlarm screen guard confirmed visible id=" + alarmId);
+        } else {
+            ensureAlertScreen(alarmId, targetAt);
         }
+        if (activeAlarmId == alarmId && activeTargetAt == targetAt)
+            handler.postDelayed(() -> guardAlertScreen(alarmId, targetAt), 2_000L);
+    }
+
+    private void ensureAlertScreen(int alarmId, long targetAt) {
         Intent alert = new Intent(this, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
                 .putExtra("reason", "ringing_service_fallback")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         Bundle creatorOptions = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             ActivityOptions options = ActivityOptions.makeBasic();

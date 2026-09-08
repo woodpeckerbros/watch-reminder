@@ -70,9 +70,9 @@ public final class SmartAlarmAlertActivity extends Activity {
                 + " target=" + targetAt + " reason=" + getIntent().getStringExtra("reason"));
         settings = new SmartAlarmStore(this, alarmId);
         setContentView(content());
-        // Match regular reminders once the full-screen UI is visible. The service remains only
-        // as a fallback for devices that decline to present the activity.
-        SmartAlarmRingingService.stop(this);
+        // Keep the ringing service alive as a foreground screen guard.  Wear OS can send an
+        // alarm activity back to Home after it was shown; the guard brings it forward again
+        // while this occurrence remains unanswered.
         alertFeedback = AlertFeedback.startSmartAlarm(this, settings);
     }
 

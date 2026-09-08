@@ -80,6 +80,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .setFullScreenIntent(pending, true).setSound(null)
                 .setDefaults(0).setOnlyAlertOnce(true).setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .addAction(SmartAlarmActions.openAction(context, alarmId, targetAt))
                 .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
                 .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
         Notification notification = builder.build();
