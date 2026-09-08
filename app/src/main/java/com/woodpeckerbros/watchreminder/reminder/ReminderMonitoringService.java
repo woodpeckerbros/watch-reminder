@@ -24,8 +24,10 @@ import java.util.concurrent.Executors;
  */
 public final class ReminderMonitoringService extends Service {
     static final long HEALTH_CHECK_INTERVAL_MS = 60 * 60_000L;
+    private static final long DEFERRED_INITIAL_HEALTH_CHECK_MS = 30_000L;
     private static final String CHANNEL_ID = "reminder_monitoring";
     private static final int NOTIFICATION_ID = 2002;
+    private static final String EXTRA_DEFER_INITIAL_HEALTH_CHECK = "defer_initial_health_check";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService maintenanceExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -46,12 +48,22 @@ public final class ReminderMonitoringService extends Service {
     }
 
     public static void start(Context context) {
+        start(context, false);
+    }
+
+    /** Starts the FGS immediately but leaves its first disk/schedule verification for later. */
+    public static void startDeferredHealthCheck(Context context) {
+        start(context, true);
+    }
+
+    private static void start(Context context, boolean deferInitialHealthCheck) {
         if (!isRequired(context)) {
             stop(context);
             return;
         }
         try {
-            Intent intent = new Intent(context, ReminderMonitoringService.class);
+            Intent intent = new Intent(context, ReminderMonitoringService.class)
+                    .putExtra(EXTRA_DEFER_INITIAL_HEALTH_CHECK, deferInitialHealthCheck);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
             else context.startService(intent);
             AppLog.d(context, "ReminderMonitoringService start requested");
@@ -121,7 +133,9 @@ public final class ReminderMonitoringService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (!isRequired(this)) { stopCleanly(); return START_NOT_STICKY; }
         handler.removeCallbacks(healthCheckRunnable);
-        handler.post(healthCheckRunnable); // startup verification; following checks do not wake the CPU.
+        long initialDelay = intent != null && intent.getBooleanExtra(EXTRA_DEFER_INITIAL_HEALTH_CHECK, false)
+                ? DEFERRED_INITIAL_HEALTH_CHECK_MS : 0L;
+        handler.postDelayed(healthCheckRunnable, initialDelay);
         return START_STICKY;
     }
 

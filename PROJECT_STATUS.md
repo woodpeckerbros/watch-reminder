@@ -1,5 +1,7 @@
 # QUICK RESUME
 
+- תיקון ביצועי startup/ANR 08/09: נרשם ANR ממשי אחרי update (`Input dispatching timed out`, CPU 173%; `wr-boot-recover` ו־`home-upcoming` התחרו במסך הראשון). recovery מלא של `MY_PACKAGE_REPLACED` נדחה ל־one-off job של 30 שניות; recovery רגיל ב־boot/time נשאר מיידי. recovery תקופתי מדלג אם recovery כבר הושלם, וה־MainActivity לא יוצר job כפול בזמן ה־startup. ה־FGS עולה מיד אך health-check ראשון נדחה, וחישוב כרטיסי הבית מקבל קדימות לפני maintenance מלא. `:app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:assembleDebug` עברו. הותקנה ונבדקה גרסת ביניים ללא ANR חדש; התקנת הגרסה הסופית נחסמה כי ADB התנתק.
+
 - שיפור ביצועים 08/09: פתיחת „כל התזכורות” אינה מבצעת עוד `ReminderStore`/חישובי snooze וההתראה הבאה על ה־main thread. הכנת הרשימה רצה ב־`wr-reminder-list`, המסך מציג מיד loading ומעדכן UI רק כשהנתונים מוכנים; callback מתעלם ממסך שכבר נסגר. למסך נוסף אותו רקע אילוסטרציה דינמי של מסך הבית. `:app:compileDebugJavaWithJavac :app:testDebugUnitTest` עברו.
 
 - Refactor מבני 08/09: מחלקות המקור אורגנו תחת `reminder`, `calendar`, `smartalarm`, `zmanim` ו־`sync`; עודכנו package/imports, Manifest, debug manifests ובדיקות. לא שונו applicationId/namespace/dependencies, persistence keys או לוגיקה. הפרויקט מכיל Java בלבד (לא נמצאו קבצי Kotlin). `:app:compileDebugJavaWithJavac` ו־`:app:testDebugUnitTest` עוברים; נותרו אזהרות deprecated קיימות בלבד.

@@ -11,21 +11,39 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.UserManager;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class BootReceiver extends BroadcastReceiver {
+    private static final AtomicBoolean RECOVERY_RUNNING = new AtomicBoolean(false);
+
+    public static boolean isRecoveryRunning() {
+        return RECOVERY_RUNNING.get();
+    }
     @Override
     public void onReceive(Context context, Intent intent) {
         UserManager userManager = context.getSystemService(UserManager.class);
         if (userManager != null && !userManager.isUserUnlocked()) {
             return;
         }
-        AppLog.d(context, "BootReceiver action=" + (intent == null ? "" : intent.getAction()));
-        ReminderRecoveryJobService.schedule(context);
+        String action = intent == null ? "" : intent.getAction();
+        AppLog.d(context, "BootReceiver action=" + action);
+        // An APK replacement starts this receiver at the same time the launcher may start the
+        // activity. Full recovery recalculates every reminder and can starve the initial frame
+        // on a two-core watch. Keep boot/time recovery immediate, but defer post-update repair
+        // to a one-off job; MainActivity performs the same repair after its first frame.
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            ReminderRecoveryJobService.schedulePostUpdateRecovery(context);
+            return;
+        }
         PendingResult pendingResult = goAsync();
         Context appContext = context.getApplicationContext();
         new Thread(() -> {
+            RECOVERY_RUNNING.set(true);
             try {
                 recover(appContext, true);
             } finally {
+                ReminderRecoveryJobService.schedule(appContext);
+                RECOVERY_RUNNING.set(false);
                 pendingResult.finish();
             }
         }, "wr-boot-recovery").start();
@@ -58,5 +76,6 @@ public class BootReceiver extends BroadcastReceiver {
         } else if (!new ReminderSettings(context).serviceEnabled()) {
             ReminderMonitoringService.stop(context);
         }
+        ReminderRecoveryJobService.markRecoveryCompleted(context);
     }
 }

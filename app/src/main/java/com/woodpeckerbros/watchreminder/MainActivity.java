@@ -132,6 +132,7 @@ public class MainActivity extends Activity {
     private static final long MISSED_ALERT_LOOKBACK_MS = 24 * 60 * 60_000L;
     private static final long GEOCODER_TIMEOUT_MS = 8_000L;
     private static final long LOCATION_RESCHEDULE_DEBOUNCE_MS = 750L;
+    private static final long STARTUP_MAINTENANCE_DELAY_MS = 750L;
     private static final ExecutorService LOCATION_RESCHEDULER = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "zmanim-location-rescheduler");
         thread.setDaemon(true);
@@ -232,6 +233,7 @@ public class MainActivity extends Activity {
     private int startupListPass;
     private int homeUpcomingLoadGeneration;
     private LinearLayout homeUpcomingContainer;
+    private boolean initialHomeUpcomingLoadInFlight;
     private int allRemindersLoadGeneration;
     private static final String[] BLESSING_NAMES = {
             "אשר יצר",
@@ -263,7 +265,7 @@ public class MainActivity extends Activity {
         // This call happens while the user-visible activity is starting, which is a compliant
         // foreground-service start path. Do not defer it to the background startup worker.
         if (onboardingSettings.onboardingComplete() && ReminderMonitoringService.isRequired(this)) {
-            ReminderMonitoringService.start(this);
+            ReminderMonitoringService.startDeferredHealthCheck(this);
         }
         if (onboardingSettings.onboardingComplete()) {
             showList();
@@ -339,21 +341,27 @@ public class MainActivity extends Activity {
         startupMaintenancePending = true;
         Runnable task = this::runStartupMaintenance;
         if (activeScrollView == null) {
-            mainHandler.postDelayed(task, 900L);
+            mainHandler.postDelayed(task, STARTUP_MAINTENANCE_DELAY_MS);
             return;
         }
-        activeScrollView.postDelayed(task, 900L);
+        activeScrollView.postDelayed(task, STARTUP_MAINTENANCE_DELAY_MS);
     }
 
     private void runStartupMaintenance() {
         if (startupMaintenanceRunning || startupMaintenanceDone) {
             return;
         }
+        if (initialHomeUpcomingLoadInFlight) {
+            mainHandler.postDelayed(this::runStartupMaintenance, 350L);
+            return;
+        }
+        if (BootReceiver.isRecoveryRunning()) {
+            mainHandler.postDelayed(this::runStartupMaintenance, 750L);
+            return;
+        }
         startupMaintenancePending = false;
         startupMaintenanceRunning = true;
         new Thread(() -> {
-            // JobScheduler IPC is maintenance work. Keep it out of the initial UI frame.
-            ReminderRecoveryJobService.schedule(MainActivity.this);
             ReminderSettings settings = new ReminderSettings(MainActivity.this);
             settings.applyPowerSaveDefaultOnce();
             long now = System.currentTimeMillis();
@@ -374,6 +382,7 @@ public class MainActivity extends Activity {
             } else {
                 ReminderMonitoringService.stop(MainActivity.this);
             }
+            ReminderRecoveryJobService.markRecoveryCompleted(MainActivity.this);
             AppLog.d(MainActivity.this, "startup maintenance end");
             mainHandler.post(() -> {
                 startupMaintenanceRunning = false;
@@ -774,16 +783,26 @@ public class MainActivity extends Activity {
     }
 
     private void loadHomeUpcomingAsync(LinearLayout container, int generation) {
+        boolean initialLoad = !startupMaintenanceDone && !startupMaintenanceRunning;
+        if (initialLoad) initialHomeUpcomingLoadInFlight = true;
         new Thread(() -> {
-            List<HomeReminderItem> upcoming = nearestHomeReminderItems();
+            List<HomeReminderItem> upcoming;
+            try {
+                upcoming = nearestHomeReminderItems();
+            } catch (RuntimeException exception) {
+                AppLog.e(this, "home upcoming load failed", exception);
+                upcoming = new java.util.ArrayList<>();
+            }
+            List<HomeReminderItem> loadedUpcoming = upcoming;
             mainHandler.post(() -> {
+                if (initialLoad) initialHomeUpcomingLoadInFlight = false;
                 if (!"list".equals(currentScreen)
                         || generation != homeUpcomingLoadGeneration
                         || container != homeUpcomingContainer
                         || isFinishing()) {
                     return;
                 }
-                renderHomeUpcoming(container, upcoming);
+                renderHomeUpcoming(container, loadedUpcoming);
             });
         }, "home-upcoming").start();
     }
