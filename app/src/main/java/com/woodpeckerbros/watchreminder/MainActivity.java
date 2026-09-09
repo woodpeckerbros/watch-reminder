@@ -1968,6 +1968,7 @@ public class MainActivity extends Activity {
                     TekufaReceiver.cancelNotification(MainActivity.this);
                 }
                 ComplicationRefresh.requestAll(MainActivity.this);
+                ReminderMonitoringService.refreshNotification(MainActivity.this);
                 recreate();
             }
 

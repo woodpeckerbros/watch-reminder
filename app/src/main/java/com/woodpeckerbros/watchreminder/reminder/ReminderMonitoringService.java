@@ -28,6 +28,7 @@ public final class ReminderMonitoringService extends Service {
     private static final String CHANNEL_ID = "reminder_monitoring";
     private static final int NOTIFICATION_ID = 2002;
     private static final String EXTRA_DEFER_INITIAL_HEALTH_CHECK = "defer_initial_health_check";
+    private static final String EXTRA_REFRESH_NOTIFICATION = "refresh_notification";
     private static final String MONITORING_TEXT_HEBREW = "ניטור תזכורות פעיל";
     private static final String MONITORING_TEXT_ENGLISH = "Active reminder monitoring";
 
@@ -79,6 +80,19 @@ public final class ReminderMonitoringService extends Service {
         catch (Exception ignored) { }
     }
 
+    /** Refreshes the foreground notification after the user changes Zmanio's language. */
+    public static void refreshNotification(Context context) {
+        if (!isRequired(context)) return;
+        try {
+            Intent intent = new Intent(context, ReminderMonitoringService.class)
+                    .putExtra(EXTRA_REFRESH_NOTIFICATION, true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
+            else context.startService(intent);
+        } catch (Exception exception) {
+            AppLog.e(context, "ReminderMonitoringService notification refresh failed", exception);
+        }
+    }
+
     /** Included in exported diagnostics for the 24-hour battery test. */
     public static String diagnosticSummary(Context context) {
         ReminderMonitoringState state = new ReminderMonitoringState(context);
@@ -110,6 +124,15 @@ public final class ReminderMonitoringService extends Service {
     @Override public void onCreate() {
         super.onCreate();
         createChannel();
+        startForegroundWithMonitoringNotification();
+        ReminderMonitoringState state = new ReminderMonitoringState(this);
+        boolean recreated = state.startedAt() != 0L;
+        state.markStarted(System.currentTimeMillis());
+        AppLog.d(this, "ReminderMonitoringService startForeground");
+        if (recreated) AppLog.d(this, "ReminderMonitoringService restart after process recreation");
+    }
+
+    private void startForegroundWithMonitoringNotification() {
         Notification.Builder notificationBuilder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.app_name))
@@ -125,15 +148,13 @@ public final class ReminderMonitoringService extends Service {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else startForeground(NOTIFICATION_ID, notification);
         foregroundStarted = true;
-        ReminderMonitoringState state = new ReminderMonitoringState(this);
-        boolean recreated = state.startedAt() != 0L;
-        state.markStarted(System.currentTimeMillis());
-        AppLog.d(this, "ReminderMonitoringService startForeground");
-        if (recreated) AppLog.d(this, "ReminderMonitoringService restart after process recreation");
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (!isRequired(this)) { stopCleanly(); return START_NOT_STICKY; }
+        if (intent != null && intent.getBooleanExtra(EXTRA_REFRESH_NOTIFICATION, false)) {
+            startForegroundWithMonitoringNotification();
+        }
         handler.removeCallbacks(healthCheckRunnable);
         long initialDelay = intent != null && intent.getBooleanExtra(EXTRA_DEFER_INITIAL_HEALTH_CHECK, false)
                 ? DEFERRED_INITIAL_HEALTH_CHECK_MS : 0L;
