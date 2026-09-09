@@ -99,6 +99,22 @@ public class SmartWakeDetectorTest {
         assertTrue(confirmed.shouldWake);
     }
 
+    @Test public void persistedPassiveContextIsNotCountedAsFreshAwakeObservation() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.seedUserActivity(SmartWakeDetector.UserActivity.PASSIVE);
+
+        SmartWakeDetector.Decision staleContext = detector.evaluate(675_000);
+        assertEquals(0, staleContext.systemNonAsleepObservations);
+        assertFalse(staleContext.systemAwakePersistent);
+        assertFalse(staleContext.shouldWake);
+
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 676_000);
+        SmartWakeDetector.Decision liveObservation = detector.evaluate(706_000);
+        assertEquals(1, liveObservation.systemNonAsleepObservations);
+        assertTrue(liveObservation.systemAwakePersistent);
+        assertEquals("SYSTEM_AWAKE_PERSISTENT", liveObservation.wakeReason);
+    }
+
     @Test public void deepSleepSingleTurnOverDoesNotWake() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);
@@ -162,22 +178,8 @@ public class SmartWakeDetectorTest {
     @Test public void telemetryIncludesBothDecisionRoutesAndSupportingMeasurements() {
         SmartWakeDetector.Decision decision = preparedDetector().evaluate(675_000);
         String summary = decision.summary(675_000);
-        assertTrue(summary.contains("timestamp=675000"));
-        assertTrue(summary.contains("BASELINE_READY=true"));
-        assertTrue(summary.contains("BASELINE_SAMPLES["));
-        assertTrue(summary.contains("HR_SAMPLE_AGE="));
-        assertTrue(summary.contains("HRV_SAMPLE_AGE="));
-        assertTrue(summary.contains("MOVEMENT_WINDOW_COVERAGE="));
-        assertTrue(summary.contains("SLEEP_STATE="));
-        assertTrue(summary.contains("SYSTEM_NON_ASLEEP_DURATION="));
-        assertTrue(summary.contains("SYSTEM_NON_ASLEEP_OBSERVATIONS="));
-        assertTrue(summary.contains("SYSTEM_AWAKE_PERSISTENT="));
-        assertTrue(summary.contains("WAKE_SCORE=0"));
-        assertTrue(summary.contains("EVIDENCE_GROUPS=0"));
-        assertTrue(summary.contains("CANDIDATE=false"));
-        assertTrue(summary.contains("CLEARLY_AWAKE=false"));
-        assertTrue(summary.contains("DECISION=CONTINUE"));
-        assertTrue(summary.contains("CONTINUE_REASON=NO_WAKE_SIGNAL"));
+        assertEquals("timestamp=675000 → WAKE_SCORE=0 → groups=0 → candidate=false "
+                + "→ clearly_awake=false → decision=CONTINUE", summary);
         String telemetry = decision.telemetry();
         assertTrue(telemetry.contains("WAKE_SCORE="));
         assertTrue(telemetry.contains("EVIDENCE_GROUPS="));

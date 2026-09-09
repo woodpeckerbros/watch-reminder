@@ -146,7 +146,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         }
         long now = System.currentTimeMillis();
         SmartWakeDetector detector = new SmartWakeDetector(now);
-        detector.setUserActivity(userActivity(new WearStateStore(this).userActivityState()), now);
+        detector.seedUserActivity(userActivity(new WearStateStore(this).userActivityState()));
         boolean firstSession = sessions.isEmpty();
         sessions.put(alarmId, new MonitorSession(alarmId, targetAt, wakeWindowStartAt, detector));
         if (firstSession) { registerMotion(); registerHeartRate(); }

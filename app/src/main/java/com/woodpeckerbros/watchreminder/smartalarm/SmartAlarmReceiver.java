@@ -6,11 +6,13 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ActivityOptions;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -18,8 +20,9 @@ import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_PREFIX = "smart_alarm_alert_v8";
-    private static final String CHANNEL_SILENT = CHANNEL_PREFIX + "_silent";
+    private static final String CHANNEL_PREFIX = "smart_alarm_alert_v9";
+    private static final String CHANNEL_ATTENTION = CHANNEL_PREFIX + "_attention";
+    private static final long[] ATTENTION_VIBRATION = {0L, 1L};
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
@@ -45,11 +48,12 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
         SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
-        // The notification is only the Android full-screen delivery transport.  Its own alarm
-        // vibration can arrive before the full-screen activity on Wear OS, which looks like a
-        // system alarm taking precedence over Zmanio.  The ringing service/activity owns the
-        // configured sound and vibration; this transport notification must stay silent.
-        String channelId = CHANNEL_SILENT;
+        // OnePlus Wear OS does not present a full-screen notification that it considers entirely
+        // silent.  Keep sound under the ringing service/activity, but give this transport channel
+        // a one-millisecond attention vibration so SystemUI classifies it as alerting and actually
+        // dispatches its full-screen PendingIntent.  It overlaps the configured alarm vibration
+        // and is not perceptible as a second alert.
+        String channelId = CHANNEL_ATTENTION;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             for (NotificationChannel existing : manager.getNotificationChannels()) {
                 if (existing.getId().startsWith("smart_alarm_alert")
@@ -63,7 +67,8 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build();
         channel.setSound(null, alarmAttributes);
-        channel.enableVibration(false);
+        channel.setVibrationPattern(ATTENTION_VIBRATION);
+        channel.enableVibration(true);
         channel.setBypassDnd(manager.isNotificationPolicyAccessGranted());
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
@@ -72,14 +77,22 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt).putExtra("reason", reason)
                 .putExtra("wake_check_escalation", "wake_check_escalation".equals(reason))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Bundle creatorOptions = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setPendingIntentCreatorBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+            creatorOptions = options.toBundle();
+        }
         PendingIntent pending = PendingIntent.getActivity(context, 0x534d5803 + alarmId, activity,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE, creatorOptions);
         Notification.Builder builder = new Notification.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_notification).setContentTitle("Smart Alarm")
                 .setContentText("זמן להתעורר").setCategory(Notification.CATEGORY_ALARM)
                 .setStyle(new Notification.BigTextStyle().bigText("זמן להתעורר"))
                 .setPriority(Notification.PRIORITY_MAX).setContentIntent(pending)
                 .setFullScreenIntent(pending, true).setSound(null)
+                .setVibrate(ATTENTION_VIBRATION)
                 .setDefaults(0).setOnlyAlertOnce(true).setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .addAction(SmartAlarmActions.openAction(context, alarmId, targetAt))

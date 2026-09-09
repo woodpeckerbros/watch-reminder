@@ -58,6 +58,20 @@ public final class SmartWakeDetector {
     }
     public void addStep(long at) { steps.addLast(at); }
 
+    /**
+     * Supplies persisted context when a monitor starts, without pretending that it is a fresh
+     * Health Services observation.  On OnePlus the last PASSIVE value can outlive the actual
+     * awake period; starting a new session used to turn that one stale value into thirty seconds
+     * of apparent persistence and wake with no candidate or clearly-awake evidence.
+     */
+    public void seedUserActivity(UserActivity value) {
+        userActivity = value == null ? UserActivity.UNKNOWN : value;
+        awakeTransitionAt = Long.MIN_VALUE;
+        systemNonAsleepStartedAt = Long.MIN_VALUE;
+        lastSystemNonAsleepAt = Long.MIN_VALUE;
+        systemNonAsleepObservations = 0;
+    }
+
     public void setUserActivity(UserActivity value, long receivedAt) {
         if (value == null) value = UserActivity.UNKNOWN;
         if (userActivity == UserActivity.ASLEEP
@@ -500,15 +514,12 @@ public final class SmartWakeDetector {
 
         private long ageAt(long evaluatedAt, long timestamp) { return timestamp == Long.MIN_VALUE ? -1L : Math.max(0L, evaluatedAt - timestamp); }
 
-        /** One persisted debug record per 30-second scoring evaluation. */
+        /** One grep-friendly record per scoring evaluation for reviewing an entire night. */
         public String summary(long timestamp) {
             return String.format(Locale.US,
-                    "timestamp=%d BASELINE_READY=%s BASELINE_STATUS=%s BASELINE_SAMPLES[HR=%d,ACCEL=%d,GYRO=%d] HR_SAMPLE_AGE=%dms HRV_SAMPLE_AGE=%dms MOVEMENT_WINDOW_COVERAGE=%d/%d SLEEP_STATE=%s SYSTEM_NON_ASLEEP_DURATION=%dms SYSTEM_NON_ASLEEP_OBSERVATIONS=%d SYSTEM_AWAKE_PERSISTENT=%s WAKE_SCORE=%d EVIDENCE_GROUPS=%d CANDIDATE=%s CLEARLY_AWAKE=%s DECISION=%s WAKE_REASON=%s CONTINUE_REASON=%s",
-                    timestamp, baselineReady, baselineStatus, baselineHeartRateSamples,
-                    baselineAccelerometerSamples, baselineGyroscopeSamples, heartRateSampleAgeMs, hrvSampleAgeMs,
-                    movementCoverageBuckets, movementCoverageTotalBuckets, userActivity, systemNonAsleepDurationMs,
-                    systemNonAsleepObservations, systemAwakePersistent, score, evidenceGroups,
-                    candidateActive, clearlyAwake, shouldWake ? "WAKE" : "CONTINUE", wakeReason, continueReason);
+                    "timestamp=%d → WAKE_SCORE=%d → groups=%d → candidate=%s → clearly_awake=%s → decision=%s",
+                    timestamp, score, evidenceGroups, candidateActive, clearlyAwake,
+                    shouldWake ? "WAKE" : "CONTINUE");
         }
 
         /** One persisted debug record per 30-second scoring evaluation. */

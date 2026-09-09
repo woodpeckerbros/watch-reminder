@@ -131,8 +131,11 @@ public final class SmartAlarmRingingService extends Service {
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
                 .putExtra("reason", "ringing_service_fallback")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                // Recreate the dedicated alarm task.  OnePlus Health can place its sleep-report
+                // full-screen Activity above ours without reliably pausing our Activity; merely
+                // addressing the existing task then returns START_TASK_TO_FRONT but leaves the
+                // system overlay on top.
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         Bundle creatorOptions = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             ActivityOptions options = ActivityOptions.makeBasic();

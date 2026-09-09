@@ -50,10 +50,12 @@ public final class SmartAlarmAlertActivity extends Activity {
     private float previewDownX;
     private float previewDownY;
     private boolean resumed;
+    private boolean windowFocused;
 
     static boolean isShowing(int expectedAlarmId, long expectedTargetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
-        return activity != null && activity.resumed && !activity.isFinishing() && !activity.isDestroyed()
+        return activity != null && activity.resumed && activity.windowFocused
+                && !activity.isFinishing() && !activity.isDestroyed()
                 && activity.alarmId == expectedAlarmId
                 && (expectedTargetAt == 0L || activity.targetAt == expectedTargetAt);
     }
@@ -87,6 +89,12 @@ public final class SmartAlarmAlertActivity extends Activity {
     @Override protected void onPause() {
         resumed = false;
         super.onPause();
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        windowFocused = hasFocus;
+        AppLog.d(this, "SmartAlarm alert window focus id=" + alarmId + " focused=" + hasFocus);
     }
 
     private View content() {

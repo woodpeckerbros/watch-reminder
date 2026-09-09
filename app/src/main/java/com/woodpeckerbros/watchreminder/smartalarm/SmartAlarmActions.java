@@ -5,9 +5,12 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ActivityOptions;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
 
 import com.woodpeckerbros.watchreminder.AppLanguage;
 import com.woodpeckerbros.watchreminder.AppLog;
@@ -17,7 +20,6 @@ import com.woodpeckerbros.watchreminder.R;
 public final class SmartAlarmActions extends BroadcastReceiver {
     private static final String ACTION_SNOOZE = "smartwake.action.SNOOZE";
     private static final String ACTION_DISMISS = "smartwake.action.DISMISS";
-    private static final String ACTION_OPEN = "smartwake.action.OPEN";
     private static final int NOTIFICATION_BASE = 0x534d5704;
 
     static Notification.Action snoozeAction(Context context, int alarmId, long targetAt) {
@@ -35,11 +37,28 @@ public final class SmartAlarmActions extends BroadcastReceiver {
     static Notification.Action openAction(Context context, int alarmId, long targetAt) {
         String title = AppLanguage.isEnglish(context) ? "Open alarm" : "פתיחת התראה";
         return new Notification.Action.Builder(R.drawable.ic_notification, title,
-                pending(context, ACTION_OPEN, alarmId, targetAt, 3)).build();
+                openPendingIntent(context, alarmId, targetAt)).build();
     }
 
     static PendingIntent openPendingIntent(Context context, int alarmId, long targetAt) {
-        return pending(context, ACTION_OPEN, alarmId, targetAt, 3);
+        Intent alert = new Intent(context, SmartAlarmAlertActivity.class)
+                .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
+                .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                .putExtra("reason", "notification_open")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Bundle creatorOptions = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setPendingIntentCreatorBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+            creatorOptions = options.toBundle();
+        }
+        // A notification tap must target the Activity itself.  Going through this BroadcastReceiver
+        // is an Android 12+ notification trampoline and Android 15 blocks the subsequent
+        // startActivity(), even though the user explicitly tapped the notification.
+        return PendingIntent.getActivity(context, 0x534d5b00 + alarmId, alert,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE, creatorOptions);
     }
 
     static void cancelNotification(Context context, int alarmId) {
@@ -53,24 +72,6 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
-
-        if (ACTION_OPEN.equals(intent.getAction())) {
-            // This receiver is invoked by an explicit user tap, so Android permits the direct
-            // foreground activity launch even on watches that suppress a notification FSI.
-            Intent alert = new Intent(context, SmartAlarmAlertActivity.class)
-                    .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
-                    .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
-                    .putExtra("reason", "notification_open")
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            try {
-                context.startActivity(alert);
-                AppLog.d(context, "SmartAlarm notification open requested id=" + alarmId);
-            } catch (RuntimeException error) {
-                AppLog.e(context, "SmartAlarm notification open failed id=" + alarmId, error);
-            }
-            return;
-        }
 
         SmartAlarmRingingService.stop(context);
         SmartWakeMonitoringService.stop(context, alarmId);
