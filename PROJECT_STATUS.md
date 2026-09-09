@@ -7,8 +7,8 @@
 - תיקון Smart Wake 09/09: ערך `PASSIVE` שמור אינו נספר עוד כתצפית Health Services חדשה. הלילה דגימה שמורה יחידה גרמה ל־`SYSTEM_AWAKE_PERSISTENT` ול־WAKE ללא candidate/clearly-awake; מעתה רק callback חי מתחיל debounce, בעוד מסלולי Smart Score ו־Clearly Awake נשארו ללא שינוי.
 - תיקון שרשרת snooze ‏09/09: יעד המופע המקורי נשמר גם כשה־state עובר לזמני נודניק. לאחר מיצוי כל הנודניקים, התזמון הבא מחושב אחרי יעד הבוקר המקורי ולכן אינו יכול להתחיל שוב את אותו חלון Smart Wake.
 - שורת `SmartWake summary` קוצרה לפורמט: `timestamp → WAKE_SCORE → groups → candidate → clearly_awake → decision`; telemetry המפורט נשאר בנפרד.
-- בדיקות: `:app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:assembleDebug` עברו. גרסת debug ‏1.26 (code 128) הסופית הותקנה בהצלחה על OnePlus Watch 3; מיד אחר כך ADB האלחוטי התנתק לפני פתיחה חוזרת, ולכן יש לפתוח ידנית פעם אחת את Zmanio.
-- לפני ההתקנה הסופית `stopped=false` והתזמונים אומתו: תזכורת רגילה 09/09 07:15; Smart Wake למחר 10/09 מתחיל ניטור 05:43:45, חלון 06:00, deadline ‏06:40. מופע debug ‏9999 בוטל. לאחר פתיחה ידנית יש לוודא שוב שהתזמונים שוחזרו.
+- בדיקות: `:app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:assembleDebug` עברו. גרסת debug ‏1.26 (code 128) הסופית הותקנה ונפתחה בהצלחה על OnePlus Watch 3; `stopped=false` אומת לאחר ההתקנה.
+- תזמונים אומתו לאחר ההתקנה הסופית: תזכורת רגילה 09/09 07:15; Smart Wake למחר 10/09 מתחיל ניטור 05:43:45, חלון 06:00, deadline ‏06:40. מופע debug ‏9999 בוטל.
 - תיקוני 08/09 שנשארים פעילים: UI cache למסכי התזכורות, startup/catch-up אסינכרוני למניעת ANR, ארגון מחלקות לפי תחומים, ודילוג למופע הבא לאחר כיבוי Smart Alarm שהופעל מוקדם.
 - `ReminderMonitoringService` הוא FGS שקט מסוג specialUse, פעיל רק כאשר ניטור מופעל ויש תזכורות; AlarmManager ממשיך למסור את ההתראות.
 - force-stop אמיתי עדיין חוסם את החבילה ומוחק alarms; אין מנגנון חוקי באותו package שעוקף זאת. מניעת ANR ופתיחת האפליקציה לאחר התקנה/עדכון נשארות קריטיות.
