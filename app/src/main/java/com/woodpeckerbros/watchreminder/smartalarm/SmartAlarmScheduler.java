@@ -124,7 +124,13 @@ public final class SmartAlarmScheduler {
      */
     public static void scheduleNextAfterHandled(Context context, int alarmId, long handledTargetAt) {
         cancel(context, alarmId);
-        schedule(context, alarmId, Math.max(System.currentTimeMillis(), handledTargetAt));
+        long occurrenceTargetAt = new SmartAlarmStateStore(context, alarmId).occurrenceTargetAt();
+        schedule(context, alarmId, handledOccurrenceBoundary(
+                System.currentTimeMillis(), handledTargetAt, occurrenceTargetAt));
+    }
+
+    static long handledOccurrenceBoundary(long now, long handledTargetAt, long occurrenceTargetAt) {
+        return Math.max(now, Math.max(handledTargetAt, occurrenceTargetAt));
     }
 
     public static void scheduleDetectedFire(Context context, int alarmId, long targetAt) {

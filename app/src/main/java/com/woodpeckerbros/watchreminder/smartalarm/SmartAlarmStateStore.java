@@ -18,16 +18,20 @@ public final class SmartAlarmStateStore {
     }
 
     public synchronized void begin(long targetAt) {
-        prefs.edit().putLong("target_at", targetAt).putBoolean("fired", false).putBoolean("dismissed", false)
+        prefs.edit().putLong("target_at", targetAt).putLong("occurrence_target_at", targetAt)
+                .putBoolean("fired", false).putBoolean("dismissed", false)
                 .putInt("snooze_used", 0).apply();
     }
 
     public synchronized void beginSnooze(long targetAt, int snoozeUsed) {
-        prefs.edit().putLong("target_at", targetAt).putBoolean("fired", false).putBoolean("dismissed", false)
+        long occurrenceTargetAt = prefs.getLong("occurrence_target_at", prefs.getLong("target_at", targetAt));
+        prefs.edit().putLong("target_at", targetAt).putLong("occurrence_target_at", occurrenceTargetAt)
+                .putBoolean("fired", false).putBoolean("dismissed", false)
                 .putInt("snooze_used", snoozeUsed).apply();
     }
 
     public long targetAt() { return prefs.getLong("target_at", 0L); }
+    public long occurrenceTargetAt() { return prefs.getLong("occurrence_target_at", targetAt()); }
     public boolean fired(long targetAt) { return targetAt == targetAt() && prefs.getBoolean("fired", false); }
     public boolean dismissed(long targetAt) { return targetAt == targetAt() && prefs.getBoolean("dismissed", false); }
 
