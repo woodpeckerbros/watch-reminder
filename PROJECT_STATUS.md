@@ -4,11 +4,12 @@
 - התיקון: ערוץ `smart_alarm_alert_v9_attention` נשאר ללא צליל מערכת אך כולל רטט attention של 1ms, ולכן SystemUI שולח את ה־full-screen. ה־contentIntent ופעולת „פתיחת התראה” הם כעת PendingIntent ישיר ל־`SmartAlarmAlertActivity`, עם opt-in ל־BAL ב־Android 15.
 - שומר המסך בודק גם window focus ולא רק lifecycle; אם מסך OnePlus כגון Sleep report מכסה את האזעקה בלי `onPause`, משימת ההתראה נוצרת מחדש ומוחזרת לחזית.
 - אימות פיזי 09/09: מהמסך הכבוי (`mWakefulness=Asleep`) SystemUI רשם `shouldVibrate=true`, פתח את `SmartAlarmAlertActivity`, והיא הייתה `RESUMED`, visible ו־focused. לחיצה אמיתית על „כיבוי” סגרה את המסך, עצרה צליל/רטט ושירות הצלצול, והסירה את notification.
+- אימות חוזר במצב שינה כפוי 09/09: במופע יחיד ונקי ה־full-screen נשלח ב־08:35:48, `SmartAlarmAlertActivity` נוצרה ב־08:35:49 וקיבלה focus ב־08:35:50. OnePlus דחה את שירות הצלצול ברקע באותו ניסיון, אך מסך ההתראה והצליל שנוצרו מה־Activity הוצגו כראוי. מופע הבדיקה ונודניק הבדיקה נוקו.
 - תיקון Smart Wake 09/09: ערך `PASSIVE` שמור אינו נספר עוד כתצפית Health Services חדשה. הלילה דגימה שמורה יחידה גרמה ל־`SYSTEM_AWAKE_PERSISTENT` ול־WAKE ללא candidate/clearly-awake; מעתה רק callback חי מתחיל debounce, בעוד מסלולי Smart Score ו־Clearly Awake נשארו ללא שינוי.
 - תיקון שרשרת snooze ‏09/09: יעד המופע המקורי נשמר גם כשה־state עובר לזמני נודניק. לאחר מיצוי כל הנודניקים, התזמון הבא מחושב אחרי יעד הבוקר המקורי ולכן אינו יכול להתחיל שוב את אותו חלון Smart Wake.
 - שורת `SmartWake summary` קוצרה לפורמט: `timestamp → WAKE_SCORE → groups → candidate → clearly_awake → decision`; telemetry המפורט נשאר בנפרד.
 - בדיקות: `:app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:assembleDebug` עברו. גרסת debug ‏1.26 (code 128) הסופית הותקנה ונפתחה בהצלחה על OnePlus Watch 3; `stopped=false` אומת לאחר ההתקנה.
-- תזמונים אומתו לאחר ההתקנה הסופית: תזכורת רגילה 09/09 07:15; Smart Wake למחר 10/09 מתחיל ניטור 05:43:45, חלון 06:00, deadline ‏06:40. מופע debug ‏9999 בוטל.
+- תזמונים אומתו לאחר ההתקנה הסופית: התזכורת הרגילה הקרובה קיימת; Smart Wake למחר 10/09 מתחיל ניטור 05:43:45, חלון 06:00, deadline ‏06:40. לא נותר מופע debug או נודניק בדיקה.
 - תיקוני 08/09 שנשארים פעילים: UI cache למסכי התזכורות, startup/catch-up אסינכרוני למניעת ANR, ארגון מחלקות לפי תחומים, ודילוג למופע הבא לאחר כיבוי Smart Alarm שהופעל מוקדם.
 - `ReminderMonitoringService` הוא FGS שקט מסוג specialUse, פעיל רק כאשר ניטור מופעל ויש תזכורות; AlarmManager ממשיך למסור את ההתראות.
 - force-stop אמיתי עדיין חוסם את החבילה ומוחק alarms; אין מנגנון חוקי באותו package שעוקף זאת. מניעת ANR ופתיחת האפליקציה לאחר התקנה/עדכון נשארות קריטיות.
