@@ -28,6 +28,8 @@ public final class ReminderMonitoringService extends Service {
     private static final String CHANNEL_ID = "reminder_monitoring";
     private static final int NOTIFICATION_ID = 2002;
     private static final String EXTRA_DEFER_INITIAL_HEALTH_CHECK = "defer_initial_health_check";
+    private static final String MONITORING_TEXT_HEBREW = "ניטור תזכורות פעיל";
+    private static final String MONITORING_TEXT_ENGLISH = "Active reminder monitoring";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService maintenanceExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -111,7 +113,7 @@ public final class ReminderMonitoringService extends Service {
         Notification.Builder notificationBuilder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText(UiText.t(this, "ניטור תזכורות פעיל"))
+                .setContentText(monitoringTextForAppLanguage(new ReminderSettings(this).language()))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOngoing(true).setShowWhen(false).setOnlyAlertOnce(true);
@@ -201,6 +203,18 @@ public final class ReminderMonitoringService extends Service {
         super.onTaskRemoved(rootIntent);
     }
     @Override public IBinder onBind(Intent intent) { return null; }
+
+    /**
+     * This foreground notification must follow the language explicitly selected in Zmanio.
+     * In particular, its wording must not change merely because Wear OS has a different locale.
+     * "Auto" is kept deterministic here: English is the neutral fallback until the user chooses
+     * Hebrew or English in Zmanio's language setting.
+     */
+    static String monitoringTextForAppLanguage(String language) {
+        return ReminderSettings.LANGUAGE_HEBREW.equals(language)
+                ? MONITORING_TEXT_HEBREW
+                : MONITORING_TEXT_ENGLISH;
+    }
 
     private void createChannel() {
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID,

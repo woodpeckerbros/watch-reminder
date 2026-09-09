@@ -10,6 +10,7 @@
 - שורת `SmartWake summary` קוצרה לפורמט: `timestamp → WAKE_SCORE → groups → candidate → clearly_awake → decision`; telemetry המפורט נשאר בנפרד.
 - בדיקות: `:app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:assembleDebug` עברו. גרסת debug ‏1.26 (code 128) הסופית הותקנה ונפתחה בהצלחה על OnePlus Watch 3; `stopped=false` אומת לאחר ההתקנה.
 - תזמונים אומתו לאחר ההתקנה הסופית: התזכורת הרגילה הקרובה קיימת; Smart Wake למחר 10/09 מתחיל ניטור 05:43:45, חלון 06:00, deadline ‏06:40. לא נותר מופע debug או נודניק בדיקה.
+- התראת ה־FGS של Zmanio (`reminder_monitoring`) משתמשת כעת בשני נוסחים מפורשים לפי בחירת השפה השמורה באפליקציה בלבד: „ניטור תזכורות פעיל” לעברית ו־`Active reminder monitoring` לאנגלית. במצב Auto היא נשארת באנגלית באופן דטרמיניסטי ואינה קוראת את שפת Wear OS. ה־APK הותקן ואומת בפועל כשהטקסט העברי הופיע ב־`dumpsys notification`.
 - תיקוני 08/09 שנשארים פעילים: UI cache למסכי התזכורות, startup/catch-up אסינכרוני למניעת ANR, ארגון מחלקות לפי תחומים, ודילוג למופע הבא לאחר כיבוי Smart Alarm שהופעל מוקדם.
 - `ReminderMonitoringService` הוא FGS שקט מסוג specialUse, פעיל רק כאשר ניטור מופעל ויש תזכורות; AlarmManager ממשיך למסור את ההתראות.
 - force-stop אמיתי עדיין חוסם את החבילה ומוחק alarms; אין מנגנון חוקי באותו package שעוקף זאת. מניעת ANR ופתיחת האפליקציה לאחר התקנה/עדכון נשארות קריטיות.
