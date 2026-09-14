@@ -9,4 +9,5 @@
 - After a meaningful task, update `PROJECT_STATUS.md`, updating QUICK RESUME first and keeping it under approximately 40 lines.
 - Move completed or historical information into `PROJECT_HISTORY.md` instead of allowing `PROJECT_STATUS.md` to grow indefinitely.
 - The user permanently authorizes clear commits and pushes to the project's configured Git remote; preserve unrelated worktree changes and never stage them accidentally.
+- After every project change made for the user, create a focused commit and push it to the configured Git remote, while leaving unrelated worktree changes unstaged.
 - Verify relevant changes by building and, when possible, running on the user's watch and phone.
