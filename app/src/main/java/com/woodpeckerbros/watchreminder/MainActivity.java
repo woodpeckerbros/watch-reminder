@@ -6,6 +6,10 @@ import com.woodpeckerbros.watchreminder.zmanim.*;
 import com.woodpeckerbros.watchreminder.sync.*;
 
 import com.woodpeckerbros.watchreminder.calendar.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementManager;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementStatus;
+import com.woodpeckerbros.watchreminder.entitlement.TrialPolicy;
 
 import android.Manifest;
 import android.app.Activity;
@@ -220,6 +224,18 @@ public class MainActivity extends Activity {
     private boolean pendingZmanimDay;
     private boolean pendingFastingSettings;
     private boolean pendingWaterSettings;
+    private EntitlementManager entitlementManager;
+    private final EntitlementManager.Listener entitlementListener = (status, trial, price, message) ->
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (!trial.featureAccessGranted && new ReminderSettings(this).onboardingComplete()) {
+                    showEntitlementScreen();
+                } else if (trial.lifetimePurchased && "entitlement".equals(currentScreen)) {
+                    showList();
+                } else if ("entitlement".equals(currentScreen)) {
+                    showEntitlementScreen();
+                }
+            });
     private boolean zmanimBackToSettings = true;
     private long lastForegroundDueCheckAt;
     private long lastReminderDataGeneration = -1L;
@@ -259,6 +275,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        entitlementManager = EntitlementManager.get(this);
+        entitlementManager.addListener(entitlementListener);
+        entitlementManager.start();
         // Channel cleanup touches the system notification service and can enumerate many
         // channels on a watch. It is housekeeping, not a prerequisite for the first frame.
         new Thread(() -> NotificationChannelMaintenance.run(getApplicationContext()),
@@ -272,7 +291,9 @@ public class MainActivity extends Activity {
         if (onboardingSettings.onboardingComplete() && ReminderMonitoringService.isRequired(this)) {
             ReminderMonitoringService.startDeferredHealthCheck(this);
         }
-        if (onboardingSettings.onboardingComplete()) {
+        if (onboardingSettings.onboardingComplete() && !EntitlementAccess.isFeatureAccessGranted(this)) {
+            showEntitlementScreen();
+        } else if (onboardingSettings.onboardingComplete()) {
             showList();
         } else if (ReminderSettings.LANGUAGE_ENGLISH.equals(onboardingSettings.language())) {
             onboardingSettings.markOnboardingStarted();
@@ -282,7 +303,8 @@ public class MainActivity extends Activity {
             showLanguageOnboarding();
         }
         mainHandler.postDelayed(() -> {
-            if (!new ReminderSettings(MainActivity.this).onboardingComplete()) {
+            if (!new ReminderSettings(MainActivity.this).onboardingComplete()
+                    || !EntitlementAccess.isFeatureAccessGranted(MainActivity.this)) {
                 return;
             }
             openPendingBlessingReminder();
@@ -291,7 +313,7 @@ public class MainActivity extends Activity {
             openPendingFastingSettings();
             openPendingWaterSettings();
         }, 260L);
-        if (new ReminderSettings(this).onboardingComplete()) {
+        if (new ReminderSettings(this).onboardingComplete() && EntitlementAccess.isFeatureAccessGranted(this)) {
             scheduleStartupMaintenance();
         }
     }
@@ -299,6 +321,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (entitlementManager != null) entitlementManager.onForeground();
+        if (new ReminderSettings(this).onboardingComplete() && !EntitlementAccess.isFeatureAccessGranted(this)) {
+            showEntitlementScreen();
+            return;
+        }
         ReminderAlertQueueStore deferredQueue = new ReminderAlertQueueStore(this);
         if (deferredQueue.hasDeferredAlerts()) {
             AppLog.d(this, "MainActivity resumed by user with deferred alerts, marking available");
@@ -376,7 +403,9 @@ public class MainActivity extends Activity {
             ReminderAudit.run(MainActivity.this);
             store.rescheduleAll();
             DafYomiScheduler.schedule(MainActivity.this);
+            MoonBlessingScheduler.schedule(MainActivity.this);
             OmerScheduler.schedule(MainActivity.this);
+            JewishDayScheduler.schedule(MainActivity.this);
             TekufaScheduler.schedule(MainActivity.this);
             IntermittentFastingScheduler.schedule(MainActivity.this);
             WaterReminderScheduler.schedule(MainActivity.this);
@@ -394,8 +423,7 @@ public class MainActivity extends Activity {
                 startupMaintenanceDone = true;
                 lastForegroundDueCheckAt = System.currentTimeMillis();
                 ReminderReceiver.dispatchNextQueued(MainActivity.this);
-                DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
-                OmerScheduler.dispatchIfDueNow(MainActivity.this);
+                CalendarReminderCatchUp.dispatchAfterRecovery(MainActivity.this);
                 refreshVisibleScreenAfterStartupMaintenance();
                 warmReminderPresentationCache();
                 if (!showMissedReminderReliabilityPromptIfNeeded()) {
@@ -426,8 +454,10 @@ public class MainActivity extends Activity {
                 ReminderAudit.run(MainActivity.this);
                 store.rescheduleAll();
                 ReminderReceiver.dispatchNextQueued(MainActivity.this);
-                DafYomiScheduler.dispatchIfDueNow(MainActivity.this);
-                OmerScheduler.dispatchIfDueNow(MainActivity.this);
+                JewishDayScheduler.schedule(MainActivity.this);
+                MoonBlessingScheduler.schedule(MainActivity.this);
+                TekufaScheduler.schedule(MainActivity.this);
+                CalendarReminderCatchUp.dispatchAfterRecovery(MainActivity.this);
                 ReminderScheduler.scheduleWatchdog(MainActivity.this);
                 IntermittentFastingScheduler.schedule(MainActivity.this);
                 WaterReminderScheduler.schedule(MainActivity.this);
@@ -561,6 +591,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         closeRestoreProgress();
+        if (entitlementManager != null) entitlementManager.removeListener(entitlementListener);
         super.onDestroy();
     }
 
@@ -570,6 +601,7 @@ public class MainActivity extends Activity {
         setIntent(intent);
         handleIntent(intent);
         showList();
+        if (!EntitlementAccess.isFeatureAccessGranted(this)) return;
         openPendingBlessingReminder();
         openPendingRestoreFromPhone();
         openPendingZmanimDay();
@@ -654,6 +686,10 @@ public class MainActivity extends Activity {
     }
 
     private void showList() {
+        if (!EntitlementAccess.isFeatureAccessGranted(this)) {
+            showEntitlementScreen();
+            return;
+        }
         if (pendingFocusReminderId != null || pendingFocusNextReminder) {
             showAllReminders();
             return;
@@ -663,6 +699,7 @@ public class MainActivity extends Activity {
         boolean jewishMode = new ReminderSettings(this).jewishMode();
         LinearLayout content = baseContent();
         addTitle(content, homeGreeting(), null);
+        addHomeTrialRemaining(content);
         lastHomeIllustrationPeriod = homeIllustrationPeriod();
         int homeBackgroundResource = homeIllustrationResource(lastHomeIllustrationPeriod);
 
@@ -753,6 +790,20 @@ public class MainActivity extends Activity {
         if (period == 1) return "צהריים טובים";
         if (period == 2) return "ערב טוב";
         return "לילה טוב";
+    }
+
+    private void addHomeTrialRemaining(LinearLayout content) {
+        if (entitlementManager == null) return;
+        TrialPolicy.Snapshot trial = entitlementManager.trial();
+        if (trial.lifetimePurchased) return;
+        long days = Math.max(1L, (trial.remainingMillis + 86_399_999L) / 86_400_000L);
+        TextView remaining = text(entitlementText(
+                "תקופת ניסיון · נותרו " + days + " ימים",
+                "Free trial · " + days + " days remaining"), 11, COLOR_LUXURY_GOLD);
+        remaining.setGravity(Gravity.CENTER);
+        remaining.setPadding(0, 0, 0, dp(7));
+        remaining.setOnClickListener(v -> showEntitlementScreen());
+        content.addView(remaining, matchParams());
     }
 
     private int homeIllustrationPeriod() {
@@ -1363,6 +1414,91 @@ public class MainActivity extends Activity {
         setScrollableContent(content);
     }
 
+    private void showEntitlementScreen() {
+        currentScreen = "entitlement";
+        if (entitlementManager == null) entitlementManager = EntitlementManager.get(this);
+        TrialPolicy.Snapshot trial = entitlementManager.trial();
+        LinearLayout content = baseContent();
+        if (trial.lifetimePurchased) {
+            addTitle(content, entitlementText("Zmanio פתוחה לצמיתות", "Zmanio is permanently unlocked"), "");
+            content.addView(infoPill(entitlementText("גישה לכל החיים מאומתת ב-Google Play", "Lifetime access verified by Google Play"), COLOR_EMERALD));
+            Button continueButton = pillButton(entitlementText("המשך", "Continue"), COLOR_ACCENT_DARK);
+            continueButton.setOnClickListener(v -> showList());
+            content.addView(continueButton, matchParams());
+            setScrollableContent(content);
+            return;
+        }
+        addTitle(content, entitlementText("תקופת הניסיון של Zmanio", "Zmanio Free Trial"), "");
+        if (trial.featureAccessGranted) {
+            long days = Math.max(1L, (trial.remainingMillis + 86_399_999L) / 86_400_000L);
+            content.addView(infoPill(entitlementText("נותרו " + days + " ימים", days + " days remaining"), COLOR_EMERALD));
+            String price = entitlementManager.localizedPrice();
+            Button upgrade = pillButton(price.isEmpty()
+                    ? entitlementText("שדרג עכשיו", "Upgrade now")
+                    : entitlementText("שדרג עכשיו · " + price, "Upgrade now · " + price), COLOR_ACCENT_DARK);
+            upgrade.setOnClickListener(v -> entitlementManager.launchLifetimePurchase(this,
+                    (success, result) -> runOnUiThread(() -> {
+                        if (!success && result != null && !result.isEmpty()) {
+                            Toast.makeText(this, result, Toast.LENGTH_LONG).show();
+                        }
+                    })));
+            content.addView(upgrade, matchParams());
+            Button restore = pillButton(entitlementText("שחזור רכישה", "Restore purchase"), COLOR_SURFACE_2);
+            restore.setOnClickListener(v -> entitlementManager.restorePurchases(
+                    (success, result) -> runOnUiThread(() -> Toast.makeText(this,
+                            success ? entitlementText("הגישה נפתחה", "Access restored") : result, Toast.LENGTH_LONG).show())));
+            content.addView(restore, matchParams());
+        } else {
+            TextView message = text(entitlementText(
+                    "תקופת הניסיון החינמית של 14 יום הסתיימה.\nניתן לפתוח את Zmanio לצמיתות ברכישה חד-פעמית.\nללא מנוי.",
+                    "Your 14-day free trial has ended.\nUnlock Zmanio permanently with a one-time purchase.\nNo subscription."), 13, COLOR_TEXT);
+            message.setGravity(Gravity.CENTER);
+            message.setPadding(dp(8), dp(12), dp(8), dp(12));
+            content.addView(message);
+            String price = entitlementManager.localizedPrice();
+            TextView priceView = infoPill(price.isEmpty()
+                    ? entitlementText("המחיר נטען מ-Google Play…", "Price loading from Google Play…")
+                    : entitlementText("רכישה חד-פעמית: " + price, "One-time purchase: " + price), COLOR_LUXURY_GOLD);
+            content.addView(priceView);
+            Button unlock = pillButton(price.isEmpty()
+                    ? entitlementText("פתיחת Zmanio", "Unlock Zmanio")
+                    : entitlementText("פתיחת Zmanio · " + price, "Unlock Zmanio · " + price), COLOR_ACCENT_DARK);
+            unlock.setOnClickListener(v -> entitlementManager.launchLifetimePurchase(this,
+                    (success, result) -> runOnUiThread(() -> {
+                        if (!success && result != null && !result.isEmpty()) Toast.makeText(this, result, Toast.LENGTH_LONG).show();
+                    })));
+            content.addView(unlock, matchParams());
+            Button restore = pillButton(entitlementText("שחזור רכישה", "Restore purchase"), COLOR_SURFACE_2);
+            restore.setOnClickListener(v -> entitlementManager.restorePurchases(
+                    (success, result) -> runOnUiThread(() -> Toast.makeText(this,
+                            success ? entitlementText("הגישה נפתחה", "Access restored") : result, Toast.LENGTH_LONG).show())));
+            content.addView(restore, matchParams());
+        }
+        setScrollableContent(content);
+    }
+
+    private void addEntitlementStatusCard(LinearLayout content) {
+        if (entitlementManager == null) return;
+        TrialPolicy.Snapshot trial = entitlementManager.trial();
+        String value;
+        int color;
+        if (trial.lifetimePurchased) {
+            value = entitlementText("Zmanio פתוחה לצמיתות", "Zmanio permanently unlocked");
+            color = COLOR_EMERALD;
+        } else {
+            long days = Math.max(1L, (trial.remainingMillis + 86_399_999L) / 86_400_000L);
+            value = entitlementText("תקופת ניסיון חינמית · נותרו " + days + " ימים", "14-day free trial · " + days + " days remaining");
+            color = COLOR_LUXURY_GOLD;
+        }
+        TextView card = infoPill(value, color);
+        card.setOnClickListener(v -> showEntitlementScreen());
+        content.addView(card);
+    }
+
+    private String entitlementText(String hebrew, String english) {
+        return AppLanguage.isEnglish(this) ? english : hebrew;
+    }
+
     private void addEditorHelp(
             FrameLayout root,
             Button help,
@@ -1484,7 +1620,7 @@ public class MainActivity extends Activity {
         editingSmartAlarmNew = false;
         currentScreen = "smart_alarm_list";
         LinearLayout content = baseContent();
-        addTitle(content, "שעונים מעוררים חכמים", "");
+        addTitle(content, "שעון מעורר חכם", "");
         ArrayList<Integer> alarmIds = SmartAlarmStore.ids(this);
         if (alarmIds.isEmpty()) {
             LinearLayout empty = card();
@@ -1925,6 +2061,7 @@ public class MainActivity extends Activity {
         ReminderSettings settings = new ReminderSettings(this);
         LinearLayout content = baseContent();
         addTitle(content, "הגדרות", "");
+        addEntitlementStatusCard(content);
 
         LinearLayout languageCard = card();
         TextView languageTitle = text("שפה", 15, COLOR_TEXT);
@@ -2035,6 +2172,44 @@ public class MainActivity extends Activity {
         });
         content.addView(quietCard, cardParams());
 
+        LinearLayout backupCard = card();
+        TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
+        AppFont.bold(backupTitle);
+        backupCard.addView(backupTitle);
+        TextView backupHint = text("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", 11, COLOR_MUTED);
+        backupHint.setPadding(0, dp(3), 0, dp(6));
+        backupCard.addView(backupHint);
+        LinearLayout backupActions = actionRow();
+        Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
+        backupToPhone.setText(AppLanguage.isEnglish(this) ? "Back Up\nto Phone" : "גיבוי\nלטלפון");
+        backupToPhone.setOnClickListener(v -> sendBackupToPhone());
+        Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
+        restoreFromPhone.setText(AppLanguage.isEnglish(this) ? "Restore\nfrom Phone" : "שחזור\nמהטלפון");
+        restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
+        backupActions.addView(backupToPhone);
+        backupActions.addView(restoreFromPhone);
+        setBackupPhoneButtonSize(backupToPhone);
+        setBackupPhoneButtonSize(restoreFromPhone);
+        backupCard.addView(backupActions);
+        content.addView(backupCard, cardParams());
+
+        Button licenses = pillButton("אודות ורישיונות", COLOR_SURFACE_2);
+        licenses.setTextSize(12);
+        licenses.setOnClickListener(v -> showAboutAndLicenses());
+        content.addView(licenses, matchParams());
+
+        LinearLayout actions = actionRow();
+        actions.setPadding(dp(4), 0, dp(4), dp(8));
+        Button back = pillButton("חזרה", COLOR_SURFACE_2);
+        back.setOnClickListener(v -> showList());
+        actions.addView(back);
+        content.addView(actions);
+
+        content.setPadding(dp(12), dp(22), dp(12), dp(16));
+        setScrollableContent(content);
+    }
+
+    private void addLogsCard(LinearLayout content) {
         LinearLayout logsCard = card();
         TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
         AppFont.bold(logsTitle);
@@ -2057,44 +2232,6 @@ public class MainActivity extends Activity {
         logsActions.addView(clearLogs);
         logsCard.addView(logsActions);
         content.addView(logsCard, cardParams());
-
-        LinearLayout backupCard = card();
-        TextView backupTitle = text("גיבוי ושחזור", 15, COLOR_TEXT);
-        AppFont.bold(backupTitle);
-        backupCard.addView(backupTitle);
-        TextView backupHint = text("גיבוי ושחזור מתבצעים דרך אפליקציית הטלפון", 11, COLOR_MUTED);
-        backupHint.setPadding(0, dp(3), 0, dp(6));
-        backupCard.addView(backupHint);
-        LinearLayout backupActions = actionRow();
-        Button backupToPhone = pillButton("גיבוי לטלפון", COLOR_ACCENT_DARK);
-        backupToPhone.setText(AppLanguage.isEnglish(this) ? "Back Up\nto Phone" : "גיבוי\nלטלפון");
-        backupToPhone.setOnClickListener(v -> sendBackupToPhone());
-        Button restoreFromPhone = pillButton("שחזור מהטלפון", COLOR_SURFACE_2);
-        restoreFromPhone.setText(AppLanguage.isEnglish(this) ? "Restore\nfrom Phone" : "שחזור\nמהטלפון");
-        clearButtonIcon(restoreFromPhone);
-        restoreFromPhone.setOnClickListener(v -> showRestoreFromPhoneStatus());
-        backupActions.addView(backupToPhone);
-        backupActions.addView(restoreFromPhone);
-        setBackupPhoneButtonSize(backupToPhone);
-        setBackupPhoneButtonSize(restoreFromPhone);
-        restoreFromPhone.setTextSize(9);
-        backupCard.addView(backupActions);
-        content.addView(backupCard, cardParams());
-
-        Button licenses = pillButton("אודות ורישיונות", COLOR_SURFACE_2);
-        licenses.setTextSize(12);
-        licenses.setOnClickListener(v -> showAboutAndLicenses());
-        content.addView(licenses, matchParams());
-
-        LinearLayout actions = actionRow();
-        actions.setPadding(dp(4), 0, dp(4), dp(8));
-        Button back = pillButton("חזרה", COLOR_SURFACE_2);
-        back.setOnClickListener(v -> showList());
-        actions.addView(back);
-        content.addView(actions);
-
-        content.setPadding(dp(12), dp(22), dp(12), dp(16));
-        setScrollableContent(content);
     }
 
     private String installedVersionName() {
@@ -2128,14 +2265,14 @@ public class MainActivity extends Activity {
         TextView englishHint = outlinedExactText(
                 "You can change this later in Settings",
                 12,
-                COLOR_BG,
+                COLOR_MUTED,
                 View.TEXT_DIRECTION_LTR);
         englishHint.setPadding(0, dp(10), 0, 0);
         content.addView(englishHint, matchParams());
         TextView hebrewHint = outlinedExactText(
                 "אפשר לשנות את השפה גם בהגדרות",
                 12,
-                COLOR_BG,
+                COLOR_MUTED,
                 View.TEXT_DIRECTION_RTL);
         hebrewHint.setPadding(0, 0, 0, dp(18));
         content.addView(hebrewHint, matchParams());
@@ -2244,6 +2381,8 @@ public class MainActivity extends Activity {
         addLicenseCard(content, "Google Play services for Wear OS 18.0.0",
                 "Google Play services wearable APIs\nGoogle APIs Terms of Service",
                 "https://developers.google.com/terms", "licenses/google_play_services_notice.txt");
+
+        addLogsCard(content);
 
         TextView appVersion = text(getString(R.string.app_name) + " · " + UiText.t(this, "גרסה") + " " + installedVersionName(),
                 10, COLOR_MUTED);
@@ -3512,6 +3651,7 @@ public class MainActivity extends Activity {
         dateTitle.setPadding(0, dp(2), 0, dp(8));
         timesCard.addView(dateTitle);
         addZmanimParshaRows(timesCard, dayMillis);
+        addCurrentFastRows(timesCard);
 
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
@@ -3921,7 +4061,9 @@ public class MainActivity extends Activity {
         currentScreen = "backup_export";
         LinearLayout content = baseContent();
         addTitle(content, "ייצוא גיבוי", "שמירה מחוץ לשעון");
-        TextView hint = infoPill("שמירה יוצרת קובץ TXT בתיקיית Documents וגם ב-Download, כדי שיהיה קל למצוא אותו באפליקציית קבצים.", COLOR_WARNING);
+        TextView hint = infoPill(AppLanguage.isEnglish(this)
+                ? "Saving creates an encrypted backup file in Documents and Download."
+                : "שמירה יוצרת קובץ גיבוי מוצפן בתיקיות Documents ו-Download.", COLOR_WARNING);
         content.addView(hint);
 
         LinearLayout actions = actionRow();
@@ -3942,8 +4084,13 @@ public class MainActivity extends Activity {
         copy.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("Zmanio backup", ReminderBackup.exportText(this)));
-                Toast.makeText(this, UiText.t(this, "הגיבוי הועתק"), Toast.LENGTH_SHORT).show();
+                try {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Zmanio backup", ReminderBackup.exportEncodedText(this)));
+                    Toast.makeText(this, UiText.t(this, "הגיבוי הועתק"), Toast.LENGTH_SHORT).show();
+                } catch (Exception exception) {
+                    AppLog.e(this, "backup clipboard encryption failed", exception);
+                    Toast.makeText(this, UiText.t(this, "לא הצלחתי ליצור גיבוי"), Toast.LENGTH_SHORT).show();
+                }
             }
         });
         actions2.addView(phone);
@@ -7619,6 +7766,28 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    private void addCurrentFastRows(LinearLayout timesCard) {
+        long today = zmanimStartOfDay(System.currentTimeMillis());
+        JewishFastInfo fast = JewishFastInfo.forDay(this, today);
+        boolean tomorrow = false;
+        if (fast == null) {
+            fast = JewishFastInfo.forDay(this, zmanimDayOffset(today, 1));
+            tomorrow = fast != null;
+        }
+        if (fast == null) return;
+
+        String prefix = AppLanguage.isEnglish(this)
+                ? (tomorrow ? "Tomorrow's fast: " : "Today's fast: ")
+                : (tomorrow ? "מחר צום: " : "היום צום: ");
+        TextView title = text(prefix + fast.label, 14, COLOR_WARNING);
+        AppFont.bold(title);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(5), 0, dp(2));
+        timesCard.addView(title, matchParams());
+        timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this) ? "Fast begins" : "תחילת הצום", fast.startsAt));
+        timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this) ? "Fast ends" : "צאת הצום", fast.endsAt));
     }
 
     private Calendar upcomingShabbos(long dayMillis) {

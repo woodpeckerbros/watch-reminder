@@ -1,6 +1,8 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import com.woodpeckerbros.watchreminder.calendar.*;
 
@@ -23,6 +25,12 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     public static void dispatchIntent(Context context, Intent intent, String source, Runnable completion) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            AppLog.d(context, source + " delivery blocked: entitlement expired");
+            EntitlementEnforcer.disableDeliveries(context);
+            finish(completion);
+            return;
+        }
         if (intent == null) {
             AppLog.w(context, source + " dispatch null intent");
             finish(completion);

@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 import com.woodpeckerbros.watchreminder.reminder.WearStateStore;
 
 import java.util.List;
@@ -82,6 +83,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         start(context, alarmId, targetAt, targetAt);
     }
     public static void start(Context context, int alarmId, long targetAt, long wakeWindowStartAt) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return;
         Intent intent = new Intent(context, SmartWakeMonitoringService.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId).putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
                 .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt);
@@ -93,6 +95,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId));
     }
     public static void windowStarted(Context context, int alarmId, long targetAt, long wakeWindowStartAt) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return;
         Intent intent = new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_WINDOW_START)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
@@ -107,6 +110,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     @Override public void onCreate() {
         super.onCreate();
+        if (!EntitlementAccess.isFeatureAccessGranted(this)) { stopSelf(); return; }
         active = true;
         createChannel();
         startForeground(NOTIFICATION_ID, new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)

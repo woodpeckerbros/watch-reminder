@@ -5,6 +5,7 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 import com.woodpeckerbros.watchreminder.zmanim.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -31,6 +32,7 @@ public class MoonBlessingScheduler {
     }
 
     public static void schedule(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { cancel(context); return; }
         cancel(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.jewishMode() || !settings.moonBlessingEnabled()) {
@@ -103,6 +105,48 @@ public class MoonBlessingScheduler {
             }
         }
         return best;
+    }
+
+    /** Replays a missed "did you bless?" prompt only while that same night is still current. */
+    public static boolean dispatchMissedIfDueNow(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            return false;
+        }
+        ReminderSettings settings = new ReminderSettings(context);
+        if (!settings.jewishMode() || !settings.moonBlessingEnabled()) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        MoonBlessingHelper.Window window = MoonBlessingHelper.windowFor(context, now);
+        if (now < window.startAt || now > window.endAt) {
+            return false;
+        }
+        ZmanimSettings zmanimSettings = new ZmanimSettings(context);
+        TimeZone timeZone = TimeZone.getTimeZone(zmanimSettings.timeZoneId());
+        Calendar night = Calendar.getInstance(timeZone);
+        night.setTimeInMillis(now);
+        night.set(Calendar.HOUR_OF_DAY, 12);
+        night.set(Calendar.MINUTE, 0);
+        night.set(Calendar.SECOND, 0);
+        night.set(Calendar.MILLISECOND, 0);
+        if (MoonBlessingHelper.isBlockedNightForTimeZone(context, timeZone, night.getTimeInMillis())) {
+            return false;
+        }
+        long questionAt = MoonBlessingHelper.questionTimeForNight(context, window, night.getTimeInMillis());
+        if (questionAt == Long.MAX_VALUE || questionAt > now || now - questionAt > 12 * HOUR_MILLIS) {
+            return false;
+        }
+        String monthKey = MoonBlessingHelper.monthKey(window);
+        MoonBlessingStore store = new MoonBlessingStore(context);
+        if (store.isHandled(monthKey) || store.wasAlertShown(monthKey, KIND_QUESTION, questionAt)) {
+            return false;
+        }
+        MoonBlessingReceiver.showNotification(context, KIND_QUESTION, monthKey, window, questionAt);
+        store.markAlertShown(monthKey, KIND_QUESTION, questionAt);
+        scheduleRetry(context, KIND_QUESTION, monthKey, questionAt,
+                settings.autoSnoozeMinutes());
+        AppLog.d(context, "moon blessing catch-up delivered month=" + monthKey);
+        return true;
     }
 
     private static Event nextEventForWindow(Context context, TimeZone timeZone, MoonBlessingHelper.Window window, String key, long now) {

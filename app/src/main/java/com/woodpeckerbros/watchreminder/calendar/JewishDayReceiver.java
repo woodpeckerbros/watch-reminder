@@ -3,6 +3,8 @@ package com.woodpeckerbros.watchreminder.calendar;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -18,6 +20,7 @@ public class JewishDayReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { EntitlementEnforcer.disableDeliveries(context); return; }
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.jewishMode() || !settings.jewishDayRemindersEnabled()) {
             AppLog.d(context, "jewish day receiver skipped disabled");
@@ -34,13 +37,19 @@ public class JewishDayReceiver extends BroadcastReceiver {
         }
         if (label != null && !label.trim().isEmpty()) {
             showNotification(context, kind, label);
+            long eventDay = intent == null ? 0L
+                    : intent.getLongExtra(JewishDayScheduler.EXTRA_EVENT_DAY, 0L);
+            if (eventDay > 0L) {
+                JewishDayScheduler.markDelivered(context, eventDay, kind, label);
+            }
         }
         JewishDayScheduler.schedule(context);
     }
 
-    private static void showNotification(Context context, String kind, String label) {
+    static void showNotification(Context context, String kind, String label) {
         String title = UiText.t(context, "ימים יהודיים");
-        String text = JewishDayScheduler.KIND_TODAY_EREV.equals(kind)
+        String text = (JewishDayScheduler.KIND_TODAY_EREV.equals(kind)
+                || JewishDayScheduler.KIND_TODAY.equals(kind))
                 ? UiText.t(context, "היום") + " " + label
                 : UiText.t(context, "מחר") + " " + label;
         InformationalAlertReceiver.show(context, "jewish-day", title, text);

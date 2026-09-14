@@ -10,8 +10,6 @@ import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableListenerService;
 
-import java.nio.charset.StandardCharsets;
-
 public class RestoreFromPhoneService extends WearableListenerService {
     private static final String RESTORE_PATH = "/watch_reminder_restore";
     private static final String PATCH_PATH = "/watch_reminder_patch";
@@ -41,13 +39,15 @@ public class RestoreFromPhoneService extends WearableListenerService {
             AppLog.w(this, "phone sync failed: missing source node");
             return;
         }
-        String backup = ReminderBackup.exportText(this);
-        if (backup.isEmpty()) {
+        byte[] backup;
+        try {
+            backup = ReminderBackup.exportData(this);
+        } catch (Exception exception) {
             AppLog.w(this, "phone sync failed: empty backup");
             return;
         }
         Wearable.getMessageClient(this)
-                .sendMessage(nodeId, PhoneBackupSender.MESSAGE_PATH, backup.getBytes(StandardCharsets.UTF_8))
+                .sendMessage(nodeId, PhoneBackupSender.MESSAGE_PATH, backup)
                 .addOnSuccessListener(result -> AppLog.d(this, "phone sync sent directly to node=" + nodeId))
                 .addOnFailureListener(error -> AppLog.e(this, "phone sync direct send failed", error));
     }

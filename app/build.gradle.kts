@@ -10,8 +10,8 @@ android {
         applicationId = "com.woodpeckerbros.watchreminder"
         minSdk = 30
         targetSdk = 35
-        versionCode = 129
-        versionName = "1.27"
+        versionCode = 132
+        versionName = "1.30"
     }
 
     compileOptions {
@@ -27,4 +27,9 @@ dependencies {
     implementation("com.google.guava:guava:33.7.1-android")
     implementation("com.kosherjava:zmanim:2.5.0")
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
+    implementation("com.android.billingclient:billing:9.1.0")
+    constraints {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22")
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22")
+    }
 }

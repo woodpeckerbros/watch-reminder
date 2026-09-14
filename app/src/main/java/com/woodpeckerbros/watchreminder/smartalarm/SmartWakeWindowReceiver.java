@@ -1,6 +1,8 @@
 package com.woodpeckerbros.watchreminder.smartalarm;
 
 import com.woodpeckerbros.watchreminder.reminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -9,6 +11,7 @@ import android.content.Intent;
 public final class SmartWakeWindowReceiver extends BroadcastReceiver {
     static final String EXTRA_WINDOW_START_CHECK = "smart_wake_window_start_check";
     @Override public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { EntitlementEnforcer.disableDeliveries(context); return; }
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         long wakeWindowStartAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, targetAt);
         int alarmId = intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);

@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.calendar.CalendarReminderCatchUp;
 
 import androidx.health.services.client.PassiveListenerService;
 import androidx.health.services.client.data.UserActivityInfo;
@@ -29,7 +30,10 @@ public class ReminderHealthPassiveService extends PassiveListenerService {
             DeferredWearRetryReceiver.cancel(this);
             DeferredReminderDispatcher.run(this);
         } else if (!asleep) {
-            AppLog.d(this, "HealthPassive awake without deferred alerts, no reschedule needed");
+            // Calendar alerts keep a delivery token, so repeated passive callbacks cannot
+            // duplicate a notice that was recovered after the watch became available.
+            CalendarReminderCatchUp.dispatchWhenAwake(this);
+            AppLog.d(this, "HealthPassive awake without deferred alerts, checked calendar catch-up");
         }
     }
 

@@ -9,8 +9,6 @@ import android.content.Context;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
-import java.nio.charset.StandardCharsets;
-
 public class PhoneBackupSender {
     public static final String MESSAGE_PATH = "/watch_reminder_backup";
 
@@ -23,12 +21,13 @@ public class PhoneBackupSender {
     }
 
     public static void send(Context context, Callback callback) {
-        String backup = ReminderBackup.exportText(context);
-        if (backup.isEmpty()) {
+        byte[] data;
+        try {
+            data = ReminderBackup.exportData(context);
+        } catch (Exception exception) {
             callback.onError(UiText.t(context, "לא הצלחתי ליצור גיבוי"));
             return;
         }
-        byte[] data = backup.getBytes(StandardCharsets.UTF_8);
         Wearable.getNodeClient(context).getConnectedNodes()
                 .addOnSuccessListener(nodes -> {
                     if (nodes.isEmpty()) {

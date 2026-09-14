@@ -1,6 +1,8 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -12,11 +14,12 @@ import android.content.Intent;
 import android.os.Build;
 
 public class IntermittentFastingReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_ID = "intermittent_fasting_alerts_no_system_vibration_v2";
+    private static final String CHANNEL_ID = "intermittent_fasting_alerts_attention_v3";
     private static final int NOTIFICATION_ID = "intermittent_fasting".hashCode();
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { EntitlementEnforcer.disableDeliveries(context); return; }
         Context localizedContext = AppLanguage.wrap(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.intermittentFastingEnabled()) {
@@ -101,7 +104,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setContentIntent(pendingIntent)
                 .setFullScreenIntent(pendingIntent, true)
-                .setVibrate(new long[]{0})
+                .setVibrate(AlertAttention.VIBRATION)
                 .setSound(null)
                 .setDefaults(0)
                 .setOnlyAlertOnce(true)
@@ -122,9 +125,7 @@ public class IntermittentFastingReceiver extends BroadcastReceiver {
                 UiText.t(context, "צום לסירוגין"),
                 NotificationManager.IMPORTANCE_HIGH
         );
-        channel.enableVibration(false);
-        channel.setVibrationPattern(new long[]{0});
-        channel.setSound(null, null);
+        AlertAttention.configure(channel);
         manager.createNotificationChannel(channel);
     }
 }

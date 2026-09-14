@@ -18,6 +18,8 @@ import android.os.Looper;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 public final class SmartAlarmReceiver extends BroadcastReceiver {
     private static final String CHANNEL_PREFIX = "smart_alarm_alert_v9";
@@ -31,6 +33,11 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
     }
 
     public static void fire(Context context, int alarmId, long targetAt, String reason) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            AppLog.d(context, "SmartAlarm delivery blocked: entitlement expired");
+            EntitlementEnforcer.disableDeliveries(context);
+            return;
+        }
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         if (!state.claimFire(targetAt)) {
             AppLog.w(context, "SmartAlarm duplicate/stale fire target=" + targetAt + " reason=" + reason);

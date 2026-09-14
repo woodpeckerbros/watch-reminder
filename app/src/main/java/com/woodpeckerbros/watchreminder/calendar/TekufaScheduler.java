@@ -3,11 +3,13 @@ package com.woodpeckerbros.watchreminder.calendar;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -22,12 +24,15 @@ public class TekufaScheduler {
     static final String KIND_ADVANCE = "advance";
     static final String KIND_START = "start";
     private static final String REQUEST_KEY = "tekufa";
+    private static final String DELIVERY_PREFS = "tekufa_delivery";
+    private static final String KEY_LAST_START = "last_start";
     private static final long HOUR_MILLIS = 60 * 60_000L;
 
     private TekufaScheduler() {
     }
 
     public static void schedule(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { cancel(context); return; }
         cancel(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.jewishMode() || !settings.tekufaRemindersEnabled()) {
@@ -69,6 +74,40 @@ public class TekufaScheduler {
             }
         }
         return best;
+    }
+
+    /** Replays the start notice only while the no-drinking window itself is still open. */
+    public static boolean dispatchMissedIfDueNow(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            return false;
+        }
+        ReminderSettings settings = new ReminderSettings(context);
+        if (!settings.jewishMode() || !settings.tekufaRemindersEnabled()) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        TekufaHelper.Event tekufa = TekufaHelper.next(now);
+        if (tekufa == null || now < tekufa.windowStartAt || now > tekufa.windowEndAt
+                || wasStartDelivered(context, tekufa.windowStartAt)) {
+            return false;
+        }
+        TekufaReceiver.showNotification(context,
+                new ScheduledEvent(KIND_START, tekufa.windowStartAt, tekufa));
+        markStartDelivered(context, tekufa.windowStartAt);
+        AppLog.d(context, "tekufa catch-up delivered start="
+                + NextReminderCalculator.formatDateTime(tekufa.windowStartAt));
+        return true;
+    }
+
+    static void markStartDelivered(Context context, long windowStartAt) {
+        context.getApplicationContext().getSharedPreferences(DELIVERY_PREFS, Context.MODE_PRIVATE)
+                .edit().putLong(KEY_LAST_START, windowStartAt).apply();
+    }
+
+    private static boolean wasStartDelivered(Context context, long windowStartAt) {
+        SharedPreferences prefs = context.getApplicationContext()
+                .getSharedPreferences(DELIVERY_PREFS, Context.MODE_PRIVATE);
+        return prefs.getLong(KEY_LAST_START, 0L) == windowStartAt;
     }
 
     private static long advanceTriggerAt(long windowStartAt) {

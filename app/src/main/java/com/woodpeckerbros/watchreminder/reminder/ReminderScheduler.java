@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import com.woodpeckerbros.watchreminder.zmanim.*;
 
@@ -47,6 +48,10 @@ public class ReminderScheduler {
      * correct registration. Returns true only when an alarm had to be created or replaced.
      */
     public static synchronized boolean ensureNearestScheduled(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            cancelRecordedNearest(context, new ReminderMonitoringState(context));
+            return false;
+        }
         java.util.List<Reminder> reminders = new ReminderStore(context).getAll();
         ScheduledCandidate nearest = null;
         ReminderEventStore eventStore = new ReminderEventStore(context);
@@ -160,6 +165,7 @@ public class ReminderScheduler {
     }
 
     public static long scheduleSnoozeAt(Context context, String reminderId, String reminderName, long triggerAt, long originalScheduledAt) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return 0L;
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         originalScheduledAt = floorToMinute(originalScheduledAt);
         triggerAt = floorToMinute(Math.max(triggerAt, floorToMinute(System.currentTimeMillis()) + 60_000L));
@@ -180,6 +186,7 @@ public class ReminderScheduler {
     }
 
     public static void scheduleDeferredRetry(Context context, String reminderId, String reminderName, long triggerAt) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return;
         triggerAt = floorToMinute(triggerAt);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         Intent intent = new Intent(context, ReminderReceiver.class)
@@ -218,6 +225,7 @@ public class ReminderScheduler {
     }
 
     public static void scheduleAutoSnooze(Context context, String occurrenceId, String reminderId, String reminderName, long originalScheduledAt) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return;
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         originalScheduledAt = floorToMinute(originalScheduledAt);
         long triggerAt = ceilToMinute(System.currentTimeMillis() + new ReminderSettings(context).autoSnoozeDelayMs());
@@ -241,6 +249,10 @@ public class ReminderScheduler {
     }
 
     public static void scheduleWatchdog(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            cancelWatchdog(context);
+            return;
+        }
         cancelWatchdog(context);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         long now = System.currentTimeMillis();
@@ -312,6 +324,15 @@ public class ReminderScheduler {
         cancelLegacyActivity(context, alarmManager, (reminder.id + ":once").hashCode());
         cancelLegacyActivity(context, alarmManager, (reminder.id + ":periodic").hashCode());
         cancelLegacyActivity(context, alarmManager, (reminder.id + ":annual").hashCode());
+    }
+
+    /** Cancels all known user-reminder, snooze and watchdog deliveries without deleting data. */
+    public static void cancelAllForEntitlement(Context context) {
+        for (Reminder reminder : new ReminderStore(context).getAll()) {
+            cancel(context, reminder);
+            cancelSnooze(context, reminder.id, reminder.name);
+        }
+        cancelWatchdog(context);
     }
 
     public static void skipOccurrence(Context context, Reminder reminder, long scheduledAt) {

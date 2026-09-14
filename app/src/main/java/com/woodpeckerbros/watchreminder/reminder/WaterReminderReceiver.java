@@ -1,6 +1,8 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -15,11 +17,15 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
     static final String EXTRA_AMOUNT_ML = "water_amount_ml";
     static final String EXTRA_CONSUMED_ML = "water_consumed_ml";
     static final String EXTRA_TARGET_ML = "water_target_ml";
-    private static final String CHANNEL_ID = "water_reminders_no_system_vibration_v1";
+    private static final String CHANNEL_ID = "water_reminders_attention_v2";
     private static final int NOTIFICATION_ID = "water_reminder".hashCode();
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            EntitlementEnforcer.disableDeliveries(context);
+            return;
+        }
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.waterRemindersEnabled()) {
             return;
@@ -78,12 +84,12 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
                 .setContentTitle(title)
                 .setContentText(message)
                 .setStyle(new Notification.BigTextStyle().bigText(message))
-                .setCategory(Notification.CATEGORY_REMINDER)
+                .setCategory(Notification.CATEGORY_ALARM)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setContentIntent(pending)
                 .setFullScreenIntent(pending, true)
-                .setVibrate(new long[]{0})
+                .setVibrate(AlertAttention.VIBRATION)
                 .setSound(null)
                 .setDefaults(0)
                 .setOnlyAlertOnce(true)
@@ -105,9 +111,7 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
         }
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
                 localized.getString(R.string.water_reminders_title), NotificationManager.IMPORTANCE_HIGH);
-        channel.enableVibration(false);
-        channel.setVibrationPattern(new long[]{0});
-        channel.setSound(null, null);
+        AlertAttention.configure(channel);
         manager.createNotificationChannel(channel);
     }
 }

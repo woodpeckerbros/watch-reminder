@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -43,6 +44,7 @@ public final class ReminderMonitoringService extends Service {
     private final Runnable healthCheckRunnable = this::runHealthCheck;
 
     public static boolean isRequired(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return false;
         if (!new ReminderSettings(context).serviceEnabled()) return false;
         for (Reminder reminder : new ReminderStore(context).getAll()) {
             if (reminder.enabled) return true;
@@ -123,6 +125,10 @@ public final class ReminderMonitoringService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
+        if (!EntitlementAccess.isFeatureAccessGranted(this)) {
+            stopSelf();
+            return;
+        }
         createChannel();
         startForegroundWithMonitoringNotification();
         ReminderMonitoringState state = new ReminderMonitoringState(this);

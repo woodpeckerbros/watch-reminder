@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.woodpeckerbros.watchreminder.AppLog;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
 
 import java.util.Calendar;
@@ -19,6 +20,10 @@ public final class SmartAlarmScheduler {
     private SmartAlarmScheduler() {}
 
     public static void reschedule(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            cancel(context);
+            return;
+        }
         cancel(context);
         for (int alarmId : SmartAlarmStore.ids(context)) schedule(context, alarmId);
     }
@@ -29,6 +34,10 @@ public final class SmartAlarmScheduler {
      * a snooze whose original alarm time has already passed.
      */
     public static void recover(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            cancel(context);
+            return;
+        }
         long now = System.currentTimeMillis();
         for (int alarmId : SmartAlarmStore.ids(context)) {
             SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
@@ -175,7 +184,10 @@ public final class SmartAlarmScheduler {
     }
 
     public static void cancel(Context context) {
-        for (int alarmId : SmartAlarmStore.ids(context)) cancel(context, alarmId);
+        for (int alarmId : SmartAlarmStore.ids(context)) {
+            cancel(context, alarmId);
+            SmartWakeMonitoringService.stop(context, alarmId);
+        }
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) {
             manager.cancel(legacyWindowIntent(context)); manager.cancel(legacyDeadlineIntent(context));

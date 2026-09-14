@@ -38,7 +38,11 @@ class WatchRestoreSender {
             callback.onError(PhoneUiText.t(context, "אין נתונים לשליחה. בצע סנכרון מהשעון קודם."));
             return;
         }
-        send(context, LocalReminderDocument.bytes(context), callback);
+        try {
+            send(context, LocalReminderDocument.encryptedBytes(context), callback);
+        } catch (Exception exception) {
+            callback.onError(PhoneUiText.t(context, "לא הצלחתי ליצור גיבוי"));
+        }
     }
 
     private static void send(Context context, byte[] data, Callback callback) {

@@ -5,6 +5,7 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 import com.woodpeckerbros.watchreminder.zmanim.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -23,6 +24,7 @@ public class DafYomiScheduler {
     }
 
     public static void schedule(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { cancel(context); return; }
         ReminderSettings settings = new ReminderSettings(context);
         cancelDaily(context);
         if (!settings.jewishMode() || !settings.dafYomiEnabled()) {
@@ -79,10 +81,7 @@ public class DafYomiScheduler {
             return false;
         }
         AppLog.d(context, "daf yomi catch-up open alert trigger=" + NextReminderCalculator.formatDateTime(todayTriggerAt));
-        Intent alert = new Intent(context, DafYomiAlertActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(alert);
-        DafYomiReceiver.cancelNotification(context);
+        DafYomiReceiver.showNotification(context);
         schedule(context);
         return true;
     }

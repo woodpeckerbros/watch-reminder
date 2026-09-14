@@ -3,6 +3,8 @@ package com.woodpeckerbros.watchreminder.calendar;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,6 +24,7 @@ public class TekufaReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { EntitlementEnforcer.disableDeliveries(context); return; }
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.jewishMode() || !settings.tekufaRemindersEnabled()) {
             AppLog.d(context, "tekufa receiver skipped disabled");
@@ -33,6 +36,9 @@ public class TekufaReceiver extends BroadcastReceiver {
         }
         if (event != null) {
             showNotification(context, event);
+            if (TekufaScheduler.KIND_START.equals(event.kind)) {
+                TekufaScheduler.markStartDelivered(context, event.tekufa.windowStartAt);
+            }
         }
         TekufaScheduler.schedule(context);
     }
@@ -55,7 +61,7 @@ public class TekufaReceiver extends BroadcastReceiver {
         );
     }
 
-    private static void showNotification(Context context, TekufaScheduler.ScheduledEvent event) {
+    static void showNotification(Context context, TekufaScheduler.ScheduledEvent event) {
         String title = UiText.t(context, "תזכורת תקופה");
         TekufaHelper.Event tekufa = event.tekufa;
         String prefix = TekufaScheduler.KIND_START.equals(event.kind)

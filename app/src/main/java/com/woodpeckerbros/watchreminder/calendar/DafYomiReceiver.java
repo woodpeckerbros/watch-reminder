@@ -3,6 +3,8 @@ package com.woodpeckerbros.watchreminder.calendar;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -16,11 +18,12 @@ import android.os.Build;
 import java.util.List;
 
 public class DafYomiReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_ID = "daf_yomi_alerts_no_system_vibration_v1";
+    private static final String CHANNEL_ID = "daf_yomi_alerts_attention_v2";
     private static final int NOTIFICATION_ID = "daf_yomi_alert".hashCode();
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { EntitlementEnforcer.disableDeliveries(context); return; }
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.dafYomiEnabled()) {
             AppLog.d(context, "daf yomi receiver skipped disabled");
@@ -62,7 +65,7 @@ public class DafYomiReceiver extends BroadcastReceiver {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setContentIntent(pendingIntent)
                 .setFullScreenIntent(pendingIntent, true)
-                .setVibrate(new long[]{0})
+                .setVibrate(AlertAttention.VIBRATION)
                 .setSound(null)
                 .setDefaults(0)
                 .setOnlyAlertOnce(true)
@@ -90,9 +93,7 @@ public class DafYomiReceiver extends BroadcastReceiver {
                 UiText.t(context, "דף היומי"),
                 NotificationManager.IMPORTANCE_HIGH
         );
-        channel.enableVibration(false);
-        channel.setVibrationPattern(new long[]{0});
-        channel.setSound(null, null);
+        AlertAttention.configure(channel);
         manager.createNotificationChannel(channel);
     }
 }

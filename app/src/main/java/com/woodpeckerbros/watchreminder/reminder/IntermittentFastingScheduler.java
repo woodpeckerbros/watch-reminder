@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -22,6 +23,7 @@ public class IntermittentFastingScheduler {
     }
 
     public static void schedule(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { cancel(context); return; }
         cancelScheduledEvents(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.intermittentFastingEnabled()) {

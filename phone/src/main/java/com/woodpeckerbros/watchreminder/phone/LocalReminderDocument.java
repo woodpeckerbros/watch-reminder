@@ -6,7 +6,8 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
+import com.woodpeckerbros.watchreminder.phone.entitlement.PhoneEntitlementManager;
+
 
 class LocalReminderDocument {
     private static final String PREFS_NAME = "local_reminder_document";
@@ -25,6 +26,10 @@ class LocalReminderDocument {
                 .putString(KEY_TEXT, text)
                 .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
                 .apply();
+        try {
+            PhoneEntitlementManager.get(context).importTrialMetadata(new JSONObject(text).optJSONObject("trialMetadata"));
+        } catch (Exception ignored) {
+        }
     }
 
     static String text(Context context) {
@@ -35,7 +40,7 @@ class LocalReminderDocument {
         }
         try {
             byte[] bytes = BackupStorage.lastBackup(context);
-            text = new String(bytes, StandardCharsets.UTF_8);
+            text = BackupCrypto.decryptToText(bytes);
             save(context, text);
             return text;
         } catch (Exception ignored) {
@@ -74,8 +79,8 @@ class LocalReminderDocument {
         }
     }
 
-    static byte[] bytes(Context context) {
-        return text(context).getBytes(StandardCharsets.UTF_8);
+    static byte[] encryptedBytes(Context context) throws Exception {
+        return BackupCrypto.encrypt(text(context));
     }
 
     private static JSONObject emptyRoot(Context context) {

@@ -5,6 +5,8 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 import com.woodpeckerbros.watchreminder.zmanim.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -19,12 +21,13 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 public class MoonBlessingReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_ID = "moon_blessing_alerts_no_system_vibration_v1";
+    private static final String CHANNEL_ID = "moon_blessing_alerts_attention_v2";
     private static final int NOTIFICATION_ID = "moon_blessing_alert".hashCode();
     private static final int PRE_START_NOTIFICATION_ID = "moon_blessing_pre_start_alert".hashCode();
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { EntitlementEnforcer.disableDeliveries(context); return; }
         if (!new ReminderSettings(context).moonBlessingEnabled()) {
             AppLog.d(context, "moon blessing receiver skipped disabled");
             return;
@@ -67,16 +70,19 @@ public class MoonBlessingReceiver extends BroadcastReceiver {
         MoonBlessingScheduler.schedule(context);
         showNotification(context, kind, event.monthKey, event.window,
                 intent == null ? event.triggerAt : intent.getLongExtra(MoonBlessingScheduler.EXTRA_TRIGGER_AT, event.triggerAt));
+        long deliveredAt = intent == null ? event.triggerAt
+                : intent.getLongExtra(MoonBlessingScheduler.EXTRA_TRIGGER_AT, event.triggerAt);
+        new MoonBlessingStore(context).markAlertShown(event.monthKey, kind, deliveredAt);
         MoonBlessingScheduler.scheduleRetry(
                 context,
                 kind,
                 event.monthKey,
-                intent == null ? event.triggerAt : intent.getLongExtra(MoonBlessingScheduler.EXTRA_TRIGGER_AT, event.triggerAt),
+                deliveredAt,
                 new ReminderSettings(context).autoSnoozeMinutes()
         );
     }
 
-    private static void showNotification(Context context, String kind, String monthKey, MoonBlessingHelper.Window window, long triggerAt) {
+    static void showNotification(Context context, String kind, String monthKey, MoonBlessingHelper.Window window, long triggerAt) {
         createChannel(context);
         String title = UiText.t(context, "ברכת הלבנה");
         String text;
@@ -96,7 +102,7 @@ public class MoonBlessingReceiver extends BroadcastReceiver {
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setPriority(Notification.PRIORITY_MAX)
-                .setVibrate(new long[]{0})
+                .setVibrate(AlertAttention.VIBRATION)
                 .setSound(null)
                 .setDefaults(0)
                 .setOnlyAlertOnce(true)
@@ -178,9 +184,7 @@ public class MoonBlessingReceiver extends BroadcastReceiver {
                 UiText.t(context, "ברכת הלבנה"),
                 NotificationManager.IMPORTANCE_HIGH
         );
-        channel.enableVibration(false);
-        channel.setVibrationPattern(new long[]{0});
-        channel.setSound(null, null);
+        AlertAttention.configure(channel);
         manager.createNotificationChannel(channel);
     }
 }

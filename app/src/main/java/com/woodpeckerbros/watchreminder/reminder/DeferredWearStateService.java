@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.calendar.CalendarReminderCatchUp;
 
 import android.Manifest;
 import android.app.Notification;
@@ -53,6 +54,7 @@ public class DeferredWearStateService extends Service {
             if (onBody) {
                 DeferredWearRetryReceiver.cancel(DeferredWearStateService.this);
                 DeferredReminderDispatcher.run(DeferredWearStateService.this);
+                CalendarReminderCatchUp.dispatchWhenAwake(DeferredWearStateService.this);
                 stopSelf();
             }
         }

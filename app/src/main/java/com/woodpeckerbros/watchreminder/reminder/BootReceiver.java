@@ -58,12 +58,11 @@ public class BootReceiver extends BroadcastReceiver {
         ReminderAudit.run(context);
         new ReminderStore(context).rescheduleAll();
         DafYomiScheduler.schedule(context);
-        DafYomiScheduler.dispatchIfDueNow(context);
         MoonBlessingScheduler.schedule(context);
         OmerScheduler.schedule(context);
-        OmerScheduler.dispatchIfDueNow(context);
         JewishDayScheduler.schedule(context);
         TekufaScheduler.schedule(context);
+        CalendarReminderCatchUp.dispatchAfterRecovery(context);
         IntermittentFastingScheduler.schedule(context);
         WaterReminderScheduler.schedule(context);
         SmartAlarmScheduler.recover(context);

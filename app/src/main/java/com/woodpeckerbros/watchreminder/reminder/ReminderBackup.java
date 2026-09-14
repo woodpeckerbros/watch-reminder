@@ -21,6 +21,7 @@ import android.widget.Toast;
 
 import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
 import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmStore;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementStore;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,7 +44,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class ReminderBackup {
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
     private static final long HISTORY_BACKUP_WINDOW_MS = 48L * 60L * 60L * 1000L;
     private static final String EXTENSION = ".zmbu";
     private static final String MIME_TYPE = "application/octet-stream";
@@ -107,6 +108,7 @@ public class ReminderBackup {
                             .put("jewishMode", settings.jewishMode()))
                     .put("quietTimeRules", new QuietTimeRuleStore(context).toJsonArray())
                     .put("userState", exportUserState(context))
+                    .put("trialMetadata", new EntitlementStore(context).exportTrialMetadata())
                     .put("zmanimLocation", new JSONObject()
                             .put("name", zmanim.name())
                             .put("latitude", zmanim.latitude())
@@ -120,8 +122,24 @@ public class ReminderBackup {
         }
     }
 
+    /** Encrypted binary form for files and watch/phone transport. */
+    public static byte[] exportData(Context context) throws Exception {
+        return BackupCrypto.encrypt(exportText(context));
+    }
+
+    /** Encrypted printable form retained for the existing clipboard/share workflow. */
+    public static String exportEncodedText(Context context) throws Exception {
+        return BackupCrypto.encodeForTextTransport(exportData(context));
+    }
+
     public static void share(Context context) {
-        String text = exportText(context);
+        String text;
+        try {
+            text = exportEncodedText(context);
+        } catch (Exception exception) {
+            AppLog.e(context, "backup share encryption failed", exception);
+            text = "";
+        }
         if (text.isEmpty()) {
             Toast.makeText(context, UiText.t(context, "לא הצלחתי ליצור גיבוי"), Toast.LENGTH_SHORT).show();
             return;
@@ -149,7 +167,7 @@ public class ReminderBackup {
         }
         File file = new File(dir, suggestedFileName());
         try (FileOutputStream output = new FileOutputStream(file)) {
-            output.write(exportText(context).getBytes(StandardCharsets.UTF_8));
+            output.write(exportData(context));
         }
         return file;
     }
@@ -188,7 +206,7 @@ public class ReminderBackup {
         }
         File file = new File(dir, fileName);
         try (FileOutputStream output = new FileOutputStream(file)) {
-            output.write(exportText(context).getBytes(StandardCharsets.UTF_8));
+            output.write(exportData(context));
         }
         scanFile(context, file);
     }
@@ -251,7 +269,7 @@ public class ReminderBackup {
 
     public static int importFile(Context context, File file) throws Exception {
         try (FileInputStream input = new FileInputStream(file)) {
-            return importText(context, readAll(input));
+            return importData(context, readAllBytes(input));
         }
     }
 
@@ -267,7 +285,7 @@ public class ReminderBackup {
             if (output == null) {
                 throw new IllegalStateException("Could not open backup output");
             }
-            output.write(exportText(context).getBytes(StandardCharsets.UTF_8));
+            output.write(exportData(context));
         }
     }
 
@@ -276,12 +294,16 @@ public class ReminderBackup {
             if (input == null) {
                 throw new IllegalStateException("Could not open backup input");
             }
-            return importText(context, readAll(input));
+            return importData(context, readAllBytes(input));
         }
     }
 
     public static int importText(Context context, String text) throws Exception {
-        JSONObject root = new JSONObject(text.trim());
+        return importData(context, BackupCrypto.decodeTextTransport(text));
+    }
+
+    public static int importData(Context context, byte[] data) throws Exception {
+        JSONObject root = new JSONObject(BackupCrypto.decryptToText(data).trim());
         if (!"watch-reminder-backup".equals(root.optString("type"))) {
             throw new IllegalArgumentException("not a Zmanio backup");
         }
@@ -320,17 +342,11 @@ public class ReminderBackup {
         if (userState != null) {
             restoreUserState(context, userState);
         }
+        new EntitlementStore(context).importTrialMetadata(root.optJSONObject("trialMetadata"));
         if (locationJson != null) {
             ZmanimRescheduler.schedule(context);
         }
-        ReminderScheduler.scheduleNearest(context);
-        ReminderScheduler.scheduleWatchdog(context);
-        SmartAlarmScheduler.reschedule(context);
-        if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderMonitoringService.start(context);
-        } else {
-            ReminderMonitoringService.stop(context);
-        }
+        com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer.apply(context);
         ComplicationRefresh.requestAll(context);
         return reminders.size();
     }
@@ -544,14 +560,14 @@ public class ReminderBackup {
         }
     }
 
-    private static String readAll(InputStream input) throws Exception {
+    private static byte[] readAllBytes(InputStream input) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         byte[] buffer = new byte[4096];
         int read;
         while ((read = input.read(buffer)) != -1) {
             output.write(buffer, 0, read);
         }
-        return output.toString("UTF-8");
+        return output.toByteArray();
     }
 
     private static boolean isBackupFileName(String name) {

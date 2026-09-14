@@ -18,7 +18,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
@@ -49,11 +48,12 @@ class BackupStorage {
                 ? displayName
                 : newBackupFileName();
         try (InputStream input = context.getContentResolver().openInputStream(sourceUri)) {
-            return saveNamed(context, readAll(input), fileName, false, false);
+            return saveNamed(context, BackupCrypto.ensureEncrypted(readAll(input)), fileName, false, false);
         }
     }
 
     private static String saveNamed(Context context, byte[] data, String fileName, boolean updateLocalDocument, boolean updateLastBackup) throws Exception {
+        data = BackupCrypto.ensureEncrypted(data);
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
         values.put(MediaStore.MediaColumns.MIME_TYPE, MIME_TYPE);
@@ -85,7 +85,7 @@ class BackupStorage {
                     .apply();
         }
         if (updateLocalDocument) {
-            LocalReminderDocument.save(context, new String(data, StandardCharsets.UTF_8));
+            LocalReminderDocument.save(context, BackupCrypto.decryptToText(data));
         }
         notifySaved(context, fileName);
         return fileName;

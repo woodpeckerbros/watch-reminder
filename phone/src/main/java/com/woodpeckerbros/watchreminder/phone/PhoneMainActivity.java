@@ -31,6 +31,7 @@ import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.kosherjava.zmanim.hebrewcalendar.JewishDate;
+import com.woodpeckerbros.watchreminder.phone.entitlement.PhoneEntitlementManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -65,31 +66,54 @@ public class PhoneMainActivity extends Activity {
     private static final String[] UNIT_LABELS = {"שעות", "ימים", "שבועות", "חודשים", "שנים"};
     private static final String[] UNIT_VALUES = {"hours", "days", "weeks", "months", "years"};
     private String screen = "main";
+    private PhoneEntitlementManager entitlementManager;
+    private final PhoneEntitlementManager.Listener entitlementListener = (state, snapshot, price, message) ->
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (!snapshot.accessGranted) showEntitlementScreen();
+                else if ("entitlement".equals(screen)) showMain();
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        entitlementManager = PhoneEntitlementManager.get(this);
+        entitlementManager.addListener(entitlementListener);
+        entitlementManager.start();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 10);
         }
-        showMain();
-        handleExternalBackupIntent(getIntent());
+        if (entitlementManager.hasAccess()) {
+            showMain();
+            handleExternalBackupIntent(getIntent());
+        } else {
+            showEntitlementScreen();
+        }
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        handleExternalBackupIntent(intent);
+        if (entitlementManager != null && entitlementManager.hasAccess()) handleExternalBackupIntent(intent);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if ("main".equals(screen)) {
+        if (entitlementManager != null) entitlementManager.onForeground();
+        if (entitlementManager != null && !entitlementManager.hasAccess()) {
+            showEntitlementScreen();
+        } else if ("main".equals(screen)) {
             showMain();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (entitlementManager != null) entitlementManager.removeListener(entitlementListener);
+        super.onDestroy();
     }
 
     @Override
@@ -110,10 +134,94 @@ public class PhoneMainActivity extends Activity {
         }
     }
 
+    private void showEntitlementScreen() {
+        screen = "entitlement";
+        if (entitlementManager == null) entitlementManager = PhoneEntitlementManager.get(this);
+        PhoneEntitlementManager.Snapshot snapshot = entitlementManager.snapshot();
+        LinearLayout content = base();
+        addHeader(content, p("תקופת הניסיון של Zmanio", "Zmanio Free Trial"), "");
+        if (snapshot.lifetime) {
+            TextView verified = text(p("Zmanio פתוחה לצמיתות", "Zmanio is permanently unlocked"), 17, TEXT);
+            verified.setGravity(Gravity.CENTER);
+            content.addView(verified, wideParams());
+            Button continueButton = fullButton(p("המשך", "Continue"), ACCENT);
+            continueButton.setOnClickListener(v -> showMain());
+            content.addView(continueButton, wideParams());
+        } else if (snapshot.accessGranted) {
+            long days = Math.max(1L, (snapshot.remainingMillis + 86_399_999L) / 86_400_000L);
+            TextView active = text(p("14-day free trial · נותרו " + days + " ימים", "14-day free trial · " + days + " days remaining"), 16, MUTED);
+            active.setGravity(Gravity.CENTER);
+            content.addView(active, wideParams());
+            Button continueButton = fullButton(p("המשך", "Continue"), ACCENT);
+            continueButton.setOnClickListener(v -> showMain());
+            content.addView(continueButton, wideParams());
+        } else {
+            TextView explanation = text(p("תקופת הניסיון החינמית של 14 יום הסתיימה.\nניתן לפתוח את Zmanio לצמיתות ברכישה חד-פעמית.\nללא מנוי.",
+                    "Your 14-day free trial has ended.\nUnlock Zmanio permanently with a one-time purchase.\nNo subscription."), 16, TEXT);
+            explanation.setGravity(Gravity.CENTER);
+            explanation.setPadding(dp(8), dp(14), dp(8), dp(14));
+            content.addView(explanation, wideParams());
+            String price = entitlementManager.price();
+            TextView priceView = text(price.isEmpty() ? p("המחיר נטען מ-Google Play…", "Price loading from Google Play…")
+                    : p("רכישה חד-פעמית: " + price, "One-time purchase: " + price), 15, MUTED);
+            priceView.setGravity(Gravity.CENTER);
+            content.addView(priceView, wideParams());
+            Button unlock = fullButton(price.isEmpty() ? p("פתיחת Zmanio", "Unlock Zmanio")
+                    : p("פתיחת Zmanio · " + price, "Unlock Zmanio · " + price), ACCENT);
+            unlock.setOnClickListener(v -> entitlementManager.purchase(this,
+                    (success, message) -> runOnUiThread(() -> {
+                        if (!success) Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    })));
+            content.addView(unlock, wideParams());
+            Button restore = fullButton(p("שחזור רכישה", "Restore purchase"), SOFT);
+            restore.setOnClickListener(v -> entitlementManager.restore(
+                    (success, message) -> runOnUiThread(() -> Toast.makeText(this,
+                            success ? p("הגישה נפתחה", "Access restored") : message, Toast.LENGTH_LONG).show())));
+            content.addView(restore, wideParams());
+        }
+        setScroll(content);
+    }
+
+    private void addTrialStatus(LinearLayout content) {
+        if (entitlementManager == null) return;
+        PhoneEntitlementManager.Snapshot snapshot = entitlementManager.snapshot();
+        TextView status;
+        if (snapshot.lifetime) {
+            status = text(p("Zmanio פתוחה לצמיתות", "Zmanio permanently unlocked"), 13, MUTED);
+        } else {
+            long days = Math.max(1L, (snapshot.remainingMillis + 86_399_999L) / 86_400_000L);
+            status = text(p("תקופת ניסיון חינמית · נותרו " + days + " ימים", "14-day free trial · " + days + " days remaining"), 13, MUTED);
+        }
+        status.setGravity(Gravity.CENTER);
+        status.setPadding(dp(8), dp(7), dp(8), dp(7));
+        status.setBackground(round(SOFT, dp(16), BORDER));
+        status.setOnClickListener(v -> showEntitlementScreen());
+        content.addView(status, wideParams());
+    }
+
+    private Button fullButton(String label, int color) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setAllCaps(false);
+        button.setTextColor(TEXT);
+        button.setTextSize(15);
+        button.setBackground(round(color, dp(18), color == SOFT ? BORDER : 0));
+        return button;
+    }
+
+    private String p(String hebrew, String english) {
+        return PhoneUiText.isEnglish(this) ? english : hebrew;
+    }
+
     private void showMain() {
+        if (entitlementManager != null && !entitlementManager.hasAccess()) {
+            showEntitlementScreen();
+            return;
+        }
         screen = "main";
         LinearLayout content = base();
         addHeader(content, "Zmanio", "ניהול תזכורות שעון");
+        addTrialStatus(content);
 
         LinearLayout actions = row();
         Button sync = button("סנכרון מהשעון", ACCENT);
@@ -649,6 +757,7 @@ public class PhoneMainActivity extends Activity {
         screen = "settings";
         LinearLayout content = base();
         addHeader(content, "הגדרות", "גיבויים והגדרות כלליות");
+        addTrialStatus(content);
 
         JSONObject root = LocalReminderDocument.root(this);
         JSONObject settings = root.optJSONObject("settings");
@@ -1498,7 +1607,7 @@ public class PhoneMainActivity extends Activity {
 
     private void loadBackup(BackupStorage.BackupEntry backup) {
         try {
-            LocalReminderDocument.save(this, new String(BackupStorage.readBackup(this, backup), java.nio.charset.StandardCharsets.UTF_8));
+            LocalReminderDocument.save(this, BackupCrypto.decryptToText(BackupStorage.readBackup(this, backup)));
             Toast.makeText(this, t("הגיבוי נטען לעריכה"), Toast.LENGTH_SHORT).show();
             showMain();
         } catch (Exception exception) {

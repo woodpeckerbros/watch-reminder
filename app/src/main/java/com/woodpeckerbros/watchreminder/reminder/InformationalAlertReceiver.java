@@ -15,7 +15,7 @@ public class InformationalAlertReceiver extends BroadcastReceiver {
     static final String EXTRA_KEY = "info_alert_key";
     static final String EXTRA_TITLE = "info_alert_title";
     static final String EXTRA_MESSAGE = "info_alert_message";
-    private static final String CHANNEL_ID = "informational_alerts_full_screen_v1";
+    private static final String CHANNEL_ID = "informational_alerts_full_screen_attention_v2";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -47,7 +47,7 @@ public class InformationalAlertReceiver extends BroadcastReceiver {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setContentIntent(open)
                 .setFullScreenIntent(open, true)
-                .setVibrate(new long[]{0})
+                .setVibrate(AlertAttention.VIBRATION)
                 .setSound(null)
                 .setDefaults(0)
                 .setOnlyAlertOnce(true)
@@ -98,8 +98,7 @@ public class InformationalAlertReceiver extends BroadcastReceiver {
         if (manager == null) return;
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID, UiText.t(context, "התראות מידע"), NotificationManager.IMPORTANCE_HIGH);
-        channel.enableVibration(false);
-        channel.setSound(null, null);
+        AlertAttention.configure(channel);
         manager.createNotificationChannel(channel);
     }
 }

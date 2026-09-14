@@ -3,6 +3,7 @@ package com.woodpeckerbros.watchreminder.calendar;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -18,6 +19,7 @@ public class OmerScheduler {
     }
 
     public static void schedule(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) { cancel(context); return; }
         ReminderSettings settings = new ReminderSettings(context);
         cancelDaily(context);
         if (!settings.jewishMode() || !settings.omerEnabled()) {
@@ -60,8 +62,7 @@ public class OmerScheduler {
             return false;
         }
         AppLog.d(context, "omer catch-up open alert day=" + item.day + " at=" + NextReminderCalculator.formatDateTime(item.triggerAt));
-        openAlert(context, item.triggerAt);
-        OmerReceiver.cancelNotification(context);
+        OmerReceiver.showNotification(context, item.triggerAt, item);
         schedule(context);
         return true;
     }
