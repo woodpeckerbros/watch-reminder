@@ -23,8 +23,8 @@ public final class SmartAlarmAutoSnoozeReceiver extends BroadcastReceiver {
         SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
         SmartAlarmRingingService.stop(context);
         SmartAlarmActions.cancelNotification(context, alarmId);
-        SmartAlarmAlertActivity.closeAutoSnoozed(alarmId, targetAt);
-        if (settings.systemTimerFallbackEnabled()) {
+        boolean interactionGraceVisible = SmartAlarmAlertActivity.closeAutoSnoozed(alarmId, targetAt);
+        if (settings.systemTimerFallbackEnabled() && !interactionGraceVisible) {
             SmartAlarmAlertActivity.startSystemTimerFallback(context, alarmId);
         }
         if (state.snoozeUsed() < settings.snoozeCount()) {

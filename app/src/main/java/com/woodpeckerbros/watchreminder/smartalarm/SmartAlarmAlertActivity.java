@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -35,6 +36,7 @@ import java.util.Calendar;
 import java.lang.ref.WeakReference;
 
 public final class SmartAlarmAlertActivity extends Activity {
+    static final long INTERACTION_GRACE_MS = 5_000L;
     private static WeakReference<SmartAlarmAlertActivity> activeActivity;
     private long targetAt;
     private int alarmId = 1;
@@ -51,6 +53,9 @@ public final class SmartAlarmAlertActivity extends Activity {
     private float previewDownY;
     private boolean resumed;
     private boolean windowFocused;
+    private long lastInitialInteractionAt;
+    private boolean autoSnoozed;
+    private Runnable interactionGraceClose;
 
     static boolean isShowing(int expectedAlarmId, long expectedTargetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
@@ -230,6 +235,10 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     private void snooze() {
         if (previewMode) { closePreview(); return; }
+        if (autoSnoozed) {
+            AppLog.d(this, "SmartAlarm snooze ignored after automatic snooze id=" + alarmId);
+            return;
+        }
         explicitlyHandled = true;
         SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
         stopFeedback();
@@ -307,6 +316,9 @@ public final class SmartAlarmAlertActivity extends Activity {
     @Override public void onBackPressed() { }
 
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        if (!previewMode && !autoSnoozed && event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            lastInitialInteractionAt = SystemClock.uptimeMillis();
+        }
         if (previewMode) {
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 previewDownX = event.getX(); previewDownY = event.getY();
@@ -319,6 +331,13 @@ public final class SmartAlarmAlertActivity extends Activity {
         return super.dispatchTouchEvent(event);
     }
 
+    @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (!previewMode && !autoSnoozed && event.getAction() == KeyEvent.ACTION_DOWN) {
+            lastInitialInteractionAt = SystemClock.uptimeMillis();
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     private void closePreview() {
         explicitlyHandled = true;
         stopFeedback();
@@ -326,20 +345,43 @@ public final class SmartAlarmAlertActivity extends Activity {
         finishAndRemoveTask();
     }
 
+    /**
+     * Stops the alert feedback at its configured timeout. If the user was already interacting
+     * close to that deadline, keep the task screen for one short, resettable grace interval.
+     */
     static boolean closeAutoSnoozed(int alarmId, long targetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
         if (activity == null || activity.explicitlyHandled || activity.alarmId != alarmId || activity.targetAt != targetAt)
             return false;
-        activity.handler.post(() -> {
-            if (!activity.explicitlyHandled && activity.alarmId == alarmId && activity.targetAt == targetAt) {
-                activity.explicitlyHandled = true;
-                activity.stopFeedback();
-                AppLog.d(activity, "SmartAlarm auto-snooze stopped activity feedback id=" + alarmId);
-                activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                activity.finishAndRemoveTask();
-            }
-        });
+        return activity.stopForAutoSnooze();
+    }
+
+    static long interactionGraceDelayMs(long now, long lastInteractionAt) {
+        if (lastInteractionAt <= 0L) return 0L;
+        return Math.max(0L, lastInteractionAt + INTERACTION_GRACE_MS - now);
+    }
+
+    private boolean stopForAutoSnooze() {
+        if (explicitlyHandled) return false;
+        autoSnoozed = true;
+        stopFeedback();
+        long delayMs = interactionGraceDelayMs(SystemClock.uptimeMillis(), lastInitialInteractionAt);
+        if (delayMs <= 0L) {
+            AppLog.d(this, "SmartAlarm auto-snooze closed task immediately id=" + alarmId);
+            finishAfterInteractionGrace();
+            return false;
+        }
+        AppLog.d(this, "SmartAlarm auto-snooze kept task visible id=" + alarmId
+                + " graceMs=" + delayMs);
+        interactionGraceClose = this::finishAfterInteractionGrace;
+        handler.postDelayed(interactionGraceClose, delayMs);
         return true;
+    }
+
+    private void finishAfterInteractionGrace() {
+        if (explicitlyHandled) return;
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        finishAndRemoveTask();
     }
 
     @Override protected void onDestroy() {

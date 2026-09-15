@@ -25,6 +25,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
     private static final String CHANNEL_PREFIX = "smart_alarm_alert_v9";
     private static final String CHANNEL_ATTENTION = CHANNEL_PREFIX + "_attention";
     private static final long[] ATTENTION_VIBRATION = {0L, 1L};
+    private static final int NOTIFICATION_BASE = 0x534d5704;
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
@@ -106,7 +107,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
                 .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
         Notification notification = builder.build();
-        manager.notify(0x534d5704 + alarmId, notification);
+        manager.notify(NOTIFICATION_BASE + alarmId, notification);
         AppLog.d(context, "SmartAlarm notified id=" + alarmId
                 + " fullScreen=" + AppLog.fullScreenIntentAllowed(context)
                 + " notifications=" + AppLog.notificationPermissionAllowed(context));
@@ -134,6 +135,65 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         }, 2_000L);
         AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason
                 + ("deadline".equals(reason) ? " WAKE_REASON=FINAL_DEADLINE" : ""));
+    }
+
+    /**
+     * A simultaneous system full-screen card can win the first delivery race.  A fresh alarm
+     * notification after that card is dismissed is more reliable than another direct background
+     * Activity launch, which Android 15 may reject.
+     */
+    static void repostFullScreen(Context context, int alarmId, long targetAt) {
+        SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+        if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager == null) return;
+        ensureAttentionChannel(manager);
+        Intent activity = new Intent(context, SmartAlarmAlertActivity.class)
+                .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
+                .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                .putExtra("reason", "screen_guard_reannounce")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Bundle creatorOptions = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setPendingIntentCreatorBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+            creatorOptions = options.toBundle();
+        }
+        PendingIntent pending = PendingIntent.getActivity(context, 0x534d5803 + alarmId, activity,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE, creatorOptions);
+        Notification notification = new Notification.Builder(context, CHANNEL_ATTENTION)
+                .setSmallIcon(R.drawable.ic_notification).setContentTitle("Smart Alarm")
+                .setContentText("זמן להתעורר").setCategory(Notification.CATEGORY_ALARM)
+                .setStyle(new Notification.BigTextStyle().bigText("זמן להתעורר"))
+                .setPriority(Notification.PRIORITY_MAX).setContentIntent(pending)
+                .setFullScreenIntent(pending, true).setSound(null)
+                .setVibrate(ATTENTION_VIBRATION)
+                .setDefaults(0).setOnlyAlertOnce(true).setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .addAction(SmartAlarmActions.openAction(context, alarmId, targetAt))
+                .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
+                .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt))
+                .build();
+        manager.cancel(NOTIFICATION_BASE + alarmId);
+        manager.notify(NOTIFICATION_BASE + alarmId, notification);
+        AppLog.w(context, "SmartAlarm full-screen notification reposted id=" + alarmId);
+    }
+
+    private static void ensureAttentionChannel(NotificationManager manager) {
+        if (manager.getNotificationChannel(CHANNEL_ATTENTION) != null) return;
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ATTENTION, "Smart Alarm", NotificationManager.IMPORTANCE_HIGH);
+        AudioAttributes attributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+        channel.setSound(null, attributes);
+        channel.setVibrationPattern(ATTENTION_VIBRATION);
+        channel.enableVibration(true);
+        channel.setBypassDnd(manager.isNotificationPolicyAccessGranted());
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        manager.createNotificationChannel(channel);
     }
 
 }

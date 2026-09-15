@@ -27,11 +27,13 @@ import com.woodpeckerbros.watchreminder.R;
 public final class SmartAlarmRingingService extends Service {
     private static final String CHANNEL = "smart_alarm_ringing_v1";
     private static final int NOTIFICATION_ID = 0x534d5706;
+    private static final long FULL_SCREEN_REPOST_INTERVAL_MS = 8_000L;
     private AlertFeedback feedback;
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int activeAlarmId;
     private long activeTargetAt;
+    private long lastFullScreenRepostAt;
 
     public static boolean start(Context context, int alarmId, long targetAt) {
         try {
@@ -62,6 +64,9 @@ public final class SmartAlarmRingingService extends Service {
         long targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         activeAlarmId = alarmId;
         activeTargetAt = targetAt;
+        // Let SystemUI process the original exact-alarm full-screen notification first. If a
+        // competing morning card takes the screen, a fresh post follows only after this interval.
+        lastFullScreenRepostAt = android.os.SystemClock.uptimeMillis();
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) manager.notify(NOTIFICATION_ID, notification(alarmId, targetAt));
         if (feedback != null) feedback.stop();
@@ -121,6 +126,11 @@ public final class SmartAlarmRingingService extends Service {
             AppLog.d(this, "SmartAlarm screen guard confirmed visible id=" + alarmId);
         } else {
             ensureAlertScreen(alarmId, targetAt);
+            long now = android.os.SystemClock.uptimeMillis();
+            if (now - lastFullScreenRepostAt >= FULL_SCREEN_REPOST_INTERVAL_MS) {
+                lastFullScreenRepostAt = now;
+                SmartAlarmReceiver.repostFullScreen(this, alarmId, targetAt);
+            }
         }
         if (activeAlarmId == alarmId && activeTargetAt == targetAt)
             handler.postDelayed(() -> guardAlertScreen(alarmId, targetAt), 2_000L);
