@@ -22,6 +22,12 @@ import java.util.Locale;
 
 public final class WaterReminderComplicationService extends ComplicationDataSourceService {
     @Override
+    public void onComplicationActivated(int complicationInstanceId, ComplicationType type) {
+        ComplicationRefresh.requestActivated(this, WaterReminderComplicationService.class,
+                complicationInstanceId);
+    }
+
+    @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
         try {
             listener.onComplicationData(createData(request.getComplicationType(), false));

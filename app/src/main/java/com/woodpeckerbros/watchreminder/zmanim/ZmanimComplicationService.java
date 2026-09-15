@@ -22,6 +22,12 @@ import androidx.wear.watchface.complications.datasource.ComplicationRequest;
 
 public class ZmanimComplicationService extends ComplicationDataSourceService {
     @Override
+    public void onComplicationActivated(int complicationInstanceId, ComplicationType type) {
+        ComplicationRefresh.requestActivated(this, ZmanimComplicationService.class,
+                complicationInstanceId);
+    }
+
+    @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
         try {
             listener.onComplicationData(createData(request.getComplicationType()));

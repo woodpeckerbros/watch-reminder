@@ -33,6 +33,12 @@ import java.util.List;
 
 public class HebrewDateComplicationService extends ComplicationDataSourceService {
     @Override
+    public void onComplicationActivated(int complicationInstanceId, ComplicationType type) {
+        ComplicationRefresh.requestActivated(this, HebrewDateComplicationService.class,
+                complicationInstanceId);
+    }
+
+    @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
         try {
             listener.onComplicationDataTimeline(createTimeline(request.getComplicationType()));

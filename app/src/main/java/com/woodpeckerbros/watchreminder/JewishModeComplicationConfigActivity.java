@@ -42,8 +42,7 @@ public class JewishModeComplicationConfigActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (new ReminderSettings(this).jewishMode()) {
-            setResult(RESULT_OK);
-            finish();
+            finishSuccessfully();
             return;
         }
         showEnableScreen();
@@ -93,7 +92,12 @@ public class JewishModeComplicationConfigActivity extends Activity {
         JewishDayScheduler.schedule(this);
         TekufaScheduler.schedule(this);
         ComplicationRefresh.requestAll(this);
+        finishSuccessfully();
+    }
+
+    private void finishSuccessfully() {
         setResult(RESULT_OK);
+        ComplicationRefresh.requestAfterConfiguration(this);
         finish();
     }
 

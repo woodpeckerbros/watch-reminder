@@ -20,6 +20,12 @@ import androidx.wear.watchface.complications.datasource.ComplicationRequest;
 
 public class IntermittentFastingComplicationService extends ComplicationDataSourceService {
     @Override
+    public void onComplicationActivated(int complicationInstanceId, ComplicationType type) {
+        ComplicationRefresh.requestActivated(this, IntermittentFastingComplicationService.class,
+                complicationInstanceId);
+    }
+
+    @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
         try {
             listener.onComplicationData(createData(request.getComplicationType()));
