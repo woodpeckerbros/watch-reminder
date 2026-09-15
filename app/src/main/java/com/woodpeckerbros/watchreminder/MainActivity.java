@@ -1419,6 +1419,8 @@ public class MainActivity extends Activity {
         if (entitlementManager == null) entitlementManager = EntitlementManager.get(this);
         TrialPolicy.Snapshot trial = entitlementManager.trial();
         LinearLayout content = baseContent();
+        // Leave enough scrollable space below the last action on small/round Wear screens.
+        content.setPadding(dp(12), dp(22), dp(12), dp(44));
         if (trial.lifetimePurchased) {
             addTitle(content, entitlementText("Zmanio פתוחה לצמיתות", "Zmanio is permanently unlocked"), "");
             content.addView(infoPill(entitlementText("גישה לכל החיים מאומתת ב-Google Play", "Lifetime access verified by Google Play"), COLOR_EMERALD));
