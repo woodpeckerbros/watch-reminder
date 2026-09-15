@@ -105,7 +105,7 @@ public class UiText {
         res("ניקוי לוגים", R.string.ui_legacy_037);
         res("לוגים", R.string.ui_legacy_038);
         res("לוגים לטלפון", R.string.ui_legacy_039);
-        res("לבדיקת תזכורות שלא קופצות בזמן", R.string.ui_legacy_040);
+        res("שליחת הלוגים למפתח מסייעת באיתור ובתיקון תקלות", R.string.ui_legacy_040);
         res("גיבוי ושחזור", R.string.ui_legacy_041);
         res("גיבוי לטלפון", R.string.ui_legacy_042);
         res("שחזור מהטלפון", R.string.ui_legacy_043);

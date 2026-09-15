@@ -2216,7 +2216,7 @@ public class MainActivity extends Activity {
         TextView logsTitle = text("לוגים", 15, COLOR_TEXT);
         AppFont.bold(logsTitle);
         logsCard.addView(logsTitle);
-        TextView logsHint = text("לבדיקת תזכורות שלא קופצות בזמן", 11, COLOR_MUTED);
+        TextView logsHint = text("שליחת הלוגים למפתח מסייעת באיתור ובתיקון תקלות", 11, COLOR_MUTED);
         logsHint.setPadding(0, dp(3), 0, dp(6));
         logsCard.addView(logsHint);
         LinearLayout logsActions = actionRow();
@@ -6726,14 +6726,18 @@ public class MainActivity extends Activity {
         TextView titleView = text(title, 22, COLOR_TEXT);
         AppFont.bold(titleView);
         titleView.setPadding(0, 0, 0, dp(2));
-        content.addView(titleView);
+        content.addView(titleView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         if (subtitle == null || subtitle.trim().isEmpty()) {
             titleView.setPadding(0, 0, 0, dp(12));
             return;
         }
         TextView subtitleView = text(subtitle, 11, COLOR_MUTED);
         subtitleView.setPadding(dp(18), 0, dp(18), dp(12));
-        content.addView(subtitleView);
+        content.addView(subtitleView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
     }
 
     private void addOutlinedTitle(LinearLayout content, String title, String subtitle) {

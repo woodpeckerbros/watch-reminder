@@ -199,7 +199,7 @@
     <string name="ui_legacy_037">Clear Logs</string>
     <string name="ui_legacy_038">Logs</string>
     <string name="ui_legacy_039">Send Logs</string>
-    <string name="ui_legacy_040">For diagnosing reminders that do not alert on time</string>
+    <string name="ui_legacy_040">Sending logs to the developer helps diagnose and fix issues</string>
     <string name="ui_legacy_041">Backup and Restore</string>
     <string name="ui_legacy_042">Back Up to Phone</string>
     <string name="ui_legacy_043">Restore from Phone</string>

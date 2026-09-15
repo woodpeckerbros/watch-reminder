@@ -17,6 +17,7 @@ public class BackupReceiverService extends WearableListenerService {
         if (LogStorage.MESSAGE_PATH.equals(messageEvent.getPath())) {
             try {
                 LogStorage.save(this, messageEvent.getData());
+                notifyPhoneDataUpdated();
             } catch (Exception exception) {
                 android.util.Log.e("WatchReminderPhone", "Could not save logs", exception);
             }
@@ -25,10 +26,16 @@ public class BackupReceiverService extends WearableListenerService {
         if (BackupStorage.MESSAGE_PATH.equals(messageEvent.getPath())) {
             try {
                 BackupStorage.save(this, messageEvent.getData());
+                notifyPhoneDataUpdated();
             } catch (Exception exception) {
                 android.util.Log.e("WatchReminderPhone", "Could not save backup", exception);
             }
         }
+    }
+
+    private void notifyPhoneDataUpdated() {
+        sendBroadcast(new Intent(PhoneMainActivity.ACTION_PHONE_DATA_UPDATED)
+                .setPackage(getPackageName()));
     }
 
     private void openApp() {

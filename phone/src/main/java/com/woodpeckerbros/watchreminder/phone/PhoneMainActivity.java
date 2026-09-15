@@ -3,7 +3,10 @@ package com.woodpeckerbros.watchreminder.phone;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -49,6 +52,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 public class PhoneMainActivity extends Activity {
+    static final String ACTION_PHONE_DATA_UPDATED = "com.woodpeckerbros.watchreminder.phone.DATA_UPDATED";
     private static final int REQUEST_PICK_BACKUP = 201;
     private static final int REQUEST_PICK_LOG = 202;
     private static final int BG = 0xFF091C2B;
@@ -67,6 +71,13 @@ public class PhoneMainActivity extends Activity {
     private static final String[] UNIT_VALUES = {"hours", "days", "weeks", "months", "years"};
     private String screen = "main";
     private PhoneEntitlementManager entitlementManager;
+    private boolean dataReceiverRegistered;
+    private final BroadcastReceiver dataUpdatedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            refreshVisibleDataScreen();
+        }
+    };
     private final PhoneEntitlementManager.Listener entitlementListener = (state, snapshot, price, message) ->
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -93,10 +104,25 @@ public class PhoneMainActivity extends Activity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter(ACTION_PHONE_DATA_UPDATED);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(dataUpdatedReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(dataUpdatedReceiver, filter);
+        }
+        dataReceiverRegistered = true;
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (entitlementManager != null && entitlementManager.hasAccess()) handleExternalBackupIntent(intent);
+        if (entitlementManager != null && entitlementManager.hasAccess()) {
+            handleExternalBackupIntent(intent);
+            refreshVisibleDataScreen();
+        }
     }
 
     @Override
@@ -105,8 +131,40 @@ public class PhoneMainActivity extends Activity {
         if (entitlementManager != null) entitlementManager.onForeground();
         if (entitlementManager != null && !entitlementManager.hasAccess()) {
             showEntitlementScreen();
-        } else if ("main".equals(screen)) {
+        } else {
+            refreshVisibleDataScreen();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        if (dataReceiverRegistered) {
+            unregisterReceiver(dataUpdatedReceiver);
+            dataReceiverRegistered = false;
+        }
+        super.onStop();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if ("smart_alarm_editor".equals(screen)) {
+            showSmartAlarms();
+        } else if ("smart_alarms".equals(screen)) {
             showMain();
+        } else if ("editor".equals(screen)) {
+            showMain();
+        } else if ("settings".equals(screen)) {
+            showMain();
+        } else if ("about_licenses".equals(screen)) {
+            showSettings();
+        } else if ("license_text".equals(screen)) {
+            showAboutAndLicenses();
+        } else if ("entitlement".equals(screen)
+                && entitlementManager != null
+                && entitlementManager.hasAccess()) {
+            showMain();
+        } else {
+            super.onBackPressed();
         }
     }
 
@@ -180,6 +238,20 @@ public class PhoneMainActivity extends Activity {
             content.addView(restore, wideParams());
         }
         setScroll(content);
+    }
+
+    private void refreshVisibleDataScreen() {
+        if (entitlementManager != null && !entitlementManager.hasAccess()) {
+            showEntitlementScreen();
+            return;
+        }
+        if ("main".equals(screen)) {
+            showMain();
+        } else if ("settings".equals(screen)) {
+            showSettings();
+        } else if ("smart_alarms".equals(screen)) {
+            showSmartAlarms();
+        }
     }
 
     private void addTrialStatus(LinearLayout content) {
@@ -1247,10 +1319,14 @@ public class PhoneMainActivity extends Activity {
         content.addView(eyebrow);
         TextView titleView = text(title, 30, TEXT);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
-        content.addView(titleView);
+        content.addView(titleView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         TextView sub = text(subtitle, 14, MUTED);
         sub.setPadding(0, dp(5), 0, dp(12));
-        content.addView(sub);
+        content.addView(sub, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         View accent = new View(this);
         accent.setBackgroundColor(COPPER);
         LinearLayout.LayoutParams accentParams = new LinearLayout.LayoutParams(dp(48), dp(3));
