@@ -12,7 +12,7 @@ public class SmartWakeDetectorTest {
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);
         addGentleWakeChange(detector, 610_000, false);
         SmartWakeDetector.Decision decision = detector.evaluate(675_000);
-        assertEquals(15, decision.score); // HR rise alone is intentionally not enough without motion.
+        assertEquals(15, decision.score); // HR delta/slope remain one cardiovascular evidence group.
         assertFalse(decision.shouldWake);
     }
 
@@ -33,7 +33,7 @@ public class SmartWakeDetectorTest {
         assertFalse(weakened.candidateActive);
         assertEquals(30_000L, weakened.candidateAgeMs);
         assertEquals("EVIDENCE_WEAKENED", weakened.candidateConfirmationStatus);
-        assertEquals("CANDIDATE_EVIDENCE_WEAKENED", weakened.continueReason);
+        assertEquals("CONTINUE_CANDIDATE_DECAYED", weakened.continueReason);
         assertFalse(weakened.candidateConfirmed);
         assertFalse(weakened.shouldWake);
     }
@@ -56,7 +56,7 @@ public class SmartWakeDetectorTest {
         assertEquals(1, fading.evidenceGroups);
         assertFalse(fading.candidateActive);
         assertEquals("EVIDENCE_WEAKENED", fading.candidateConfirmationStatus);
-        assertEquals("CANDIDATE_EVIDENCE_WEAKENED", fading.continueReason);
+        assertEquals("CONTINUE_CANDIDATE_DECAYED", fading.continueReason);
         assertFalse(fading.shouldWake);
     }
 
@@ -71,8 +71,8 @@ public class SmartWakeDetectorTest {
         assertTrue(confirmation.candidateActive);
         assertTrue(confirmation.candidateConfirmed);
         assertEquals("CONFIRMED_FRESH_EVIDENCE", confirmation.candidateConfirmationStatus);
-        assertEquals("SCORE_STRENGTH_MAINTAINED", confirmation.candidateConfirmationSource);
-        assertEquals("CANDIDATE_CONFIRMED_FRESH_EVIDENCE", confirmation.wakeReason);
+        assertEquals("TEMPORAL_CARDIO_AND_MOVEMENT", confirmation.candidateConfirmationSource);
+        assertEquals("WAKE_LIGHT_SLEEP_OPPORTUNITY", confirmation.wakeReason);
         assertTrue(confirmation.shouldWake);
     }
 
@@ -87,8 +87,22 @@ public class SmartWakeDetectorTest {
         assertTrue(waiting.candidateActive);
         assertFalse(waiting.candidateConfirmed);
         assertEquals("WAITING_FOR_FRESH_CONFIRMATION", waiting.candidateConfirmationStatus);
-        assertEquals("CANDIDATE_WAITING_FOR_FRESH_CONFIRMATION", waiting.continueReason);
+        assertEquals("CONTINUE_INSUFFICIENT_WAKEABILITY", waiting.continueReason);
         assertFalse(waiting.shouldWake);
+    }
+
+    @Test public void freshLowHeartRateCannotConfirmOldHighHeartRateWithFreshMovement() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addStrongHeartRateCandidateWithAccel(detector, 610_000L);
+        assertTrue(detector.evaluate(675_000L).candidateActive);
+
+        detector.addHeartRate(60, 680_000L);
+        addActiveAccelBucket(detector, 685_000L);
+        SmartWakeDetector.Decision decision = detector.evaluate(705_000L);
+
+        assertFalse(decision.candidateConfirmed);
+        assertFalse(decision.shouldWake);
     }
 
     @Test public void candidateExpiresWithoutAffectingLaterEvaluations() {
@@ -97,23 +111,22 @@ public class SmartWakeDetectorTest {
         addGentleWakeChange(detector, 610_000, true);
         assertTrue(detector.evaluate(675_000).candidateActive);
 
-        SmartWakeDetector.Decision expired = detector.evaluate(766_000);
+        SmartWakeDetector.Decision expired = detector.evaluate(826_000);
         assertFalse(expired.candidateActive);
         assertFalse(expired.candidateConfirmed);
         assertEquals("EXPIRED", expired.candidateConfirmationStatus);
-        assertEquals("CANDIDATE_EXPIRED", expired.continueReason);
+        assertEquals("CONTINUE_CANDIDATE_DECAYED", expired.continueReason);
         assertFalse(expired.shouldWake);
     }
 
-    @Test public void veryHighMultiSignalChangeWakesOnOneEvaluation() {
+    @Test public void veryHighMultiSignalChangeStillNeedsTemporalConfirmation() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);
-        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 650_000);
         addStrongBaselineRelativeChange(detector, 610_000);
         SmartWakeDetector.Decision decision = detector.evaluate(675_000);
         assertTrue(decision.immediateCandidate);
-        assertTrue(decision.shouldWake);
-        assertEquals("SMART_SCORE_IMMEDIATE", decision.wakeReason);
+        assertTrue(decision.candidateActive);
+        assertFalse(decision.shouldWake);
     }
 
     @Test public void accelerometerAndGyroscopeAreOneMovementEvidenceGroup() {
@@ -122,7 +135,8 @@ public class SmartWakeDetectorTest {
         addStrongBaselineRelativeChange(detector, 610_000);
         SmartWakeDetector.Decision decision = detector.evaluate(675_000);
         assertEquals(2, decision.evidenceGroups); // cardiovascular + movement, not three groups.
-        assertTrue(decision.immediateCandidate); // Immediate now needs these exact two groups.
+        assertTrue(decision.immediateCandidate); // Strong sample, but still only candidate context.
+        assertFalse(decision.shouldWake);
     }
 
     @Test public void persistentSystemNonAsleepWakesEvenWithoutSmartScore() {
@@ -134,7 +148,7 @@ public class SmartWakeDetectorTest {
         assertEquals(0, decision.score);
         assertTrue(decision.lateAwakeConfirmation);
         assertTrue(decision.systemAwakePersistent);
-        assertEquals("SYSTEM_AWAKE_PERSISTENT", decision.wakeReason);
+        assertEquals("WAKE_ALREADY_AWAKE", decision.wakeReason);
         assertTrue(decision.shouldWake);
     }
 
@@ -149,7 +163,7 @@ public class SmartWakeDetectorTest {
         addActiveAccelBucket(detector, 700_000L);
         SmartWakeDetector.Decision awake = detector.evaluate(715_000);
         assertTrue(awake.clearlyAwake);
-        assertEquals("CLEARLY_AWAKE", awake.wakeReason);
+        assertEquals("WAKE_CLEARLY_AWAKE", awake.wakeReason);
         assertTrue(awake.shouldWake);
     }
 
@@ -164,7 +178,7 @@ public class SmartWakeDetectorTest {
         SmartWakeDetector.Decision awake = detector.evaluate(715_000);
         assertTrue(awake.freshSystemNonAsleep);
         assertTrue(awake.systemAwakePersistent);
-        assertEquals("SYSTEM_AWAKE_PERSISTENT", awake.wakeReason);
+        assertEquals("WAKE_ALREADY_AWAKE", awake.wakeReason);
         assertTrue(awake.shouldWake);
     }
 
@@ -176,13 +190,13 @@ public class SmartWakeDetectorTest {
         SmartWakeDetector.Decision pending = detector.evaluate(625_000);
         assertFalse(pending.systemAwakePersistent);
         assertFalse(pending.shouldWake);
-        assertEquals("SYSTEM_AWAKE_NOT_YET_PERSISTENT", pending.continueReason);
+        assertEquals("CONTINUE_ISOLATED_EVENT", pending.continueReason);
 
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 626_000);
         SmartWakeDetector.Decision returnedToSleep = detector.evaluate(660_000);
         assertFalse(returnedToSleep.systemAwakePersistent);
         assertFalse(returnedToSleep.shouldWake);
-        assertEquals("NO_CANDIDATE", returnedToSleep.continueReason);
+        assertEquals("CONTINUE_INSUFFICIENT_WAKEABILITY", returnedToSleep.continueReason);
     }
 
     @Test public void secondSystemNonAsleepObservationConfirmsWakeWithoutWaitingForNextInterval() {
@@ -195,7 +209,7 @@ public class SmartWakeDetectorTest {
         SmartWakeDetector.Decision confirmed = detector.evaluate(626_000);
         assertTrue(confirmed.systemAwakePersistent);
         assertEquals(2, confirmed.systemNonAsleepObservations);
-        assertEquals("SYSTEM_AWAKE_PERSISTENT", confirmed.wakeReason);
+        assertEquals("WAKE_ALREADY_AWAKE", confirmed.wakeReason);
         assertTrue(confirmed.shouldWake);
     }
 
@@ -218,7 +232,7 @@ public class SmartWakeDetectorTest {
         SmartWakeDetector.Decision validatedObservation = detector.evaluate(706_000);
         assertEquals(2, validatedObservation.systemNonAsleepObservations);
         assertTrue(validatedObservation.systemAwakePersistent);
-        assertEquals("SYSTEM_AWAKE_PERSISTENT", validatedObservation.wakeReason);
+        assertEquals("WAKE_ALREADY_AWAKE", validatedObservation.wakeReason);
     }
 
     @Test public void twoRecentPersistedCallbacksPreserveValidatedAwakeStateAcrossStartup() {
@@ -229,7 +243,7 @@ public class SmartWakeDetectorTest {
         SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
         assertEquals(2, decision.systemNonAsleepObservations);
         assertTrue(decision.systemAwakePersistent);
-        assertEquals("SYSTEM_AWAKE_PERSISTENT", decision.wakeReason);
+        assertEquals("WAKE_ALREADY_AWAKE", decision.wakeReason);
         assertTrue(decision.shouldWake);
     }
 
@@ -321,28 +335,163 @@ public class SmartWakeDetectorTest {
     @Test public void telemetryIncludesBothDecisionRoutesAndSupportingMeasurements() {
         SmartWakeDetector.Decision decision = preparedDetector().evaluate(675_000);
         String summary = decision.summary(675_000);
-        assertEquals("timestamp=675000 → WAKE_SCORE=0 → groups=0 → candidate_active=false → candidate_age_ms=-1"
-                + " → candidate_origin_score=-1 → candidate_origin_groups=-1"
-                + " → candidate_confirmation_status=NONE → clearly_awake=false"
-                + " → system_state=UNKNOWN → system_awake_fresh=false → system_awake_persistent=false"
-                + " → decision=CONTINUE → DECISION_REASON=NO_CANDIDATE", summary);
+        assertTrue(summary.contains("timestamp=675000 → system_state=UNKNOWN"));
+        assertTrue(summary.contains("WAKE_SCORE=0 → groups=0 → fresh_groups=0"));
+        assertTrue(summary.contains("wakeability_state=STABLE_OR_LOW_WAKEABILITY"));
+        assertTrue(summary.contains("decision=CONTINUE"));
         String telemetry = decision.telemetry();
         assertTrue(telemetry.contains("WAKE_SCORE="));
         assertTrue(telemetry.contains("EVIDENCE_GROUPS="));
         assertTrue(telemetry.contains("CANDIDATE_ACTIVE="));
         assertTrue(telemetry.contains("CANDIDATE_AGE="));
-        assertTrue(telemetry.contains("CANDIDATE_ORIGIN_SCORE="));
-        assertTrue(telemetry.contains("CANDIDATE_ORIGIN_GROUPS="));
+        assertTrue(telemetry.contains("CANDIDATE_ORIGIN="));
         assertTrue(telemetry.contains("CANDIDATE_CONFIRMATION_STATUS="));
         assertTrue(telemetry.contains("CANDIDATE_CONFIRMATION_SOURCE="));
         assertTrue(telemetry.contains("CLEARLY_AWAKE="));
         assertTrue(telemetry.contains("CLEARLY_AWAKE_REASON="));
         assertTrue(telemetry.contains("ACTIVE_MOVEMENT_BUCKETS="));
         assertTrue(telemetry.contains("MOVEMENT_SPAN="));
-        assertTrue(telemetry.contains("STEPS="));
-        assertTrue(telemetry.contains("FRESH_USER_ACTIVITY_TRANSITION="));
+        assertTrue(telemetry.contains("STEPS_RECENT="));
+        assertTrue(telemetry.contains("ASLEEP_TO_NON_ASLEEP="));
         assertTrue(telemetry.contains("SYSTEM_AWAKE_PERSISTENT="));
         assertTrue(telemetry.contains("SYSTEM_AWAKE_FRESH="));
+        assertTrue(telemetry.contains("HR_RECENT_SLOPE="));
+        assertTrue(telemetry.contains("HRV=NO_DATA"));
+        assertTrue(telemetry.contains("ACCEL_SAMPLES="));
+        assertTrue(telemetry.contains("GYRO_SAMPLES="));
+        assertTrue(telemetry.contains("MICRO_MOVEMENT_COUNT="));
+        assertTrue(telemetry.contains("MOVEMENT_CLUSTER_COUNT="));
+        assertTrue(telemetry.contains("WAKEABILITY_STATE="));
+        assertTrue(telemetry.contains("WAKEABILITY_TREND="));
+        assertTrue(telemetry.contains("FRESH_EVIDENCE_GROUPS="));
+        assertTrue(telemetry.contains("DECISION_REASON="));
+    }
+
+    @Test public void stableQuietSleepDoesNotWake() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(60, 620_000L);
+        detector.addHeartRate(61, 650_000L);
+        detector.addAccelerometerMotion(.08, 620_000L);
+        detector.addGyroscopeMotion(.10, 620_000L);
+        detector.addAccelerometerMotion(.08, 650_000L);
+        detector.addGyroscopeMotion(.10, 650_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+
+        assertEquals(SmartWakeDetector.WakeabilityState.STABLE_OR_LOW_WAKEABILITY,
+                decision.wakeabilityState);
+        assertEquals("CONTINUE_STABLE_SLEEP", decision.continueReason);
+        assertFalse(decision.shouldWake);
+    }
+
+    @Test public void oneHeartRateSpikeIsIsolatedNoise() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(105, 650_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+
+        assertFalse(decision.candidateActive);
+        assertFalse(decision.shouldWake);
+        assertEquals(0, decision.evidenceGroups);
+    }
+
+    @Test public void moderateMultiGroupEventThenSilenceDecaysWithoutWake() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        assertTrue(detector.evaluate(675_000L).candidateActive);
+
+        SmartWakeDetector.Decision fading = detector.evaluate(751_000L);
+        SmartWakeDetector.Decision silent = detector.evaluate(781_000L);
+
+        assertFalse(fading.shouldWake);
+        assertFalse(silent.shouldWake);
+        assertFalse(silent.candidateActive);
+        assertEquals("CONTINUE_CANDIDATE_DECAYED", silent.continueReason);
+    }
+
+    @Test public void systemAsleepAllowsTemporalWakeOpportunityBeforeClearlyAwake() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        SmartWakeDetector.Decision rising = detector.evaluate(675_000L);
+        assertEquals(SmartWakeDetector.WakeabilityState.WAKEABILITY_RISING,
+                rising.wakeabilityState);
+        assertFalse(rising.shouldWake);
+
+        addGentleWakeChange(detector, 680_000L, true);
+        SmartWakeDetector.Decision opportunity = detector.evaluate(745_000L);
+
+        assertEquals(SmartWakeDetector.UserActivity.ASLEEP, opportunity.userActivity);
+        assertFalse(opportunity.clearlyAwake);
+        assertEquals(SmartWakeDetector.WakeabilityState.WAKE_OPPORTUNITY,
+                opportunity.wakeabilityState);
+        assertEquals("WAKE_LIGHT_SLEEP_OPPORTUNITY", opportunity.wakeReason);
+        assertTrue(opportunity.shouldWake);
+    }
+
+    @Test public void naturalTransitionTriggersBeforeLaterPassiveCallback() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        detector.evaluate(675_000L);
+        addGentleWakeChange(detector, 680_000L, true);
+
+        SmartWakeDetector.Decision beforePassive = detector.evaluate(745_000L);
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 760_000L);
+
+        assertTrue(beforePassive.shouldWake);
+        assertEquals(SmartWakeDetector.UserActivity.ASLEEP, beforePassive.userActivity);
+        assertEquals("WAKE_LIGHT_SLEEP_OPPORTUNITY", beforePassive.wakeReason);
+    }
+
+    @Test public void awakeLyingInBedUsesLateFallbackWithoutSteps() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 590_000L);
+        addGentleWakeChange(detector, 610_000L, false);
+        addStrongAccelBucket(detector, 600_000L);
+        addStrongAccelBucket(detector, 615_000L);
+        addStrongAccelBucket(detector, 630_000L);
+        addStrongAccelBucket(detector, 645_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+
+        assertEquals(0, decision.steps);
+        assertTrue(decision.clearlyAwake);
+        assertEquals("WAKE_CLEARLY_AWAKE", decision.wakeReason);
+        assertTrue(decision.shouldWake);
+    }
+
+    @Test public void bathroomTripThenFreshAsleepAndQuietDoesNotReuseStaleAwakeEvidence() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 610_000L);
+        detector.setUserActivity(SmartWakeDetector.UserActivity.PASSIVE, 620_000L);
+        for (int i = 0; i < 5; i++) detector.addStep(625_000L + i * 5_000L);
+        addActiveAccelBucket(detector, 630_000L);
+        addActiveAccelBucket(detector, 650_000L);
+        assertTrue(detector.evaluate(675_000L).shouldWake);
+
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 680_000L);
+        SmartWakeDetector.Decision returnedToSleep = detector.evaluate(800_000L);
+
+        assertFalse(returnedToSleep.systemAwakePersistent);
+        assertFalse(returnedToSleep.clearlyAwake);
+        assertFalse(returnedToSleep.shouldWake);
+    }
+
+    @Test public void missingMovementSensorDataIsNotMeasuredQuiet() {
+        SmartWakeDetector detector = new SmartWakeDetector(0L);
+        for (int minute = 0; minute < 12; minute++) {
+            detector.addHeartRate(60, minute * 60_000L + 5_000L);
+        }
+
+        SmartWakeDetector.Decision decision = detector.evaluate(800_000L);
+
+        assertEquals("NO_DATA", decision.movementDataStatus);
+        assertFalse(decision.baselineReady);
+        assertFalse(decision.shouldWake);
     }
 
     @Test public void baselineIsRequiredBeforeEarlyWake() {
@@ -374,6 +523,99 @@ public class SmartWakeDetectorTest {
         assertEquals(0, decision.gyroscopeBaseline.energyPerSecond, .0001);
     }
 
+    @Test public void rollingBaselineFreezesDuringGradualHeartRateRise() {
+        SmartWakeDetector detector = lowHeartRateBaselineDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+
+        // The first two elevated samples create interesting cardiovascular evidence and freeze
+        // the pre-transition sleep baseline at 48.0 BPM.
+        detector.addHeartRate(51, 610_000L);
+        detector.addHeartRate(53, 645_000L);
+        SmartWakeDetector.Decision firstRise = detector.evaluate(675_000L);
+        assertEquals(48.0, firstRise.heartRateBaseline, .001);
+
+        // Continue the 3–5 minute-like rise. Without freezing, 51/53/56/59 would enter the
+        // rolling baseline after the 75-second exclusion and reduce the final delta.
+        detector.addHeartRate(56, 680_000L);
+        detector.addHeartRate(59, 715_000L);
+        detector.evaluate(745_000L);
+        detector.addHeartRate(61, 750_000L);
+        detector.addHeartRate(63, 785_000L);
+        SmartWakeDetector.Decision continuingRise = detector.evaluate(815_000L);
+
+        assertEquals("READY_FROZEN", continuingRise.baselineStatus);
+        assertEquals(48.0, continuingRise.heartRateBaseline, .001);
+        assertEquals(14.0, continuingRise.hrAboveBaseline, .001);
+    }
+
+    @Test public void movementThenCurrentHeartRateCanFormTemporalMultiGroupEvidence() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addActiveAccelBucket(detector, 610_000L); // T+00s micro-movement cluster.
+        detector.addHeartRate(64, 645_000L); // T+35s cardiovascular evidence begins.
+        detector.addHeartRate(65, 665_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+
+        assertEquals(2, decision.evidenceGroups);
+        assertTrue(decision.candidateActive);
+        assertFalse(decision.shouldWake); // One composite evaluation remains candidate-only.
+    }
+
+    @Test public void staleMovementCannotCombineWithLaterHeartRate() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addActiveAccelBucket(detector, 610_000L);
+        detector.addHeartRate(64, 690_000L);
+        detector.addHeartRate(65, 710_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(735_000L);
+
+        assertEquals(1, decision.evidenceGroups);
+        assertFalse(decision.candidateActive);
+        assertFalse(decision.shouldWake);
+    }
+
+    @Test public void heartRateThenCurrentMovementCanFormTemporalMultiGroupEvidence() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(64, 610_000L); // T+00s cardiovascular evidence begins.
+        detector.addHeartRate(65, 630_000L);
+        addActiveAccelBucket(detector, 650_000L); // T+40s micro-movement cluster.
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+
+        assertEquals(2, decision.evidenceGroups);
+        assertTrue(decision.candidateActive);
+        assertFalse(decision.shouldWake);
+    }
+
+    @Test public void temporallyConfirmedTrendDoesNotNeedPostCandidateThirdEvent() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+
+        // Three interesting frames over 130 seconds: first movement, then HR, then fresh HR
+        // plus movement. The final frame creates candidate context, but the preceding fresh
+        // history already supplies the independent temporal confirmation.
+        addActiveAccelBucket(detector, 610_000L);
+        assertFalse(detector.evaluate(675_000L).shouldWake);
+        detector.addHeartRate(64, 690_000L);
+        detector.addHeartRate(65, 710_000L);
+        assertFalse(detector.evaluate(735_000L).shouldWake);
+        addActiveAccelBucket(detector, 750_000L);
+        detector.addHeartRate(64, 760_000L);
+        detector.addHeartRate(65, 780_000L);
+
+        SmartWakeDetector.Decision opportunity = detector.evaluate(805_000L);
+
+        assertTrue(opportunity.candidateActive);
+        assertFalse(opportunity.candidateConfirmed);
+        assertEquals(SmartWakeDetector.UserActivity.ASLEEP, opportunity.userActivity);
+        assertFalse(opportunity.clearlyAwake);
+        assertEquals("WAKE_LIGHT_SLEEP_OPPORTUNITY", opportunity.wakeReason);
+        assertTrue(opportunity.shouldWake);
+    }
+
     private static SmartWakeDetector preparedDetector() {
         SmartWakeDetector detector = new SmartWakeDetector(0);
         // Ten minutes of quiet personal baseline: HR around 60 and no motion above noise thresholds.
@@ -381,6 +623,17 @@ public class SmartWakeDetectorTest {
             long at = minute * 60_000L + 5_000L;
             detector.addHeartRate(60 + (minute % 2), at);
             detector.addHeartRate(61 - (minute % 2), at + 10_000L);
+            detector.addAccelerometerMotion(.08, at);
+            detector.addGyroscopeMotion(.10, at);
+        }
+        return detector;
+    }
+
+    private static SmartWakeDetector lowHeartRateBaselineDetector() {
+        SmartWakeDetector detector = new SmartWakeDetector(0L);
+        for (int minute = 0; minute < 10; minute++) {
+            long at = minute * 60_000L + 5_000L;
+            detector.addHeartRate(48, at);
             detector.addAccelerometerMotion(.08, at);
             detector.addGyroscopeMotion(.10, at);
         }

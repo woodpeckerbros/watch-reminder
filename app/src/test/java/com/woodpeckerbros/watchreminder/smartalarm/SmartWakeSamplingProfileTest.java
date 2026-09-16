@@ -11,4 +11,9 @@ public class SmartWakeSamplingProfileTest {
         assertEquals(10 * 60_000L, SmartWakeSamplingProfile.startBufferMs(5 * 60_000L));
         assertEquals(15 * 60_000L, SmartWakeSamplingProfile.startBufferMs(20 * 60_000L));
     }
+
+    @Test public void monitoringStartsFortyFiveMinutesBeforeAllowedWakeWindow() {
+        assertEquals(45 * 60_000L, SmartWakeSamplingProfile.monitorLeadTime(0));
+        assertEquals(45 * 60_000L, SmartWakeSamplingProfile.monitorLeadTime(10 * 60_000L));
+    }
 }

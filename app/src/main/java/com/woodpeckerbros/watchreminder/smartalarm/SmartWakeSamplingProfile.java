@@ -12,13 +12,21 @@ final class SmartWakeSamplingProfile {
     private static final String KEY_LAST_HR_SAMPLE_AT = "last_hr_sample_at";
     static final long DEFAULT_START_BUFFER_MS = 5 * 60_000L;
     private static final long MAX_START_BUFFER_MS = 15 * 60_000L;
+    // Collect a personal sleep baseline well before the allowed ringing window. This is lead-in
+    // only: the service still cannot ring before the user's configured earliest wake time.
+    static final long MIN_MONITOR_LEAD_TIME_MS = 45 * 60_000L;
     private static final long MIN_VALID_INTERVAL_MS = 15_000L;
     private static final long MAX_VALID_INTERVAL_MS = 10 * 60_000L;
 
     private SmartWakeSamplingProfile() {}
 
     static long monitorLeadTime(Context context) {
-        return SmartWakeDetector.BASELINE_MIN_DURATION_MS + startBufferMs(observedHrIntervalMs(context));
+        return monitorLeadTime(observedHrIntervalMs(context));
+    }
+
+    static long monitorLeadTime(long observedHrIntervalMs) {
+        return Math.max(MIN_MONITOR_LEAD_TIME_MS,
+                SmartWakeDetector.BASELINE_MIN_DURATION_MS + startBufferMs(observedHrIntervalMs));
     }
 
     static long observedHrIntervalMs(Context context) {

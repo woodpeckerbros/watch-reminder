@@ -16,6 +16,7 @@ import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -51,6 +52,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private final Handler handler = new Handler(Looper.getMainLooper());
     private SensorManager sensorManager;
     private Sensor accelerometer, gyroscope, stepDetector;
+    private boolean motionRegistered, activeWindowSampling;
     private final Map<Integer, MonitorSession> sessions = new ConcurrentHashMap<>();
     private MeasureClient measureClient;
     private float gravityX, gravityY, gravityZ;
@@ -64,13 +66,20 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             List<SampleDataPoint<Double>> points = data.getData(DataType.HEART_RATE_BPM);
             long now = System.currentTimeMillis();
             for (SampleDataPoint<Double> point : points) {
-                for (MonitorSession session : sessions.values()) session.detector.addHeartRate(point.getValue(), now);
+                long sampleAt = epochMillisFromBootDuration(point.getTimeDurationFromBoot().toMillis(), now);
+                for (MonitorSession session : sessions.values()) {
+                    session.detector.addHeartRate(point.getValue(), sampleAt);
+                }
             }
             if (!points.isEmpty()) SmartWakeSamplingProfile.recordHeartRateDelivery(SmartWakeMonitoringService.this, now);
             if (!points.isEmpty() && now - lastHeartRateLogAt >= 60_000L) {
                 lastHeartRateLogAt = now;
+                long lastSampleAt = epochMillisFromBootDuration(
+                        points.get(points.size() - 1).getTimeDurationFromBoot().toMillis(), now);
                 AppLog.d(SmartWakeMonitoringService.this,
-                        "SmartWake live HR samples=" + points.size() + " bpm=" + points.get(points.size() - 1).getValue());
+                        "SmartWake live HR samples=" + points.size() + " bpm="
+                                + points.get(points.size() - 1).getValue()
+                                + " sampleAgeMs=" + Math.max(0L, now - lastSampleAt));
             }
         }
         @Override public void onRegistrationFailed(Throwable throwable) {
@@ -143,7 +152,10 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         if (existing != null && existing.targetAt == targetAt) {
             // Recovery can redeliver the same monitor intent. Its evaluator is already running;
             // restarting its 30-second timer here creates blind spots in the wake window.
-            if (windowStartCheckpoint) evaluateSessions(System.currentTimeMillis(), true);
+            if (windowStartCheckpoint) {
+                enableActiveWindowSampling();
+                evaluateSessions(System.currentTimeMillis(), true);
+            }
             else AppLog.d(this, "SmartWake monitoring continued id=" + alarmId + " target=" + targetAt
                     + " evaluationSchedule=retained");
             return START_REDELIVER_INTENT;
@@ -156,11 +168,15 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 wearState.previousNonAsleepObservedAt(), wearState.userActivityObservedAt());
         boolean firstSession = sessions.isEmpty();
         sessions.put(alarmId, new MonitorSession(alarmId, targetAt, wakeWindowStartAt, detector));
-        if (firstSession) { registerMotion(); registerHeartRate(); }
+        if (firstSession) {
+            registerMotion(now >= wakeWindowStartAt);
+            registerHeartRate();
+        }
         handler.removeCallbacks(evaluateRunnable); handler.postDelayed(evaluateRunnable, 30_000L);
         AppLog.d(this, "SmartWake monitoring started id=" + alarmId + " wakeWindow=" + wakeWindowStartAt + " target=" + targetAt + " accel=" + (accelerometer != null)
                 + " gyro=" + (gyroscope != null) + " steps=" + (stepDetector != null)
-                + "; live sleep stages LIGHT/DEEP/REM unavailable in Health Services 1.1 API");
+                + "; liveStageSource=UNAVAILABLE HealthServices1.1_has_no_live_sleep_stage_stream"
+                + " HealthConnectSleepSession=RETROSPECTIVE_AFTER_SESSION_ONLY");
         if (windowStartCheckpoint) {
             AppLog.w(this, "SmartWake baseline checkpoint started monitor at window boundary id=" + alarmId
                     + "; baseline cannot be valid yet (monitor start was delayed)");
@@ -169,23 +185,40 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         return START_REDELIVER_INTENT;
     }
 
-    private void registerMotion() {
+    private void registerMotion(boolean activeWindow) {
         if (sensorManager == null) return;
+        if (motionRegistered && activeWindowSampling == activeWindow) return;
+        if (motionRegistered) {
+            if (accelerometer != null) sensorManager.unregisterListener(this, accelerometer);
+            if (gyroscope != null) sensorManager.unregisterListener(this, gyroscope);
+            if (stepDetector != null) sensorManager.unregisterListener(this, stepDetector);
+        }
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         stepDetector = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
         // Preserve the exact sampling rate and every sample used by the detector, while allowing
-        // the sensor hub to deliver samples in batches and wake the CPU much less often.
-        if (accelerometer != null) sensorManager.registerListener(this, accelerometer, 100_000, 5_000_000);
-        if (gyroscope != null) sensorManager.registerListener(this, gyroscope, 200_000, 5_000_000);
+        // the sensor hub to batch more aggressively during baseline collection. Inside the actual
+        // wake window, shorten delivery latency without changing feature calibration/sample rate.
+        int maxLatencyUs = activeWindow ? 2_000_000 : 15_000_000;
+        if (accelerometer != null) sensorManager.registerListener(this, accelerometer, 100_000, maxLatencyUs);
+        if (gyroscope != null) sensorManager.registerListener(this, gyroscope, 200_000, maxLatencyUs);
         if (stepDetector != null) {
             try {
-                sensorManager.registerListener(this, stepDetector, 1_000_000, 5_000_000);
+                sensorManager.registerListener(this, stepDetector, 1_000_000, maxLatencyUs);
             } catch (SecurityException exception) {
                 stepDetector = null;
                 AppLog.w(this, "SmartWake step detector unavailable: ACTIVITY_RECOGNITION not granted");
             }
         }
+        motionRegistered = true;
+        activeWindowSampling = activeWindow;
+        AppLog.d(this, "SmartWake motion sampling phase="
+                + (activeWindow ? "ACTIVE_WINDOW" : "BASELINE_LEAD_IN")
+                + " accelPeriodUs=100000 gyroPeriodUs=200000 maxLatencyUs=" + maxLatencyUs);
+    }
+
+    private void enableActiveWindowSampling() {
+        registerMotion(true);
     }
 
     private void registerHeartRate() {
@@ -235,7 +268,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             }
             if (decision.shouldWake && now >= session.wakeWindowStartAt) {
                 sessions.remove(session.alarmId);
-                SmartAlarmScheduler.scheduleDetectedFire(this, session.alarmId, session.targetAt);
+                SmartAlarmScheduler.scheduleDetectedFire(this, session.alarmId, session.targetAt,
+                        decision.wakeReason);
             } else if (decision.shouldWake) AppLog.d(this,
                     "SmartWake candidate held until wake window id=" + session.alarmId + " at=" + session.wakeWindowStartAt);
         }
@@ -244,20 +278,32 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     @Override public void onSensorChanged(SensorEvent event) {
         if (sessions.isEmpty() || event.values.length == 0) return;
         long now = System.currentTimeMillis();
+        long sampleAt = epochMillisForSensorEvent(event.timestamp, now);
         if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
-            for (MonitorSession session : sessions.values()) session.detector.addHeartRate(event.values[0], now);
+            for (MonitorSession session : sessions.values()) session.detector.addHeartRate(event.values[0], sampleAt);
             SmartWakeSamplingProfile.recordHeartRateDelivery(this, now);
         }
         else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER && event.values.length >= 3) {
             gravityX = .8f * gravityX + .2f * event.values[0]; gravityY = .8f * gravityY + .2f * event.values[1]; gravityZ = .8f * gravityZ + .2f * event.values[2];
             double linear = Math.sqrt(Math.pow(event.values[0]-gravityX,2)+Math.pow(event.values[1]-gravityY,2)+Math.pow(event.values[2]-gravityZ,2));
-            for (MonitorSession session : sessions.values()) session.detector.addAccelerometerMotion(linear, now);
+            for (MonitorSession session : sessions.values()) session.detector.addAccelerometerMotion(linear, sampleAt);
         } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE && event.values.length >= 3) {
             double rotation = Math.sqrt(event.values[0]*event.values[0]+event.values[1]*event.values[1]+event.values[2]*event.values[2]);
-            for (MonitorSession session : sessions.values()) session.detector.addGyroscopeMotion(rotation, now);
+            for (MonitorSession session : sessions.values()) session.detector.addGyroscopeMotion(rotation, sampleAt);
         } else if (event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
-            for (MonitorSession session : sessions.values()) session.detector.addStep(now);
+            for (MonitorSession session : sessions.values()) session.detector.addStep(sampleAt);
         }
+    }
+
+    private static long epochMillisForSensorEvent(long eventTimestampNanos, long nowEpochMillis) {
+        long ageMillis = Math.max(0L,
+                (SystemClock.elapsedRealtimeNanos() - eventTimestampNanos) / 1_000_000L);
+        return Math.min(nowEpochMillis, nowEpochMillis - ageMillis);
+    }
+
+    private static long epochMillisFromBootDuration(long durationFromBootMillis, long nowEpochMillis) {
+        long bootEpochMillis = nowEpochMillis - SystemClock.elapsedRealtime();
+        return Math.min(nowEpochMillis, bootEpochMillis + Math.max(0L, durationFromBootMillis));
     }
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 

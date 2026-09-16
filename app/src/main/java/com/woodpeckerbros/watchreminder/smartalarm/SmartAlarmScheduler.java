@@ -143,10 +143,14 @@ public final class SmartAlarmScheduler {
     }
 
     public static void scheduleDetectedFire(Context context, int alarmId, long targetAt) {
+        scheduleDetectedFire(context, alarmId, targetAt, "WAKE_TEMPORAL_MULTI_SENSOR_CONFIRMATION");
+    }
+
+    public static void scheduleDetectedFire(Context context, int alarmId, long targetAt, String decisionReason) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
         long fireAt = System.currentTimeMillis() + 500L;
-        PendingIntent operation = detectedFireIntent(context, alarmId, targetAt);
+        PendingIntent operation = detectedFireIntent(context, alarmId, targetAt, decisionReason);
         try {
             if (ReminderScheduler.canScheduleExactAlarms(context)) {
                 manager.setAlarmClock(new AlarmManager.AlarmClockInfo(
@@ -159,7 +163,7 @@ public final class SmartAlarmScheduler {
             manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, operation);
         }
         AppLog.d(context, "SmartAlarm detected fire handed to AlarmManager id=" + alarmId
-                + " target=" + targetAt + " fireAt=" + fireAt);
+                + " target=" + targetAt + " fireAt=" + fireAt + " reason=" + decisionReason);
     }
 
     public static void scheduleAutoSnooze(Context context, int alarmId, long targetAt, int delaySeconds) {
@@ -205,7 +209,7 @@ public final class SmartAlarmScheduler {
         manager.cancel(windowIntent(context, alarmId, 0, 0));
         manager.cancel(windowStartCheckIntent(context, alarmId, 0, 0));
         manager.cancel(deadlineIntent(context, alarmId, 0));
-        manager.cancel(detectedFireIntent(context, alarmId, 0));
+        manager.cancel(detectedFireIntent(context, alarmId, 0, null));
         manager.cancel(autoSnoozeIntent(context, alarmId, 0, false));
     }
 
@@ -271,9 +275,11 @@ public final class SmartAlarmScheduler {
         return PendingIntent.getBroadcast(context, requestCode(alarmId, 2), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static PendingIntent detectedFireIntent(Context context, int alarmId, long targetAt) {
+    private static PendingIntent detectedFireIntent(Context context, int alarmId, long targetAt,
+                                                    String decisionReason) {
         Intent intent = alarmIntent(context, SmartAlarmReceiver.class, alarmId, targetAt)
-                .putExtra("reason", "estimated_wake_window");
+                .putExtra("reason", decisionReason == null
+                        ? "WAKE_TEMPORAL_MULTI_SENSOR_CONFIRMATION" : decisionReason);
         return PendingIntent.getBroadcast(context, requestCode(alarmId, 5), intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
