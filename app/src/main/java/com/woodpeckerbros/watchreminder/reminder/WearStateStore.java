@@ -11,6 +11,9 @@ public class WearStateStore {
     private static final String KEY_OFF_BODY = "off_body";
     private static final String KEY_UPDATED_AT = "updated_at";
     private static final String KEY_USER_ACTIVITY_STATE = "user_activity_state";
+    private static final String KEY_USER_ACTIVITY_OBSERVED_AT = "user_activity_observed_at";
+    private static final String KEY_PREVIOUS_NON_ASLEEP_OBSERVED_AT = "previous_non_asleep_observed_at";
+    private static final long NON_ASLEEP_HISTORY_GAP_MS = 30 * 60_000L;
     private static final long STATE_TTL_MS = 6 * 60 * 60_000L;
 
     private final SharedPreferences prefs;
@@ -37,10 +40,30 @@ public class WearStateStore {
 
     /** Stores the public Health Services activity state for Smart Wake scoring. */
     public void setUserActivityState(String state) {
+        long now = System.currentTimeMillis();
+        String normalized = state == null ? "UNKNOWN" : state;
+        String previousState = prefs.getString(KEY_USER_ACTIVITY_STATE, "UNKNOWN");
+        long previousObservedAt = prefs.getLong(KEY_USER_ACTIVITY_OBSERVED_AT, 0L);
+        long priorNonAsleepObservedAt = 0L;
+        if (isNonAsleep(normalized) && isNonAsleep(previousState)
+                && previousObservedAt > 0L && now >= previousObservedAt
+                && now - previousObservedAt <= NON_ASLEEP_HISTORY_GAP_MS) {
+            priorNonAsleepObservedAt = previousObservedAt;
+        }
         prefs.edit()
-                .putString(KEY_USER_ACTIVITY_STATE, state == null ? "UNKNOWN" : state)
-                .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
+                .putString(KEY_USER_ACTIVITY_STATE, normalized)
+                .putLong(KEY_USER_ACTIVITY_OBSERVED_AT, now)
+                .putLong(KEY_PREVIOUS_NON_ASLEEP_OBSERVED_AT, priorNonAsleepObservedAt)
+                .putLong(KEY_UPDATED_AT, now)
                 .apply();
+    }
+
+    public long userActivityObservedAt() {
+        return prefs.getLong(KEY_USER_ACTIVITY_OBSERVED_AT, 0L);
+    }
+
+    public long previousNonAsleepObservedAt() {
+        return prefs.getLong(KEY_PREVIOUS_NON_ASLEEP_OBSERVED_AT, 0L);
     }
 
     public void setAsleep(boolean asleep) {
@@ -73,5 +96,9 @@ public class WearStateStore {
     private boolean fresh() {
         long updatedAt = prefs.getLong(KEY_UPDATED_AT, 0);
         return updatedAt > 0 && System.currentTimeMillis() - updatedAt < STATE_TTL_MS;
+    }
+
+    private static boolean isNonAsleep(String state) {
+        return "PASSIVE".equals(state) || "EXERCISE".equals(state);
     }
 }

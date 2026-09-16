@@ -221,6 +221,29 @@ public class SmartWakeDetectorTest {
         assertEquals("SYSTEM_AWAKE_PERSISTENT", validatedObservation.wakeReason);
     }
 
+    @Test public void twoRecentPersistedCallbacksPreserveValidatedAwakeStateAcrossStartup() {
+        SmartWakeDetector detector = new SmartWakeDetector(675_000L);
+        detector.seedValidatedUserActivity(SmartWakeDetector.UserActivity.PASSIVE,
+                610_000L, 650_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+        assertEquals(2, decision.systemNonAsleepObservations);
+        assertTrue(decision.systemAwakePersistent);
+        assertEquals("SYSTEM_AWAKE_PERSISTENT", decision.wakeReason);
+        assertTrue(decision.shouldWake);
+    }
+
+    @Test public void stalePersistedCallbackPairDoesNotWakeAStartedMonitor() {
+        SmartWakeDetector detector = new SmartWakeDetector(2_500_000L);
+        detector.seedValidatedUserActivity(SmartWakeDetector.UserActivity.PASSIVE,
+                100_000L, 130_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(2_500_000L);
+        assertEquals(0, decision.systemNonAsleepObservations);
+        assertFalse(decision.systemAwakePersistent);
+        assertFalse(decision.shouldWake);
+    }
+
     @Test public void stalePassiveContextCannotConfirmAnActiveCandidate() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);

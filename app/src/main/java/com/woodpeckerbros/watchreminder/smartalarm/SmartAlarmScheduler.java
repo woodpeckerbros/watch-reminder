@@ -163,10 +163,15 @@ public final class SmartAlarmScheduler {
     }
 
     public static void scheduleAutoSnooze(Context context, int alarmId, long targetAt, int delaySeconds) {
+        scheduleAutoSnooze(context, alarmId, targetAt, delaySeconds, false);
+    }
+
+    public static void scheduleAutoSnooze(Context context, int alarmId, long targetAt,
+                                          int delaySeconds, boolean wakeCheckEscalation) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
         long at = System.currentTimeMillis() + Math.max(5, delaySeconds) * 1000L;
-        PendingIntent pending = autoSnoozeIntent(context, alarmId, targetAt);
+        PendingIntent pending = autoSnoozeIntent(context, alarmId, targetAt, wakeCheckEscalation);
         try {
             if (ReminderScheduler.canScheduleExactAlarms(context))
                 manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
@@ -180,7 +185,7 @@ public final class SmartAlarmScheduler {
 
     public static void cancelAutoSnooze(Context context, int alarmId) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (manager != null) manager.cancel(autoSnoozeIntent(context, alarmId, 0L));
+        if (manager != null) manager.cancel(autoSnoozeIntent(context, alarmId, 0L, false));
     }
 
     public static void cancel(Context context) {
@@ -201,7 +206,7 @@ public final class SmartAlarmScheduler {
         manager.cancel(windowStartCheckIntent(context, alarmId, 0, 0));
         manager.cancel(deadlineIntent(context, alarmId, 0));
         manager.cancel(detectedFireIntent(context, alarmId, 0));
-        manager.cancel(autoSnoozeIntent(context, alarmId, 0));
+        manager.cancel(autoSnoozeIntent(context, alarmId, 0, false));
     }
 
     public static void cancelDeadline(Context context, int alarmId) {
@@ -278,8 +283,10 @@ public final class SmartAlarmScheduler {
         return PendingIntent.getActivity(context, requestCode(alarmId, 3), source, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static PendingIntent autoSnoozeIntent(Context context, int alarmId, long targetAt) {
-        Intent intent = alarmIntent(context, SmartAlarmAutoSnoozeReceiver.class, alarmId, targetAt);
+    private static PendingIntent autoSnoozeIntent(Context context, int alarmId, long targetAt,
+                                                  boolean wakeCheckEscalation) {
+        Intent intent = alarmIntent(context, SmartAlarmAutoSnoozeReceiver.class, alarmId, targetAt)
+                .putExtra("wake_check_escalation", wakeCheckEscalation);
         return PendingIntent.getBroadcast(context, requestCode(alarmId, 4), intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }

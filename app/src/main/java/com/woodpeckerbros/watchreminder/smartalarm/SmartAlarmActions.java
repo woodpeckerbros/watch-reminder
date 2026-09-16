@@ -29,9 +29,15 @@ public final class SmartAlarmActions extends BroadcastReceiver {
     }
 
     static Notification.Action dismissAction(Context context, int alarmId, long targetAt) {
+        return dismissAction(context, alarmId, targetAt, false);
+    }
+
+    static Notification.Action dismissAction(Context context, int alarmId, long targetAt,
+                                             boolean wakeCheckEscalation) {
         String title = AppLanguage.isEnglish(context) ? "Dismiss" : "כיבוי";
         return new Notification.Action.Builder(R.drawable.ic_notification, title,
-                pending(context, ACTION_DISMISS, alarmId, targetAt, 2)).build();
+                pending(context, ACTION_DISMISS, alarmId, targetAt,
+                        wakeCheckEscalation ? 3 : 2, wakeCheckEscalation)).build();
     }
 
     static Notification.Action openAction(Context context, int alarmId, long targetAt) {
@@ -41,10 +47,17 @@ public final class SmartAlarmActions extends BroadcastReceiver {
     }
 
     static PendingIntent openPendingIntent(Context context, int alarmId, long targetAt) {
+        return openPendingIntent(context, alarmId, targetAt, false);
+    }
+
+    static PendingIntent openPendingIntent(Context context, int alarmId, long targetAt,
+                                           boolean wakeCheckEscalation) {
         Intent alert = new Intent(context, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
-                .putExtra("reason", "notification_open")
+                .putExtra("reason", wakeCheckEscalation
+                        ? "wake_check_escalation" : "notification_open")
+                .putExtra("wake_check_escalation", wakeCheckEscalation)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         Bundle creatorOptions = null;
@@ -70,6 +83,15 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         if (intent == null) return;
         int alarmId = intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
+        boolean wakeCheckEscalation = intent.getBooleanExtra("wake_check_escalation", false);
+        if (wakeCheckEscalation && ACTION_DISMISS.equals(intent.getAction())) {
+            SmartAlarmRingingService.stop(context);
+            SmartAlarmScheduler.cancelAutoSnooze(context, alarmId);
+            SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
+            cancelNotification(context, alarmId);
+            AppLog.d(context, "SmartAlarm notification wake check escalation dismissed id=" + alarmId);
+            return;
+        }
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
 
@@ -98,9 +120,15 @@ public final class SmartAlarmActions extends BroadcastReceiver {
     }
 
     private static PendingIntent pending(Context context, String action, int alarmId, long targetAt, int kind) {
+        return pending(context, action, alarmId, targetAt, kind, false);
+    }
+
+    private static PendingIntent pending(Context context, String action, int alarmId, long targetAt,
+                                         int kind, boolean wakeCheckEscalation) {
         Intent intent = new Intent(context, SmartAlarmActions.class).setAction(action)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
-                .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt);
+                .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                .putExtra("wake_check_escalation", wakeCheckEscalation);
         int requestCode = 0x534d5800 | ((alarmId & 0xffff) << 2) | kind;
         return PendingIntent.getBroadcast(context, requestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

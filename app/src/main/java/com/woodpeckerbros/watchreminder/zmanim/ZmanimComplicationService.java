@@ -29,6 +29,8 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
 
     @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
+        ComplicationRefresh.logDataRequest(this, ZmanimComplicationService.class,
+                request.getComplicationInstanceId(), request.getComplicationType());
         try {
             listener.onComplicationData(createData(request.getComplicationType()));
         } catch (RemoteException ignored) {

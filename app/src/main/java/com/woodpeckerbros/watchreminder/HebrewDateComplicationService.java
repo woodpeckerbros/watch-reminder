@@ -40,6 +40,8 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
 
     @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
+        ComplicationRefresh.logDataRequest(this, HebrewDateComplicationService.class,
+                request.getComplicationInstanceId(), request.getComplicationType());
         try {
             listener.onComplicationDataTimeline(createTimeline(request.getComplicationType()));
         } catch (RemoteException ignored) {

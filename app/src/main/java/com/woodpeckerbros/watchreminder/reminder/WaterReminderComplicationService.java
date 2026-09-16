@@ -29,6 +29,8 @@ public final class WaterReminderComplicationService extends ComplicationDataSour
 
     @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
+        ComplicationRefresh.logDataRequest(this, WaterReminderComplicationService.class,
+                request.getComplicationInstanceId(), request.getComplicationType());
         try {
             listener.onComplicationData(createData(request.getComplicationType(), false));
         } catch (RemoteException ignored) {

@@ -52,6 +52,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
     }
 
     private static void deliver(Context context, int alarmId, long targetAt, String reason) {
+        boolean wakeCheckEscalation = "wake_check_escalation".equals(reason);
         if (!"deadline".equals(reason)) SmartAlarmScheduler.cancelDeadline(context, alarmId);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
@@ -83,7 +84,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         Intent activity = new Intent(context, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt).putExtra("reason", reason)
-                .putExtra("wake_check_escalation", "wake_check_escalation".equals(reason))
+                .putExtra("wake_check_escalation", wakeCheckEscalation)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Bundle creatorOptions = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
@@ -102,10 +103,15 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .setFullScreenIntent(pending, true).setSound(null)
                 .setVibrate(ATTENTION_VIBRATION)
                 .setDefaults(0).setOnlyAlertOnce(true).setAutoCancel(true)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .addAction(SmartAlarmActions.openAction(context, alarmId, targetAt))
-                .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
-                .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
+                .setVisibility(Notification.VISIBILITY_PUBLIC);
+        if (wakeCheckEscalation) {
+            builder.addAction(SmartAlarmActions.dismissAction(
+                    context, alarmId, targetAt, true));
+        } else {
+            builder.addAction(SmartAlarmActions.openAction(context, alarmId, targetAt))
+                    .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
+                    .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
+        }
         Notification notification = builder.build();
         manager.notify(NOTIFICATION_BASE + alarmId, notification);
         AppLog.d(context, "SmartAlarm notified id=" + alarmId
@@ -115,7 +121,8 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         // Android's temporary background-start exemption. Starting it later from a Handler can
         // be rejected after onReceive returns, precisely when Wear OS suppresses the full-screen
         // intent in Bedtime/DND mode.
-        boolean ringingServiceRequested = SmartAlarmRingingService.start(context, alarmId, targetAt);
+        boolean ringingServiceRequested = SmartAlarmRingingService.start(
+                context, alarmId, targetAt, wakeCheckEscalation);
         AppLog.d(context, "SmartAlarm immediate ringing service requested id=" + alarmId
                 + " accepted=" + ringingServiceRequested);
         // Use the same proven full-screen notification path as regular reminders. Explicitly
@@ -123,7 +130,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         // processes the full-screen intent, leaving sound active without presenting the screen.
         SmartWakeMonitoringService.stop(context, alarmId);
         SmartAlarmScheduler.scheduleAutoSnooze(context, alarmId, targetAt,
-                settings.alertDurationSeconds());
+                settings.alertDurationSeconds(), wakeCheckEscalation);
         Context appContext = context.getApplicationContext();
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {

@@ -33,13 +33,20 @@ public final class SmartAlarmRingingService extends Service {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private int activeAlarmId;
     private long activeTargetAt;
+    private boolean activeWakeCheckEscalation;
     private long lastFullScreenRepostAt;
 
     public static boolean start(Context context, int alarmId, long targetAt) {
+        return start(context, alarmId, targetAt, false);
+    }
+
+    public static boolean start(Context context, int alarmId, long targetAt,
+                                boolean wakeCheckEscalation) {
         try {
             ContextCompat.startForegroundService(context, new Intent(context, SmartAlarmRingingService.class)
                     .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
-                    .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt));
+                    .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                    .putExtra("wake_check_escalation", wakeCheckEscalation));
             return true;
         } catch (RuntimeException error) {
             AppLog.w(context, "SmartAlarm ringing service start rejected; full-screen activity must own feedback: "
@@ -56,19 +63,23 @@ public final class SmartAlarmRingingService extends Service {
         super.onCreate();
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Alarm ringing", NotificationManager.IMPORTANCE_LOW));
-        startForeground(NOTIFICATION_ID, notification(1, 0L));
+        startForeground(NOTIFICATION_ID, notification(1, 0L, false));
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         int alarmId = intent == null ? 1 : intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
         long targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
+        boolean wakeCheckEscalation = intent != null
+                && intent.getBooleanExtra("wake_check_escalation", false);
         activeAlarmId = alarmId;
         activeTargetAt = targetAt;
+        activeWakeCheckEscalation = wakeCheckEscalation;
         // Let SystemUI process the original exact-alarm full-screen notification first. If a
         // competing morning card takes the screen, a fresh post follows only after this interval.
         lastFullScreenRepostAt = android.os.SystemClock.uptimeMillis();
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager != null) manager.notify(NOTIFICATION_ID, notification(alarmId, targetAt));
+        if (manager != null) manager.notify(NOTIFICATION_ID,
+                notification(alarmId, targetAt, wakeCheckEscalation));
         if (feedback != null) feedback.stop();
         handler.removeCallbacksAndMessages(null);
         SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
@@ -80,19 +91,26 @@ public final class SmartAlarmRingingService extends Service {
         if (!SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
             feedback = AlertFeedback.startSmartAlarm(this, settings);
         }
-        handler.postDelayed(() -> guardAlertScreen(alarmId, targetAt), 1_200L);
+        handler.postDelayed(() -> guardAlertScreen(
+                alarmId, targetAt, wakeCheckEscalation), 1_200L);
         handler.postDelayed(this::stopSelf, alertDurationMs + 1_000L);
         return START_NOT_STICKY;
     }
 
-    private Notification notification(int alarmId, long targetAt) {
+    private Notification notification(int alarmId, long targetAt, boolean wakeCheckEscalation) {
         Notification.Builder builder = new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Smart Alarm").setContentText("ההתראה פעילה").setOngoing(true);
         if (targetAt > 0L) {
-            builder.setContentIntent(SmartAlarmActions.openPendingIntent(this, alarmId, targetAt))
-                    .addAction(SmartAlarmActions.openAction(this, alarmId, targetAt))
-                    .addAction(SmartAlarmActions.snoozeAction(this, alarmId, targetAt))
-                    .addAction(SmartAlarmActions.dismissAction(this, alarmId, targetAt));
+            builder.setContentIntent(SmartAlarmActions.openPendingIntent(
+                    this, alarmId, targetAt, wakeCheckEscalation));
+            if (wakeCheckEscalation) {
+                builder.addAction(SmartAlarmActions.dismissAction(
+                        this, alarmId, targetAt, true));
+            } else {
+                builder.addAction(SmartAlarmActions.openAction(this, alarmId, targetAt))
+                        .addAction(SmartAlarmActions.snoozeAction(this, alarmId, targetAt))
+                        .addAction(SmartAlarmActions.dismissAction(this, alarmId, targetAt));
+            }
         }
         return builder.build();
     }
@@ -118,29 +136,32 @@ public final class SmartAlarmRingingService extends Service {
         wakeLock = null;
     }
 
-    private void guardAlertScreen(int alarmId, long targetAt) {
+    private void guardAlertScreen(int alarmId, long targetAt, boolean wakeCheckEscalation) {
         if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
             // The activity now owns user feedback; the service stays alive only to guard its
             // foreground state and to recover it if Wear OS sends it back to Home.
             if (feedback != null) { feedback.stop(); feedback = null; }
             AppLog.d(this, "SmartAlarm screen guard confirmed visible id=" + alarmId);
         } else {
-            ensureAlertScreen(alarmId, targetAt);
+            ensureAlertScreen(alarmId, targetAt, wakeCheckEscalation);
             long now = android.os.SystemClock.uptimeMillis();
             if (now - lastFullScreenRepostAt >= FULL_SCREEN_REPOST_INTERVAL_MS) {
                 lastFullScreenRepostAt = now;
-                SmartAlarmReceiver.repostFullScreen(this, alarmId, targetAt);
+                if (!wakeCheckEscalation) SmartAlarmReceiver.repostFullScreen(this, alarmId, targetAt);
             }
         }
-        if (activeAlarmId == alarmId && activeTargetAt == targetAt)
-            handler.postDelayed(() -> guardAlertScreen(alarmId, targetAt), 2_000L);
+        if (activeAlarmId == alarmId && activeTargetAt == targetAt
+                && activeWakeCheckEscalation == wakeCheckEscalation)
+            handler.postDelayed(() -> guardAlertScreen(
+                    alarmId, targetAt, wakeCheckEscalation), 2_000L);
     }
 
-    private void ensureAlertScreen(int alarmId, long targetAt) {
+    private void ensureAlertScreen(int alarmId, long targetAt, boolean wakeCheckEscalation) {
         Intent alert = new Intent(this, SmartAlarmAlertActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
                 .putExtra("reason", "ringing_service_fallback")
+                .putExtra("wake_check_escalation", wakeCheckEscalation)
                 // Recreate the dedicated alarm task.  OnePlus Health can place its sleep-report
                 // full-screen Activity above ours without reliably pausing our Activity; merely
                 // addressing the existing task then returns START_TASK_TO_FRONT but leaves the

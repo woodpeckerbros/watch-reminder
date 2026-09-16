@@ -14,6 +14,14 @@ public final class SmartAlarmAutoSnoozeReceiver extends BroadcastReceiver {
         if (intent == null) return;
         int alarmId = intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
+        if (intent.getBooleanExtra("wake_check_escalation", false)) {
+            SmartAlarmRingingService.stop(context);
+            SmartAlarmActions.cancelNotification(context, alarmId);
+            SmartAlarmAlertActivity.closeAutoSnoozed(alarmId, targetAt);
+            SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
+            AppLog.w(context, "SmartAlarm unanswered wake check escalation stopped id=" + alarmId);
+            return;
+        }
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         if (!state.fired(targetAt) || state.dismissed(targetAt)) {
             AppLog.w(context, "SmartAlarm auto-snooze skipped stale id=" + alarmId + " target=" + targetAt);

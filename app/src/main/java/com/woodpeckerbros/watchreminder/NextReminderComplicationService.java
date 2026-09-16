@@ -34,6 +34,8 @@ public class NextReminderComplicationService extends ComplicationDataSourceServi
 
     @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
+        ComplicationRefresh.logDataRequest(this, NextReminderComplicationService.class,
+                request.getComplicationInstanceId(), request.getComplicationType());
         try {
             listener.onComplicationData(createData(request.getComplicationType(), false));
         } catch (RemoteException ignored) {

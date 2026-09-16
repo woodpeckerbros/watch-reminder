@@ -27,6 +27,8 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
 
     @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
+        ComplicationRefresh.logDataRequest(this, IntermittentFastingComplicationService.class,
+                request.getComplicationInstanceId(), request.getComplicationType());
         try {
             listener.onComplicationData(createData(request.getComplicationType()));
         } catch (RemoteException ignored) {

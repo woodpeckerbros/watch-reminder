@@ -24,7 +24,9 @@ public final class EntitlementEnforcer {
         if (EntitlementAccess.isFeatureAccessGranted(appContext)) {
             new ReminderStore(appContext).rescheduleAll();
             ReminderScheduler.scheduleWatchdog(appContext);
-            SmartAlarmScheduler.reschedule(appContext);
+            // Billing ownership is re-queried on foreground. Preserve a dismissed early-wake
+            // occurrence and any active snooze instead of rebuilding today's pre-deadline alarm.
+            SmartAlarmScheduler.recover(appContext);
             DafYomiScheduler.schedule(appContext);
             MoonBlessingScheduler.schedule(appContext);
             OmerScheduler.schedule(appContext);

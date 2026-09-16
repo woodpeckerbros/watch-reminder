@@ -130,8 +130,8 @@ public final class SmartAlarmAlertActivity extends Activity {
         body.addView(alarmClock, alarmClockParams);
 
         int used = new SmartAlarmStateStore(this, alarmId).snoozeUsed();
-        int remaining = Math.max(0, settings.snoozeCount() - used);
-        if (settings.snoozeCount() > 0) {
+        int remaining = wakeCheckEscalation ? 0 : Math.max(0, settings.snoozeCount() - used);
+        if (!wakeCheckEscalation && settings.snoozeCount() > 0) {
             body.addView(label(english ? remaining + " snoozes remaining" : "נותרו " + remaining + " נודניקים", 13, 0xFFE8E8E8));
         }
         Button dismiss;
@@ -200,6 +200,17 @@ public final class SmartAlarmAlertActivity extends Activity {
     private void dismissAlarm() {
         if (previewMode) { closePreview(); return; }
         explicitlyHandled = true;
+        if (wakeCheckEscalation) {
+            // The original occurrence was already dismissed and the next calendar alarm was
+            // scheduled before this verification alert. Do not cancel or advance that schedule.
+            SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
+            SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
+            SmartAlarmActions.cancelNotification(this, alarmId);
+            stopFeedback();
+            AppLog.d(this, "SmartAlarm wake check escalation dismissed finally id=" + alarmId);
+            close();
+            return;
+        }
         // Cancel all receivers for this occurrence before changing its state.  In particular,
         // this prevents a pending SmartWakeWindowReceiver from restarting sensor sampling after
         // the user has pressed "Dismiss".
@@ -208,10 +219,12 @@ public final class SmartAlarmAlertActivity extends Activity {
         SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
         new SmartAlarmStateStore(this, alarmId).dismiss(targetAt);
         stopFeedback();
-        if (settings.wakeCheckEnabled() && !wakeCheckEscalation) {
+        if (settings.wakeCheckEnabled()) {
             SmartAlarmWakeCheckReceiver.schedule(this, alarmId, targetAt, settings.wakeCheckDelayMinutes());
+            AppLog.d(this, "SmartAlarm dismissed; wake check retained id=" + alarmId);
         } else {
             SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
+            AppLog.d(this, "SmartAlarm dismissed finally id=" + alarmId);
         }
         SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId, targetAt);
         close();

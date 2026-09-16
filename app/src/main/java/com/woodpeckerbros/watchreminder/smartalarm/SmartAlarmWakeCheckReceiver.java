@@ -16,7 +16,7 @@ import com.woodpeckerbros.watchreminder.R;
 import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
 
 public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
-    private static final String CHANNEL = "smart_alarm_wake_check_v1";
+    private static final String CHANNEL = "smart_alarm_wake_check_v2_attention";
     private static final int NOTIFICATION_BASE = 0x534d5A00;
 
     static void schedule(Context context, int alarmId, long targetAt, int minutes) {
@@ -40,6 +40,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         }
         NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
+        SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
     }
 
     static void confirm(Context context, int alarmId) {
@@ -47,18 +48,30 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         if (manager != null) manager.cancel(receiverIntent(context, alarmId, 0L, true));
         NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
+        SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
     }
 
     @Override public void onReceive(Context context, Intent source) {
         int alarmId = source.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
         long targetAt = source.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         if (source.getBooleanExtra("escalate", false)) {
+            AppLog.w(context, "SmartAlarm wake check unanswered; escalating id=" + alarmId);
+            NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
+            SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
             SmartAlarmReceiver.fireWakeCheckEscalation(context, alarmId, targetAt);
             return;
         }
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;
-        manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Alarm wake check", NotificationManager.IMPORTANCE_HIGH));
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL, "Smart Alarm wake check", NotificationManager.IMPORTANCE_HIGH);
+        // OnePlus suppresses silent full-screen intents as "not noisy". A one-millisecond
+        // attention pulse makes the confirmation screen eligible without creating perceptible
+        // duplicate alarm feedback.
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[]{0L, 1L});
+        manager.createNotificationChannel(channel);
         Intent activity = new Intent(context, SmartAlarmWakeCheckActivity.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
@@ -68,8 +81,10 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         Notification notification = new Notification.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Smart Alarm").setContentText("האם אתם ערים?")
                 .setCategory(Notification.CATEGORY_ALARM).setPriority(Notification.PRIORITY_MAX)
+                .setVibrate(new long[]{0L, 1L})
                 .setContentIntent(open).setFullScreenIntent(open, true).setAutoCancel(false).setOngoing(true).build();
         manager.notify(NOTIFICATION_BASE + alarmId, notification);
+        AppLog.d(context, "SmartAlarm wake check shown id=" + alarmId + " target=" + targetAt);
         scheduleEscalation(context, alarmId, targetAt);
     }
 

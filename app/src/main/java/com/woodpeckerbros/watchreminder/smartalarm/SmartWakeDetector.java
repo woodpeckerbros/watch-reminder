@@ -24,7 +24,10 @@ public final class SmartWakeDetector {
     public static final long CANDIDATE_MEMORY_MS = 90_000L;
     private static final long CLEARLY_AWAKE_WINDOW_MS = 90_000L;
     private static final long FRESH_ACTIVITY_TRANSITION_MS = 120_000L;
-    private static final long SYSTEM_AWAKE_OBSERVATION_WINDOW_MS = 90_000L;
+    // Health Services passive callbacks on physical watches can be about ten minutes apart.
+    // Keep two independently delivered observations usable across that cadence; a single stored
+    // PASSIVE value still never counts as an observation.
+    static final long SYSTEM_AWAKE_OBSERVATION_WINDOW_MS = 30 * 60_000L;
     private static final long MOVEMENT_BUCKET_MS = 15_000L;
     private static final long COVERAGE_BUCKET_MS = 5_000L;
     private static final int EVIDENCE_CARDIOVASCULAR = 1;
@@ -73,6 +76,26 @@ public final class SmartWakeDetector {
         systemNonAsleepStartedAt = Long.MIN_VALUE;
         lastSystemNonAsleepAt = Long.MIN_VALUE;
         systemNonAsleepObservations = 0;
+    }
+
+    /**
+     * Restores an already validated pair of recent Health Services observations. This is
+     * intentionally separate from {@link #seedUserActivity}: one persisted PASSIVE value remains
+     * context only, while two real callbacks can preserve "already awake" across process/service
+     * startup and be acted on when the configured wake window opens.
+     */
+    public void seedValidatedUserActivity(UserActivity value, long firstObservedAt,
+                                          long lastObservedAt) {
+        seedUserActivity(value);
+        if (!isSystemNonAsleep(value) || firstObservedAt <= 0L
+                || lastObservedAt < firstObservedAt || lastObservedAt > startedAt
+                || lastObservedAt < startedAt - SYSTEM_AWAKE_OBSERVATION_WINDOW_MS
+                || lastObservedAt - firstObservedAt > SYSTEM_AWAKE_OBSERVATION_WINDOW_MS) {
+            return;
+        }
+        systemNonAsleepStartedAt = firstObservedAt;
+        lastSystemNonAsleepAt = lastObservedAt;
+        systemNonAsleepObservations = 2;
     }
 
     public void setUserActivity(UserActivity value, long receivedAt) {

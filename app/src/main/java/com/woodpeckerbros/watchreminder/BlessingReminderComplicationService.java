@@ -26,6 +26,8 @@ public class BlessingReminderComplicationService extends ComplicationDataSourceS
 
     @Override
     public void onComplicationRequest(ComplicationRequest request, ComplicationRequestListener listener) {
+        ComplicationRefresh.logDataRequest(this, BlessingReminderComplicationService.class,
+                request.getComplicationInstanceId(), request.getComplicationType());
         try {
             listener.onComplicationData(createData(request.getComplicationType()));
         } catch (RemoteException ignored) {

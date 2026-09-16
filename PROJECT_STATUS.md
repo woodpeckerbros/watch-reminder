@@ -1,6 +1,8 @@
 # QUICK RESUME
 
-- תיקון activation של complications ‏15/09: לאחר התקנה נקייה, OnePlus שמר את חמשת השיוכים אך לא ביקש מהם נתונים, ולכן ה־watch face נשאר ריק עד boot. כל ששת ספקי Zmanio מבקשים כעת update ממוקד בעת `onComplicationActivated`, עם retry יחיד אחרי 1.5 שניות נגד מירוץ השמירה; מסך הגדרת complications של מצב יהודי מבקש גם רענון מאוחר אחרי `RESULT_OK`, כולל כשהמצב כבר פעיל. `:app:testDebugUnitTest :app:assembleDebug` עברו. התקנה פיזית לא בוצעה מעל גרסת Play כדי לא למחוק נתונים עקב חתימה שונה.
+- תיקון complications ‏16/09: הלוגים הוכיחו שב־OnePlus מנהל ה־complications נמצא ב־`com.google.wear.services`, בעוד AndroidX ‏1.3.0 שולחת ב־Android 14 בקשות update רק ל־`com.google.android.wearable.app`; לכן לא התקבלו activation/request וה־jobs בוטלו עד reboot. נוסף broadcast תאימות מאומת עם `PendingIntent` לחבילת OnePlus, וכל ספק ללא הגדרות מקבל config callback שקוף ומבקש רענון לכל הספקים אחרי commit. נוספו לוגי activation/request. בנייה ובדיקות עברו; אימות פיזי ממתין לחיבור ADB מחדש.
+- תיקוני Smart Alarm מלוגי Refael/Moti ‏16/09: אצל רפאל Billing foreground recovery הפעיל `reschedule` אחרי כיבוי מוקדם והחזיר בטעות את אותו deadline; `EntitlementEnforcer` משתמש כעת ב־`recover` ושומר מופע שטופל/נודניק פעיל. אצל מוטי מסך „אני ער” של Wake Check לא עלה לפני escalation בגלל ערוץ שקט; הוא קיבל ערוץ attention של 1ms, lifecycle/logging וסגירה לפני escalation. כיבוי escalation אינו מבטל/מדלג עוד על השעון הבא, אין בו snooze, ו־timeout עוצר אותו בלי לשנות את occurrence הבא.
+- תיקון זיהוי ערנות ‏16/09: Health Services בשעונים הפיזיים סיפקה callbacks מסוג `PASSIVE` בהפרשים של כעשר דקות, ולכן חלון debounce של 90 שניות לעולם לא אישר ערנות. נשמרות כעת שתי תצפיות non-asleep אמיתיות ורצופות עד 30 דקות; זוג טרי נשמר גם מעבר להפעלת שירות הניטור ומאפשר להעיר בפתיחת חלון ההשכמה. ערך `PASSIVE` שמור יחיד עדיין אינו ראיה ואינו מעיר. נוספו בדיקות לזוג טרי ולזוג ישן.
 - תיקוני ממשק וטלפון ‏15/09: כותרות ארוכות ב־Wear ובטלפון מוגבלות לרוחב התוכן כדי שלא ייחתכו; ניסוח הלוגים מציין שליחה למפתח לצורך איתור ותיקון תקלות. Back בטלפון מחזיר למסך הקודם בכל מסכי ה־Activity, וקבלת לוג/גיבוי מרעננת מיד את המסכים הרלוונטיים וגם לאחר פתיחת ההתראה.
 
 - תיקון מסך תקופת הניסיון ‏15/09: נוסף מרווח גלילה תחתון למסך הרכישה בשעון, כדי שכפתור „שחזור רכישה” לא ייחתך במסכים עגולים/נמוכים.
@@ -12,7 +14,7 @@
 - גיבויי Watch→Phone חדשים מוצפנים ומאומתים ב־AES-GCM (`ZMBU3`), כוללים `trialStartedAt`, ונתמכת קריאת גיבויים ישנים לשם מעבר בלבד. המפתח המשותף מגן מפני צפייה/עריכה ידנית אך אינו תחליף לשרת או סיסמת משתמש מול reverse engineering.
 - הכנת Google Play Billing ‏14/09: שני ארטיפקטי ה־Play (`:app` ל־Wear OS ו־`:phone` לאפליקציית הליווי) כוללים `com.android.billingclient:billing:9.1.0`; הגרסאות הן Wear ‏1.28/code 130 וטלפון ‏1.13/code 1012. שתי מעטפות Kotlin מיושרות נקודתית ל־1.8.22 כדי למנוע כפילות עם תלויות AndroidX קיימות; ה־BillingClient ולוגיקת הרכישה ממומשים בשכבת ה־entitlement. ההרשאה `com.android.vending.BILLING` מגיעה ממיזוג manifest של הספרייה.
 - עקרון Smart Wake מחייב: המטרה היא לזהות מעבר לשינה קלה/עוררות עדינה **לפני** קימה מודעת, כדי שההתראה תהיה קלה ונעימה יותר. צעדים, קימה ו־`clearly_awake` הם סימנים מאוחרים לכל היותר — לא הגדרת הצלחה ולא יעד שאליו יש להטות את האלגוריתם. אין להסיק משינה שקטה בלבד שהיא שינה עמוקה, כי Health Services במכשיר אינו מספק שלבי LIGHT/DEEP/REM.
-- תיקון Smart Wake ‏14/09: candidate הוא הקשר בלבד, לא אישור. אישור דורש דגימת multi-group טרייה אחרי יצירתו; ראיות שנחלשו (למשל `36/2` ואז `22/1`) מבטלות את ה־candidate וממשיכות לנטר. `PASSIVE` נחשב `SYSTEM_AWAKE_PERSISTENT` רק אחרי שתי תצפיות Health Services טריות, ולא רק לפי חלוף זמן מ־callback יחיד. סיכום הלוג מציג origin, גיל, סטטוס/מקור אישור ומצב system-awake טרי.
+- תיקון Smart Wake ‏14/09: candidate הוא הקשר בלבד, לא אישור. אישור דורש דגימת multi-group טרייה אחרי יצירתו; ראיות שנחלשו (למשל `36/2` ואז `22/1`) מבטלות את ה־candidate וממשיכות לנטר. `PASSIVE` נחשב `SYSTEM_AWAKE_PERSISTENT` רק אחרי שתי תצפיות Health Services אמיתיות, ולא רק לפי חלוף זמן מ־callback יחיד. סיכום הלוג מציג origin, גיל, סטטוס/מקור אישור ומצב system-awake טרי.
 - תיקון קריטי 09/09 — מסך Smart Alarm: לוגי השעון הוכיחו ש־OnePlus SystemUI סיווג את ערוץ ה־full-screen השקט כ־`not noisy` ולא הציג אותו; ניסיונות ה־FGS לפתוח Activity נחסמו שוב ושוב ב־`BAL_BLOCK`. גם לחיצה על „פתיחת התראה” נחסמה כ־notification trampoline.
 - התיקון: ערוץ `smart_alarm_alert_v9_attention` נשאר ללא צליל מערכת אך כולל רטט attention של 1ms, ולכן SystemUI שולח את ה־full-screen. ה־contentIntent ופעולת „פתיחת התראה” הם כעת PendingIntent ישיר ל־`SmartAlarmAlertActivity`, עם opt-in ל־BAL ב־Android 15.
 - שומר המסך בודק גם window focus ולא רק lifecycle; אם מסך OnePlus כגון Sleep report מכסה את האזעקה בלי `onPause`, משימת ההתראה נוצרת מחדש ומוחזרת לחזית.
@@ -60,7 +62,7 @@ Smart Alarm נמצא תחת `app/src/main/java/com/woodpeckerbros/watchreminder/
 - תזמון מחדש קיים לאחר boot, timezone, שינוי מיקום ושינוי הגדרות.
 - הרשאות notifications, location, activity recognition, body sensors, exact alarm ו־full-screen מטופלות ברצף onboarding.
 - יש תמיכה בעברית ובאנגלית, עיצוב Wear עגול, רקעים, complications וגיבוי טלפון.
-- כל ספקי ה־complication מרעננים את המופע החדש בעת activation; ספקים עם מסך הגדרת מצב יהודי שולחים גם רענון מאוחר לאחר שהמערכת שומרת את הבחירה, כדי להימנע משדות ריקים ב־OnePlus אחרי התקנה נקייה.
+- כל ספקי ה־complication מרעננים בעת activation/configuration ושולחים גם את פרוטוקול ה־update המאומת ישירות למנהל `com.google.wear.services` של OnePlus; נדרש אימות פיזי נוסף אחרי התקנה נקייה.
 - `:app:testDebugUnitTest` ו־`:app:assembleDebug` עברו בבדיקה האחרונה.
 
 ## שבור, לא גמור או מסוכן
