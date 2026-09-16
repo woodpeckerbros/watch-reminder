@@ -182,6 +182,7 @@ public class NextReminderComplicationService extends ComplicationDataSourceServi
                 .setAction("com.woodpeckerbros.watchreminder.FOCUS_NEXT_REMINDER")
                 .putExtra(MainActivity.EXTRA_FOCUS_NEXT_REMINDER, true)
                 .putExtra(MainActivity.EXTRA_FOCUS_REMINDER_ID, next == null ? "" : next.reminderId)
+                .putExtra(MainActivity.EXTRA_FROM_COMPLICATION, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(
                 this,

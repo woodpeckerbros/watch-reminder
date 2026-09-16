@@ -105,6 +105,8 @@ public class MainActivity extends Activity {
     public static final String EXTRA_OPEN_ZMANIM_DAY = "open_zmanim_day";
     public static final String EXTRA_OPEN_FASTING_SETTINGS = "open_fasting_settings";
     public static final String EXTRA_OPEN_WATER_SETTINGS = "open_water_settings";
+    /** Marks a MainActivity launch whose root is the watch face complication, not the app UI. */
+    public static final String EXTRA_FROM_COMPLICATION = "from_complication";
 
     private static final int REQUEST_POST_NOTIFICATIONS = 10;
     private static final int REQUEST_FINE_LOCATION = 11;
@@ -210,6 +212,7 @@ public class MainActivity extends Activity {
     private boolean askedFullScreenThisSession;
     private boolean askedNotificationPolicyThisSession;
     private String currentScreen = "list";
+    private boolean openedFromComplication;
     private float swipeStartX;
     private float swipeStartY;
     private long swipeStartTime;
@@ -6429,6 +6432,12 @@ public class MainActivity extends Activity {
     }
 
     private boolean navigateBack() {
+        // A complication is an external entry point. Do not expose the app's list/home screen
+        // behind it: leaving the launched screen should return directly to the watch face.
+        if (openedFromComplication) {
+            finish();
+            return true;
+        }
         if ("smart_alarm_dismiss_settings".equals(currentScreen)) {
             restoreSmartAlarmDismissEditor();
             return true;
@@ -6566,6 +6575,9 @@ public class MainActivity extends Activity {
     private void handleIntent(Intent intent) {
         if (intent == null) {
             return;
+        }
+        if (intent.getBooleanExtra(EXTRA_FROM_COMPLICATION, false)) {
+            openedFromComplication = true;
         }
         String focusReminderId = intent.getStringExtra(EXTRA_FOCUS_REMINDER_ID);
         if (intent.getBooleanExtra(EXTRA_FOCUS_NEXT_REMINDER, false)) {

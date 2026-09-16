@@ -176,6 +176,7 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
                 .setAction("com.woodpeckerbros.watchreminder.OPEN_ZMANIM_DAY")
                 .setData(Uri.parse("watchreminder://zmanim/day"))
                 .putExtra(MainActivity.EXTRA_OPEN_ZMANIM_DAY, true)
+                .putExtra(MainActivity.EXTRA_FROM_COMPLICATION, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(
                 this,
@@ -189,7 +190,7 @@ public class HebrewDateComplicationService extends ComplicationDataSourceService
         return PendingIntent.getActivity(
                 this,
                 8344,
-                JewishModeComplicationConfigActivity.createIntent(this),
+                JewishModeComplicationConfigActivity.createComplicationIntent(this),
                 PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
     }

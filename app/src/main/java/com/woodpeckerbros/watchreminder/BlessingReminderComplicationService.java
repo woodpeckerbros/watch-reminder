@@ -101,6 +101,7 @@ public class BlessingReminderComplicationService extends ComplicationDataSourceS
     private PendingIntent openBlessingIntent() {
         Intent intent = new Intent(this, MainActivity.class)
                 .putExtra(MainActivity.EXTRA_OPEN_BLESSING_REMINDER, true)
+                .putExtra(MainActivity.EXTRA_FROM_COMPLICATION, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(
                 this,
@@ -114,7 +115,7 @@ public class BlessingReminderComplicationService extends ComplicationDataSourceS
         return PendingIntent.getActivity(
                 this,
                 7287,
-                JewishModeComplicationConfigActivity.createIntent(this),
+                JewishModeComplicationConfigActivity.createComplicationIntent(this),
                 PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
     }

@@ -96,6 +96,7 @@ public class IntermittentFastingComplicationService extends ComplicationDataSour
     private PendingIntent openFastingSettingsIntent() {
         Intent intent = new Intent(this, MainActivity.class)
                 .putExtra(MainActivity.EXTRA_OPEN_FASTING_SETTINGS, true)
+                .putExtra(MainActivity.EXTRA_FROM_COMPLICATION, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(
                 this,

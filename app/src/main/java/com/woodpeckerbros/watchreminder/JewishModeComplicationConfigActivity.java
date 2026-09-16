@@ -27,11 +27,18 @@ public class JewishModeComplicationConfigActivity extends Activity {
 
     public static final String ACTION_CONFIGURE =
             "com.woodpeckerbros.watchreminder.CONFIGURE_JEWISH_MODE_COMPLICATION";
+    private static final String EXTRA_FROM_COMPLICATION = "from_complication";
 
     public static Intent createIntent(Context context) {
         return new Intent(context, JewishModeComplicationConfigActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
     }
+
+    public static Intent createComplicationIntent(Context context) {
+        return createIntent(context).putExtra(EXTRA_FROM_COMPLICATION, true);
+    }
+
+    private boolean openedFromComplication;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -41,11 +48,21 @@ public class JewishModeComplicationConfigActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        openedFromComplication = getIntent().getBooleanExtra(EXTRA_FROM_COMPLICATION, false);
         if (new ReminderSettings(this).jewishMode()) {
             finishSuccessfully();
             return;
         }
         showEnableScreen();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (openedFromComplication) {
+            finishAndRemoveTask();
+            return;
+        }
+        super.onBackPressed();
     }
 
     private void showEnableScreen() {
@@ -98,7 +115,11 @@ public class JewishModeComplicationConfigActivity extends Activity {
     private void finishSuccessfully() {
         setResult(RESULT_OK);
         ComplicationRefresh.requestAfterConfiguration(this);
-        finish();
+        if (openedFromComplication) {
+            finishAndRemoveTask();
+        } else {
+            finish();
+        }
     }
 
     private TextView text(String value, int sizeSp) {
