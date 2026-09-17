@@ -18,6 +18,8 @@ import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
 public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
     private static final String CHANNEL = "smart_alarm_wake_check_v2_attention";
     private static final int NOTIFICATION_BASE = 0x534d5A00;
+    private static final String STATE_PREFS = "smart_alarm_wake_check_state";
+    private static final String PENDING_PREFIX = "pending_";
 
     static void schedule(Context context, int alarmId, long targetAt, int minutes) {
         cancel(context, alarmId);
@@ -29,6 +31,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
             if (ReminderScheduler.canScheduleExactAlarms(context)) manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
             else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
         } catch (SecurityException error) { manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending); }
+        state(context).edit().putLong(PENDING_PREFIX + alarmId, at).apply();
         AppLog.d(context, "SmartAlarm wake check scheduled id=" + alarmId + " at=" + at);
     }
 
@@ -41,6 +44,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
         SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
+        state(context).edit().remove(PENDING_PREFIX + alarmId).apply();
     }
 
     static void confirm(Context context, int alarmId) {
@@ -49,6 +53,12 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
         SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
+        state(context).edit().remove(PENDING_PREFIX + alarmId).apply();
+    }
+
+    /** A lightweight state bit for the FGS delivery-obligation calculation. */
+    public static boolean hasPending(Context context) {
+        return !state(context).getAll().isEmpty();
     }
 
     @Override public void onReceive(Context context, Intent source) {
@@ -59,6 +69,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
             NotificationManager notifications = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
             SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
+            state(context).edit().remove(PENDING_PREFIX + alarmId).apply();
             SmartAlarmReceiver.fireWakeCheckEscalation(context, alarmId, targetAt);
             return;
         }
@@ -103,5 +114,9 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt).putExtra("escalate", escalate);
         return PendingIntent.getBroadcast(context, NOTIFICATION_BASE + alarmId + (escalate ? 0x1000 : 0), intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static android.content.SharedPreferences state(Context context) {
+        return context.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE);
     }
 }

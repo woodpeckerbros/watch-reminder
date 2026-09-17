@@ -22,16 +22,26 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         UserManager userManager = context.getSystemService(UserManager.class);
+        String action = intent == null ? "" : intent.getAction();
         if (userManager != null && !userManager.isUserUnlocked()) {
+            // AlarmManager entries are cleared by reboot.  Credential-protected settings are not
+            // readable yet, but the device-protected deadline shadow is intentionally available.
+            AppLog.d(context, "BootReceiver locked action=" + action
+                    + "; restoring Smart Alarm safety alarms and protection FGS");
+            SmartAlarmScheduler.recoverLockedBoot(context);
+            ReminderMonitoringService.ensureRunningDirectBoot(context);
             return;
         }
-        String action = intent == null ? "" : intent.getAction();
         AppLog.d(context, "BootReceiver action=" + action);
         // An APK replacement starts this receiver at the same time the launcher may start the
         // activity. Full recovery recalculates every reminder and can starve the initial frame
         // on a two-core watch. Keep boot/time recovery immediate, but defer post-update repair
         // to a one-off job; MainActivity performs the same repair after its first frame.
         if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            // The deferred job intentionally avoids heavy database reconciliation during an APK
+            // update, but a future Smart Alarm must not spend that gap unprotected on OnePlus.
+            // ensureRunning() is idempotent and starts only the lightweight FGS anchor.
+            ReminderMonitoringService.ensureRunning(context);
             ReminderRecoveryJobService.schedulePostUpdateRecovery(context);
             return;
         }
@@ -69,12 +79,7 @@ public class BootReceiver extends BroadcastReceiver {
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.requestAll(context);
         ReminderReceiver.dispatchNextQueued(context);
-        if (mayStartMonitoringService && new ReminderSettings(context).serviceEnabled()) {
-            AppLog.d(context, "ReminderMonitoring boot recovery start");
-            ReminderMonitoringService.start(context);
-        } else if (!new ReminderSettings(context).serviceEnabled()) {
-            ReminderMonitoringService.stop(context);
-        }
+        if (mayStartMonitoringService) ReminderMonitoringService.ensureRunning(context);
         ReminderRecoveryJobService.markRecoveryCompleted(context);
     }
 }

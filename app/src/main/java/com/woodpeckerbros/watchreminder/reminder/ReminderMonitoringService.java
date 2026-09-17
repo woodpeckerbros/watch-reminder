@@ -2,6 +2,9 @@ package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
 import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmWakeCheckReceiver;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartWakeMonitoringService;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -15,6 +18,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.UserManager;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,8 +34,12 @@ public final class ReminderMonitoringService extends Service {
     private static final int NOTIFICATION_ID = 2002;
     private static final String EXTRA_DEFER_INITIAL_HEALTH_CHECK = "defer_initial_health_check";
     private static final String EXTRA_REFRESH_NOTIFICATION = "refresh_notification";
+    private static final String EXTRA_DIRECT_BOOT = "direct_boot";
     private static final String MONITORING_TEXT_HEBREW = "ניטור תזכורות פעיל";
     private static final String MONITORING_TEXT_ENGLISH = "Active reminder monitoring";
+    private static volatile boolean running;
+    private static volatile boolean directBootMode;
+    private static volatile String lastAlreadyRunningSignature;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService maintenanceExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -40,51 +48,69 @@ public final class ReminderMonitoringService extends Service {
         return thread;
     });
     private boolean foregroundStarted;
+    private boolean startLogged;
     private boolean healthCheckInFlight;
     private final Runnable healthCheckRunnable = this::runHealthCheck;
 
     public static boolean isRequired(Context context) {
-        if (!EntitlementAccess.isFeatureAccessGranted(context)) return false;
-        if (!new ReminderSettings(context).serviceEnabled()) return false;
-        for (Reminder reminder : new ReminderStore(context).getAll()) {
-            if (reminder.enabled) return true;
-        }
-        return false;
+        return currentRequirement(context).required;
+    }
+
+    /** Re-evaluates all delivery obligations and starts exactly one lightweight protection FGS. */
+    public static void ensureRunning(Context context) {
+        start(context, false, false);
+    }
+
+    /** Locked-boot variant: uses only the minimal device-protected Smart Alarm shadow. */
+    public static void ensureRunningDirectBoot(Context context) {
+        start(context, true, false);
     }
 
     public static void start(Context context) {
-        start(context, false);
+        ensureRunning(context);
     }
 
     /** Starts the FGS immediately but leaves its first disk/schedule verification for later. */
     public static void startDeferredHealthCheck(Context context) {
-        start(context, true);
+        start(context, false, true);
     }
 
-    private static void start(Context context, boolean deferInitialHealthCheck) {
-        if (!isRequired(context)) {
-            stop(context);
+    private static void start(Context context, boolean requestedDirectBoot,
+                              boolean deferInitialHealthCheck) {
+        boolean locked = !isUserUnlocked(context);
+        boolean directBoot = requestedDirectBoot || locked;
+        ReminderMonitoringPolicy.Requirement requirement = directBoot
+                ? directBootRequirement(context) : currentRequirement(context);
+        if (!requirement.required) {
+            AppLog.d(context, "REMINDER_MONITOR_FGS_STOP reason=NO_DELIVERY_OBLIGATION");
+            requestStop(context);
+            return;
+        }
+        if (running && (!directBootMode || !isUserUnlocked(context))) {
+            logAlreadyRunningOnce(context, requirement);
             return;
         }
         try {
             Intent intent = new Intent(context, ReminderMonitoringService.class)
-                    .putExtra(EXTRA_DEFER_INITIAL_HEALTH_CHECK, deferInitialHealthCheck);
+                    .putExtra(EXTRA_DEFER_INITIAL_HEALTH_CHECK, deferInitialHealthCheck)
+                    .putExtra(EXTRA_DIRECT_BOOT, directBoot);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent);
             else context.startService(intent);
-            AppLog.d(context, "ReminderMonitoringService start requested");
+            logRequirement(context, "REMINDER_MONITOR_FGS_REQUIRED", requirement);
         } catch (Exception exception) {
-            AppLog.e(context, "ReminderMonitoringService start failed", exception);
+            AppLog.e(context, "REMINDER_MONITOR_FGS_START failed", exception);
         }
     }
 
     public static void stop(Context context) {
-        try { context.stopService(new Intent(context, ReminderMonitoringService.class)); }
-        catch (Exception ignored) { }
+        // Legacy call sites used stop() after one reminder changed. Re-evaluate instead: another
+        // Smart Alarm or tomorrow's occurrence must keep the package alive.
+        ensureRunning(context);
     }
 
     /** Refreshes the foreground notification after the user changes Zmanio's language. */
     public static void refreshNotification(Context context) {
-        if (!isRequired(context)) return;
+        if (!isUserUnlocked(context) || !isRequired(context)) return;
         try {
             Intent intent = new Intent(context, ReminderMonitoringService.class)
                     .putExtra(EXTRA_REFRESH_NOTIFICATION, true);
@@ -125,12 +151,15 @@ public final class ReminderMonitoringService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
-        if (!EntitlementAccess.isFeatureAccessGranted(this)) {
-            stopSelf();
-            return;
-        }
+        running = true;
+        directBootMode = !isUserUnlocked(this);
         createChannel();
         startForegroundWithMonitoringNotification();
+        if (directBootMode) {
+            AppLog.d(this, "REMINDER_MONITOR_FGS_START mode=DIRECT_BOOT");
+            return;
+        }
+        if (!EntitlementAccess.isFeatureAccessGranted(this)) { stopCleanly(); return; }
         ReminderMonitoringState state = new ReminderMonitoringState(this);
         boolean recreated = state.startedAt() != 0L;
         state.markStarted(System.currentTimeMillis());
@@ -142,7 +171,8 @@ public final class ReminderMonitoringService extends Service {
         Notification.Builder notificationBuilder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText(monitoringTextForAppLanguage(new ReminderSettings(this).language()))
+                .setContentText(directBootMode ? MONITORING_TEXT_ENGLISH
+                        : monitoringTextForAppLanguage(new ReminderSettings(this).language()))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOngoing(true).setShowWhen(false).setOnlyAlertOnce(true);
@@ -157,7 +187,18 @@ public final class ReminderMonitoringService extends Service {
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
-        if (!isRequired(this)) { stopCleanly(); return START_NOT_STICKY; }
+        boolean requestedDirectBoot = intent != null && intent.getBooleanExtra(EXTRA_DIRECT_BOOT, false);
+        if (!requestedDirectBoot && isUserUnlocked(this) && directBootMode) {
+            directBootMode = false;
+            startForegroundWithMonitoringNotification();
+            AppLog.d(this, "REMINDER_MONITOR_FGS_DIRECT_BOOT_MERGED");
+        }
+        ReminderMonitoringPolicy.Requirement requirement = directBootMode
+                ? directBootRequirement(this) : currentRequirement(this);
+        if (!requirement.required) { stopCleanly(); return START_NOT_STICKY; }
+        logRequirement(this, startLogged ? "REMINDER_MONITOR_FGS_KEEP" : "REMINDER_MONITOR_FGS_START", requirement);
+        startLogged = true;
+        if (directBootMode) return START_STICKY;
         if (intent != null && intent.getBooleanExtra(EXTRA_REFRESH_NOTIFICATION, false)) {
             startForegroundWithMonitoringNotification();
         }
@@ -173,7 +214,8 @@ public final class ReminderMonitoringService extends Service {
         healthCheckInFlight = true;
         maintenanceExecutor.execute(() -> {
             try {
-                if (!isRequired(this)) {
+                if (!currentRequirement(this).required) {
+                    AppLog.d(this, "REMINDER_MONITOR_FGS_STOP reason=NO_DELIVERY_OBLIGATION");
                     handler.post(this::stopCleanly);
                     return;
                 }
@@ -210,6 +252,8 @@ public final class ReminderMonitoringService extends Service {
     }
 
     @Override public void onDestroy() {
+        running = false;
+        directBootMode = false;
         handler.removeCallbacks(healthCheckRunnable);
         new ReminderMonitoringState(this).clearMaintenanceSchedule();
         if (foregroundStarted) {
@@ -224,6 +268,7 @@ public final class ReminderMonitoringService extends Service {
         // Some OEM launchers treat clearing recents as a service hint. Reassert all available
         // in-package recovery paths while callbacks are still allowed.
         AppLog.w(this, "ReminderMonitoringService task removed; reasserting recovery paths");
+        if (directBootMode) { super.onTaskRemoved(rootIntent); return; }
         ReminderScheduler.scheduleNearest(this);
         ReminderScheduler.scheduleWatchdog(this);
         ReminderRecoveryJobService.schedule(this);
@@ -249,5 +294,54 @@ public final class ReminderMonitoringService extends Service {
         channel.setSound(null, null);
         channel.enableVibration(false);
         ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(channel);
+    }
+
+    private static ReminderMonitoringPolicy.Requirement currentRequirement(Context context) {
+        if (!isUserUnlocked(context) || !EntitlementAccess.isFeatureAccessGranted(context)) {
+            return new ReminderMonitoringPolicy.Requirement(false,
+                    ReminderMonitoringPolicy.Reason.NONE, 0L,
+                    false, false, false, false);
+        }
+        NextReminderCalculator.NextReminder normal = NextReminderCalculator.next(context);
+        long nextNormal = normal == null ? Long.MAX_VALUE : normal.scheduledAt;
+        return ReminderMonitoringPolicy.decide(nextNormal,
+                SmartAlarmScheduler.nextFutureDeliveryAt(context),
+                SmartWakeMonitoringService.isActive(), SmartAlarmWakeCheckReceiver.hasPending(context));
+    }
+
+    private static ReminderMonitoringPolicy.Requirement directBootRequirement(Context context) {
+        return ReminderMonitoringPolicy.decide(Long.MAX_VALUE,
+                SmartAlarmScheduler.nextFutureDirectBootDeliveryAt(context), false, false);
+    }
+
+    private static boolean isUserUnlocked(Context context) {
+        UserManager manager = context.getSystemService(UserManager.class);
+        return manager == null || manager.isUserUnlocked();
+    }
+
+    private static void requestStop(Context context) {
+        try { context.stopService(new Intent(context, ReminderMonitoringService.class)); }
+        catch (Exception ignored) { }
+    }
+
+    private static void logRequirement(Context context, String event,
+                                       ReminderMonitoringPolicy.Requirement requirement) {
+        boolean unlocked = isUserUnlocked(context);
+        AppLog.d(context, event + " reason=" + requirement.reason
+                + " future_normal_reminders=" + requirement.futureNormalReminders
+                + " future_smart_alarm=" + requirement.futureSmartAlarm
+                + " active_smart_wake=" + (unlocked && requirement.activeSmartWake)
+                + " pending_wake_check=" + (unlocked && requirement.pendingWakeCheck)
+                + " next_delivery_at=" + requirement.nextDeliveryAt);
+    }
+
+    private static void logAlreadyRunningOnce(Context context,
+                                              ReminderMonitoringPolicy.Requirement requirement) {
+        String signature = requirement.reason + ":" + requirement.futureNormalReminders + ":"
+                + requirement.futureSmartAlarm + ":" + requirement.activeSmartWake + ":"
+                + requirement.pendingWakeCheck + ":" + requirement.nextDeliveryAt;
+        if (signature.equals(lastAlreadyRunningSignature)) return;
+        lastAlreadyRunningSignature = signature;
+        logRequirement(context, "REMINDER_MONITOR_FGS_ALREADY_RUNNING", requirement);
     }
 }

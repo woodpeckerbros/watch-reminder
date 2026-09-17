@@ -168,12 +168,14 @@ public final class SmartAlarmStore {
     }
 
     public static void delete(Context context, int id) {
+        SmartAlarmBootStore.disarm(context, id, 0L);
         context.getApplicationContext().getSharedPreferences(prefsName(id), Context.MODE_PRIVATE).edit().clear().apply();
         SharedPreferences registry = context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);
         Set<String> ids = new HashSet<>(registry.getStringSet("ids", Collections.emptySet()));
         ids.remove(String.valueOf(id));
         registry.edit().putStringSet("ids", ids).apply();
         new SmartAlarmStateStore(context, id).clear();
+        ReminderMonitoringService.ensureRunning(context);
     }
 
     public static JSONArray toJson(Context context) throws Exception {

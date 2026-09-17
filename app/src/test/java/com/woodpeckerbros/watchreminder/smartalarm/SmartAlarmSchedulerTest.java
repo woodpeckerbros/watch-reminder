@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.smartalarm;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import org.junit.Test;
 
@@ -43,5 +44,12 @@ public class SmartAlarmSchedulerTest {
         expectedNext.add(Calendar.DAY_OF_YEAR, 7);
         assertEquals(expectedNext.getTimeInMillis(), SmartAlarmScheduler.nextTarget(
                 7, 10, daysMask, originalDeadline.getTimeInMillis()));
+    }
+
+    @Test public void finalAlarmPendingIntentIdentityIsStableAcrossRecovery() {
+        assertEquals(SmartAlarmScheduler.requestCode(7, 2),
+                SmartAlarmScheduler.requestCode(7, 2));
+        assertNotEquals(SmartAlarmScheduler.requestCode(7, 2),
+                SmartAlarmScheduler.requestCode(7, 7));
     }
 }

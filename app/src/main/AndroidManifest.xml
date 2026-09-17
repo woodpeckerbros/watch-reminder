@@ -37,6 +37,7 @@
 
         <service
             android:name=".reminder.ReminderMonitoringService"
+            android:directBootAware="true"
             android:exported="false"
             android:foregroundServiceType="specialUse"
             android:stopWithTask="false">
@@ -52,6 +53,7 @@
 
         <service
             android:name=".smartalarm.SmartWakeMonitoringService"
+            android:directBootAware="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -61,6 +63,7 @@
 
         <service
             android:name=".smartalarm.SmartAlarmRingingService"
+            android:directBootAware="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -324,8 +327,18 @@
             android:name=".reminder.ReminderReceiver"
             android:exported="false" />
 
-        <receiver android:name=".smartalarm.SmartWakeWindowReceiver" android:exported="false" />
-        <receiver android:name=".smartalarm.SmartAlarmReceiver" android:exported="false" />
+        <receiver
+            android:name=".smartalarm.SmartWakeWindowReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+        <receiver
+            android:name=".smartalarm.SmartAlarmReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+        <receiver
+            android:name=".smartalarm.SmartWakeHardStopReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
         <receiver android:name=".smartalarm.SmartAlarmAutoSnoozeReceiver" android:exported="false" />
         <receiver android:name=".smartalarm.SmartAlarmWakeCheckReceiver" android:exported="false" />
 

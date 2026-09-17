@@ -21,11 +21,12 @@ public final class SmartAlarmScheduler {
 
     public static void reschedule(Context context) {
         if (!EntitlementAccess.isFeatureAccessGranted(context)) {
-            cancel(context);
+            cancel(context, "ENTITLEMENT_REVOKED");
             return;
         }
-        cancel(context);
+        cancel(context, "RESCHEDULE_ALL");
         for (int alarmId : SmartAlarmStore.ids(context)) schedule(context, alarmId);
+        ReminderMonitoringService.ensureRunning(context);
     }
 
     /**
@@ -35,7 +36,7 @@ public final class SmartAlarmScheduler {
      */
     public static void recover(Context context) {
         if (!EntitlementAccess.isFeatureAccessGranted(context)) {
-            cancel(context);
+            cancel(context, "ENTITLEMENT_REVOKED");
             return;
         }
         long now = System.currentTimeMillis();
@@ -43,10 +44,26 @@ public final class SmartAlarmScheduler {
             SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
             SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
             long targetAt = state.targetAt();
-            if (store.enabled() && targetAt > now && !state.fired(targetAt) && !state.dismissed(targetAt)) {
+            boolean shadowMatches = SmartAlarmBootStore.matches(context, alarmId, targetAt);
+            boolean directBootDelivered = SmartAlarmBootStore.delivered(context, alarmId, targetAt);
+            if (SmartAlarmRecoveryPolicy.shouldFinalizeDirectBootDelivery(
+                    shadowMatches, directBootDelivered)) {
+                if (state.completeDirectBootDelivery(targetAt)) {
+                    AppLog.w(context, "SmartAlarm recovery finalized direct-boot delivery id="
+                            + alarmId + " target=" + targetAt + "; scheduling next occurrence");
+                    reschedule(context, alarmId);
+                    continue;
+                }
+                AppLog.w(context, "SmartAlarm recovery could not finalize direct-boot delivery id="
+                        + alarmId + " target=" + targetAt + "; preserving safety shadow");
+            }
+            SmartAlarmRecoveryPolicy.Action action = SmartAlarmRecoveryPolicy.decide(
+                    store.enabled(), targetAt, now, state.fired(targetAt), state.dismissed(targetAt));
+            if (action == SmartAlarmRecoveryPolicy.Action.RESTORE_FUTURE_DEADLINE) {
                 AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
                 if (manager != null) {
                     setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
+                    scheduleHardStop(context, manager, alarmId, targetAt);
                     if (state.snoozeUsed() > 0) {
                         AppLog.d(context, "SmartAlarm recovery preserved snooze id=" + alarmId
                                 + " target=" + targetAt + " used=" + state.snoozeUsed());
@@ -70,18 +87,84 @@ public final class SmartAlarmScheduler {
                 }
                 continue;
             }
-            if (state.fired(targetAt) && !state.dismissed(targetAt)) {
+            if (action == SmartAlarmRecoveryPolicy.Action.DELIVER_RECENT_MISSED_DEADLINE) {
+                scheduleMissedDeadlineFire(context, alarmId, targetAt, now);
+                AppLog.w(context, "SmartAlarm recovery catch-up id=" + alarmId
+                        + " target=" + targetAt + " lateByMs=" + (now - targetAt));
+                continue;
+            }
+            if (action == SmartAlarmRecoveryPolicy.Action.PRESERVE_ACTIVE_ALERT) {
                 AppLog.d(context, "SmartAlarm recovery preserved active alert id=" + alarmId
                         + " target=" + targetAt);
                 continue;
             }
+            if (targetAt > 0L && targetAt <= now && !state.fired(targetAt)
+                    && !state.dismissed(targetAt)) {
+                AppLog.w(context, "SmartAlarm recovery expired missed occurrence id=" + alarmId
+                        + " target=" + targetAt + " lateByMs=" + (now - targetAt)
+                        + " policy=RESCHEDULE_NEXT_OCCURRENCE");
+            }
             reschedule(context, alarmId);
+        }
+        ReminderMonitoringService.ensureRunning(context);
+    }
+
+    /** Restores only the minimal device-protected occurrence shadow before the watch is unlocked. */
+    public static void recoverLockedBoot(Context context) {
+        long now = System.currentTimeMillis();
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager == null) return;
+        for (SmartAlarmBootStore.Entry entry : SmartAlarmBootStore.entries(context)) {
+            SmartAlarmRecoveryPolicy.Action action = SmartAlarmRecoveryPolicy.decideLockedBoot(
+                    entry.targetAt, now, entry.delivered);
+            if (action == SmartAlarmRecoveryPolicy.Action.RESTORE_FUTURE_DEADLINE) {
+                setDeadlineAlarm(context, manager, entry.alarmId, entry.targetAt,
+                        deadlineIntent(context, entry.alarmId, entry.targetAt));
+                scheduleHardStop(context, manager, entry.alarmId, entry.targetAt);
+                AppLog.d(context, "FINAL_ALARM_RESTORED_LOCKED_BOOT id=" + entry.alarmId
+                        + " occurrence_id=" + entry.alarmId + ":" + entry.targetAt
+                        + " deadline=" + entry.targetAt);
+            } else if (action == SmartAlarmRecoveryPolicy.Action.DELIVER_RECENT_MISSED_DEADLINE) {
+                scheduleMissedDeadlineFire(context, entry.alarmId, entry.targetAt, now);
+                AppLog.w(context, "FINAL_ALARM_CATCH_UP_LOCKED_BOOT id=" + entry.alarmId
+                        + " occurrence_id=" + entry.alarmId + ":" + entry.targetAt
+                        + " lateByMs=" + (now - entry.targetAt));
+            }
+            SmartWakeDirectBootPolicy.Action monitoringAction = SmartWakeDirectBootPolicy.decide(
+                    entry.smartWakeEnabled, entry.delivered, entry.monitoringStartAt,
+                    entry.earliestWakeAt, entry.targetAt, now);
+            if (monitoringAction == SmartWakeDirectBootPolicy.Action.RESTORE_MONITORING_START) {
+                setWindowAlarm(context, manager, entry.monitoringStartAt,
+                        windowIntent(context, entry.alarmId, entry.targetAt, entry.earliestWakeAt));
+                setWindowAlarm(context, manager, entry.earliestWakeAt,
+                        windowStartCheckIntent(context, entry.alarmId, entry.targetAt,
+                                entry.earliestWakeAt));
+                AppLog.d(context, "SMART_WAKE_MONITOR_RESTORED_LOCKED_BOOT id=" + entry.alarmId
+                        + " occurrence_id=" + entry.alarmId + ":" + entry.targetAt
+                        + " monitoring_start=" + entry.monitoringStartAt
+                        + " earliest_wake=" + entry.earliestWakeAt
+                        + " deadline=" + entry.targetAt);
+            } else if (monitoringAction == SmartWakeDirectBootPolicy.Action.START_MONITORING_CATCH_UP) {
+                if (now < entry.earliestWakeAt) {
+                    setWindowAlarm(context, manager, entry.earliestWakeAt,
+                            windowStartCheckIntent(context, entry.alarmId, entry.targetAt,
+                                    entry.earliestWakeAt));
+                }
+                SmartWakeMonitoringService.startDirectBoot(context, entry.alarmId, entry.targetAt,
+                        entry.earliestWakeAt);
+                AppLog.w(context, "SMART_WAKE_MONITOR_CATCH_UP_LOCKED_BOOT id=" + entry.alarmId
+                        + " occurrence_id=" + entry.alarmId + ":" + entry.targetAt
+                        + " monitoring_start=" + entry.monitoringStartAt
+                        + " earliest_wake=" + entry.earliestWakeAt
+                        + " deadline=" + entry.targetAt);
+            }
         }
     }
 
     public static void reschedule(Context context, int alarmId) {
-        cancel(context, alarmId);
+        cancel(context, alarmId, "RESCHEDULE");
         schedule(context, alarmId);
+        ReminderMonitoringService.ensureRunning(context);
     }
 
     private static void schedule(Context context, int alarmId) {
@@ -106,10 +189,13 @@ public final class SmartAlarmScheduler {
         state.begin(targetAt);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
+        SmartAlarmBootStore.arm(context, alarmId, targetAt, monitorAt, wakeWindowStartAt,
+                store.windowMinutes() > 0);
         setWindowAlarm(context, manager, monitorAt, windowIntent(context, alarmId, targetAt, wakeWindowStartAt));
         setWindowAlarm(context, manager, wakeWindowStartAt,
                 windowStartCheckIntent(context, alarmId, targetAt, wakeWindowStartAt));
         setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
+        scheduleHardStop(context, manager, alarmId, targetAt);
         AppLog.d(context, "SmartAlarm scheduled id=" + alarmId + " monitor=" + monitorAt
                 + " wakeWindow=" + wakeWindowStartAt + " target=" + targetAt
                 + " baselineBufferMs=" + SmartWakeSamplingProfile.startBufferMs(
@@ -118,13 +204,15 @@ public final class SmartAlarmScheduler {
 
     public static void scheduleSnooze(Context context, int alarmId, long originalTargetAt, int minutes) {
         cancelAutoSnooze(context, alarmId);
-        cancel(context, alarmId);
+        cancel(context, alarmId, "SNOOZE_REPLACEMENT");
         long targetAt = System.currentTimeMillis() + minutes * 60_000L;
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         state.beginSnooze(targetAt, state.snoozeUsed() + 1);
+        SmartAlarmBootStore.arm(context, alarmId, targetAt, 0L, 0L, false);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
         AppLog.d(context, "SmartAlarm snoozed id=" + alarmId + " original=" + originalTargetAt + " target=" + targetAt);
+        ReminderMonitoringService.ensureRunning(context);
     }
 
     /**
@@ -132,10 +220,11 @@ public final class SmartAlarmScheduler {
      * plain reschedule here: before the configured deadline it would recreate the same alarm.
      */
     public static void scheduleNextAfterHandled(Context context, int alarmId, long handledTargetAt) {
-        cancel(context, alarmId);
+        cancel(context, alarmId, "OCCURRENCE_HANDLED");
         long occurrenceTargetAt = new SmartAlarmStateStore(context, alarmId).occurrenceTargetAt();
         schedule(context, alarmId, handledOccurrenceBoundary(
                 System.currentTimeMillis(), handledTargetAt, occurrenceTargetAt));
+        ReminderMonitoringService.ensureRunning(context);
     }
 
     static long handledOccurrenceBoundary(long now, long handledTargetAt, long occurrenceTargetAt) {
@@ -193,8 +282,12 @@ public final class SmartAlarmScheduler {
     }
 
     public static void cancel(Context context) {
+        cancel(context, "EXPLICIT_CANCEL_OR_RECONFIGURE");
+    }
+
+    private static void cancel(Context context, String reason) {
         for (int alarmId : SmartAlarmStore.ids(context)) {
-            cancel(context, alarmId);
+            cancel(context, alarmId, reason);
             SmartWakeMonitoringService.stop(context, alarmId);
         }
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -204,18 +297,72 @@ public final class SmartAlarmScheduler {
     }
 
     public static void cancel(Context context, int alarmId) {
+        cancel(context, alarmId, "EXPLICIT_CANCEL_OR_RECONFIGURE");
+    }
+
+    private static void cancel(Context context, int alarmId, String reason) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (manager == null) return;
-        manager.cancel(windowIntent(context, alarmId, 0, 0));
-        manager.cancel(windowStartCheckIntent(context, alarmId, 0, 0));
-        manager.cancel(deadlineIntent(context, alarmId, 0));
-        manager.cancel(detectedFireIntent(context, alarmId, 0, null));
-        manager.cancel(autoSnoozeIntent(context, alarmId, 0, false));
+        if (manager != null) {
+            manager.cancel(windowIntent(context, alarmId, 0, 0));
+            manager.cancel(windowStartCheckIntent(context, alarmId, 0, 0));
+            manager.cancel(deadlineIntent(context, alarmId, 0));
+            manager.cancel(detectedFireIntent(context, alarmId, 0, null));
+            manager.cancel(autoSnoozeIntent(context, alarmId, 0, false));
+            manager.cancel(hardStopIntent(context, alarmId, 0L));
+        }
+        SmartAlarmBootStore.disarm(context, alarmId, 0L);
+        AppLog.d(context, "FINAL_ALARM_CANCELLED id=" + alarmId + " reason=" + reason);
+        ReminderMonitoringService.ensureRunning(context);
+    }
+
+    /**
+     * Next normal (credential-protected) Smart Alarm delivery that is still owed.  This is used
+     * only to keep the lightweight package-survival FGS alive; it never starts Smart Wake sensors.
+     */
+    public static long nextFutureDeliveryAt(Context context) {
+        long now = System.currentTimeMillis();
+        long result = Long.MAX_VALUE;
+        for (int alarmId : SmartAlarmStore.ids(context)) {
+            SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
+            if (!store.enabled()) continue;
+            SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+            long targetAt = state.targetAt();
+            if (targetAt > now && !state.fired(targetAt) && !state.dismissed(targetAt)) {
+                result = Math.min(result, targetAt);
+            } else {
+                long next = nextTarget(store.hour(), store.minute(), store.daysMask(), now);
+                result = Math.min(result, next);
+            }
+        }
+        return result;
+    }
+
+    /** Device-protected counterpart for the locked-boot protection service. */
+    public static long nextFutureDirectBootDeliveryAt(Context context) {
+        long now = System.currentTimeMillis();
+        long result = Long.MAX_VALUE;
+        for (SmartAlarmBootStore.Entry entry : SmartAlarmBootStore.entries(context)) {
+            if (!entry.delivered && entry.targetAt > now) result = Math.min(result, entry.targetAt);
+        }
+        return result;
     }
 
     public static void cancelDeadline(Context context, int alarmId) {
+        cancelDeadline(context, alarmId, 0L, "EARLY_ALERT_DELIVERY_DURABLE");
+    }
+
+    public static void cancelDeadline(Context context, int alarmId, long targetAt, String reason) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) manager.cancel(deadlineIntent(context, alarmId, 0));
+        SmartAlarmBootStore.disarm(context, alarmId, targetAt);
+        AppLog.d(context, "FINAL_ALARM_CANCELLED id=" + alarmId + " occurrence_id="
+                + alarmId + ":" + targetAt + " request_code=" + requestCode(alarmId, 2)
+                + " reason=" + reason);
+    }
+
+    static void cancelHardStop(Context context, int alarmId) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager != null) manager.cancel(hardStopIntent(context, alarmId, 0L));
     }
 
     static long nextTarget(int hour, int minute, int daysMask, long now) {
@@ -254,6 +401,39 @@ public final class SmartAlarmScheduler {
             AppLog.e(context, "SmartAlarm exact deadline permission missing", error);
             manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent);
         }
+        AppLog.d(context, "FINAL_ALARM_SCHEDULED id=" + alarmId + " occurrence_id="
+                + alarmId + ":" + at + " deadline=" + at
+                + " request_code=" + requestCode(alarmId, 2)
+                + " type=ALARM_CLOCK_OR_RTC_WAKEUP");
+    }
+
+    private static void scheduleMissedDeadlineFire(Context context, int alarmId,
+                                                   long originalTargetAt, long now) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager == null) return;
+        long fireAt = now + 500L;
+        PendingIntent operation = deadlineIntent(context, alarmId, originalTargetAt);
+        try {
+            if (ReminderScheduler.canScheduleExactAlarms(context)) {
+                manager.setAlarmClock(new AlarmManager.AlarmClockInfo(
+                        fireAt, alertIntent(context, alarmId, originalTargetAt)), operation);
+            } else {
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, operation);
+            }
+        } catch (SecurityException error) {
+            AppLog.e(context, "SmartAlarm recovery catch-up exact permission missing", error);
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, operation);
+        }
+        AppLog.w(context, "FINAL_ALARM_SCHEDULED id=" + alarmId + " occurrence_id="
+                + alarmId + ":" + originalTargetAt + " deadline=" + originalTargetAt
+                + " fireAt=" + fireAt + " request_code=" + requestCode(alarmId, 2)
+                + " type=RECOVERY_CATCH_UP");
+    }
+
+    private static void scheduleHardStop(Context context, AlarmManager manager,
+                                         int alarmId, long targetAt) {
+        long hardStopAt = SmartWakeRuntimePolicy.hardStopAt(targetAt);
+        setWindowAlarm(context, manager, hardStopAt, hardStopIntent(context, alarmId, targetAt));
     }
 
     private static PendingIntent windowIntent(Context context, int alarmId, long targetAt, long wakeWindowStartAt) {
@@ -297,10 +477,41 @@ public final class SmartAlarmScheduler {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    private static PendingIntent hardStopIntent(Context context, int alarmId, long targetAt) {
+        Intent intent = alarmIntent(context, SmartWakeHardStopReceiver.class, alarmId, targetAt);
+        return PendingIntent.getBroadcast(context, requestCode(alarmId, 7), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     private static Intent alarmIntent(Context context, Class<?> type, int alarmId, long targetAt) {
         return new Intent(context, type).putExtra(EXTRA_ALARM_ID, alarmId).putExtra(EXTRA_TARGET_AT, targetAt);
     }
-    private static int requestCode(int alarmId, int kind) { return 0x53000000 | ((alarmId & 0xfffff) << 3) | kind; }
+    static int requestCode(int alarmId, int kind) { return 0x53000000 | ((alarmId & 0xfffff) << 3) | kind; }
     private static PendingIntent legacyWindowIntent(Context context) { return PendingIntent.getBroadcast(context, 0x534d5701, new Intent(context, SmartWakeWindowReceiver.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE); }
     private static PendingIntent legacyDeadlineIntent(Context context) { return PendingIntent.getBroadcast(context, 0x534d5702, new Intent(context, SmartAlarmReceiver.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE); }
+
+    public static String diagnosticSummary(Context context) {
+        StringBuilder result = new StringBuilder();
+        long now = System.currentTimeMillis();
+        for (int alarmId : SmartAlarmStore.ids(context)) {
+            SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
+            SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+            long targetAt = state.targetAt();
+            result.append("id=").append(alarmId)
+                    .append(" enabled=").append(store.enabled())
+                    .append(" hour=").append(store.hour()).append(':').append(store.minute())
+                    .append(" daysMask=").append(store.daysMask())
+                    .append(" windowMinutes=").append(store.windowMinutes())
+                    .append(" target=").append(targetAt)
+                    .append(" fired=").append(state.fired(targetAt))
+                    .append(" dismissed=").append(state.dismissed(targetAt))
+                    .append(" recoveryAction=").append(SmartAlarmRecoveryPolicy.decide(
+                            store.enabled(), targetAt, now, state.fired(targetAt), state.dismissed(targetAt)))
+                    .append('\n');
+        }
+        if (result.length() == 0) result.append("none\n");
+        result.append("Device-protected final deadlines:\n")
+                .append(SmartAlarmBootStore.diagnosticSummary(context));
+        return result.toString();
+    }
 }

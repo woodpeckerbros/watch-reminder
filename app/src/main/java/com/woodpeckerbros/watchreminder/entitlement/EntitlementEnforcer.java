@@ -10,7 +10,6 @@ import com.woodpeckerbros.watchreminder.calendar.TekufaScheduler;
 import com.woodpeckerbros.watchreminder.reminder.IntermittentFastingScheduler;
 import com.woodpeckerbros.watchreminder.reminder.ReminderMonitoringService;
 import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
-import com.woodpeckerbros.watchreminder.reminder.ReminderSettings;
 import com.woodpeckerbros.watchreminder.reminder.ReminderStore;
 import com.woodpeckerbros.watchreminder.reminder.WaterReminderScheduler;
 import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
@@ -34,9 +33,7 @@ public final class EntitlementEnforcer {
             TekufaScheduler.schedule(appContext);
             IntermittentFastingScheduler.schedule(appContext);
             WaterReminderScheduler.schedule(appContext);
-            if (new ReminderSettings(appContext).serviceEnabled()) {
-                ReminderMonitoringService.start(appContext);
-            }
+            ReminderMonitoringService.ensureRunning(appContext);
             return;
         }
         disableDeliveries(appContext);

@@ -71,11 +71,7 @@ public class ReminderStore {
             new ReminderSnoozeStore(context).delete(reminder.id);
         }
         ReminderScheduler.scheduleNearest(context);
-        if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderMonitoringService.start(context);
-        } else {
-            ReminderMonitoringService.stop(context);
-        }
+        ReminderMonitoringService.ensureRunning(context);
         ComplicationRefresh.request(context);
     }
 
@@ -91,11 +87,7 @@ public class ReminderStore {
         }
         save(reminders);
         ReminderScheduler.scheduleNearest(context);
-        if (new ReminderSettings(context).serviceEnabled()) {
-            ReminderMonitoringService.start(context);
-        } else {
-            ReminderMonitoringService.stop(context);
-        }
+        ReminderMonitoringService.ensureRunning(context);
         ComplicationRefresh.request(context);
     }
 

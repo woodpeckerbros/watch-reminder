@@ -35,10 +35,21 @@ public final class SmartAlarmStateStore {
     public boolean fired(long targetAt) { return targetAt == targetAt() && prefs.getBoolean("fired", false); }
     public boolean dismissed(long targetAt) { return targetAt == targetAt() && prefs.getBoolean("dismissed", false); }
 
-    public synchronized boolean claimFire(long targetAt) {
-        if (targetAt != targetAt() || fired(targetAt) || dismissed(targetAt)) return false;
-        prefs.edit().putBoolean("fired", true).apply();
-        return true;
+    public synchronized boolean canFire(long targetAt) {
+        return targetAt == targetAt() && !fired(targetAt) && !dismissed(targetAt);
+    }
+
+    /** Records terminal delivery only after NotificationManager accepted the alert. */
+    public synchronized boolean markFireDelivered(long targetAt) {
+        if (targetAt != targetAt() || dismissed(targetAt)) return false;
+        if (fired(targetAt)) return true;
+        return prefs.edit().putBoolean("fired", true).commit();
+    }
+
+    /** Completes an occurrence that was durably alerted while credential storage was locked. */
+    public synchronized boolean completeDirectBootDelivery(long targetAt) {
+        if (targetAt != targetAt()) return false;
+        return prefs.edit().putBoolean("fired", true).putBoolean("dismissed", true).commit();
     }
 
     public void dismiss(long targetAt) {

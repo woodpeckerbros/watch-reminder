@@ -25,9 +25,11 @@ import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
 
 public final class SmartAlarmRingingService extends Service {
+    static final long DIRECT_BOOT_ALERT_DURATION_MS = 120_000L;
     private static final String CHANNEL = "smart_alarm_ringing_v1";
     private static final int NOTIFICATION_ID = 0x534d5706;
     private static final long FULL_SCREEN_REPOST_INTERVAL_MS = 8_000L;
+    private static final String EXTRA_DIRECT_BOOT_FALLBACK = "direct_boot_fallback";
     private AlertFeedback feedback;
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -55,6 +57,19 @@ public final class SmartAlarmRingingService extends Service {
         }
     }
 
+    static boolean startDirectBoot(Context context, int alarmId, long targetAt) {
+        try {
+            ContextCompat.startForegroundService(context, new Intent(context, SmartAlarmRingingService.class)
+                    .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
+                    .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                    .putExtra(EXTRA_DIRECT_BOOT_FALLBACK, true));
+            return true;
+        } catch (RuntimeException error) {
+            AppLog.e(context, "SmartAlarm direct-boot ringing service start rejected", error);
+            return false;
+        }
+    }
+
     public static void stop(Context context) {
         context.stopService(new Intent(context, SmartAlarmRingingService.class));
     }
@@ -71,6 +86,8 @@ public final class SmartAlarmRingingService extends Service {
         long targetAt = intent == null ? 0L : intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         boolean wakeCheckEscalation = intent != null
                 && intent.getBooleanExtra("wake_check_escalation", false);
+        boolean directBootFallback = intent != null
+                && intent.getBooleanExtra(EXTRA_DIRECT_BOOT_FALLBACK, false);
         activeAlarmId = alarmId;
         activeTargetAt = targetAt;
         activeWakeCheckEscalation = wakeCheckEscalation;
@@ -78,10 +95,19 @@ public final class SmartAlarmRingingService extends Service {
         // competing morning card takes the screen, a fresh post follows only after this interval.
         lastFullScreenRepostAt = android.os.SystemClock.uptimeMillis();
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager != null) manager.notify(NOTIFICATION_ID,
-                notification(alarmId, targetAt, wakeCheckEscalation));
+        if (manager != null) manager.notify(NOTIFICATION_ID, directBootFallback
+                ? directBootNotification() : notification(alarmId, targetAt, wakeCheckEscalation));
         if (feedback != null) feedback.stop();
         handler.removeCallbacksAndMessages(null);
+        if (directBootFallback) {
+            int durationMs = (int) DIRECT_BOOT_ALERT_DURATION_MS;
+            holdCpuWhileRinging(durationMs);
+            feedback = AlertFeedback.startEmergencyAlarm(this, durationMs);
+            handler.postDelayed(this::stopSelf, DIRECT_BOOT_ALERT_DURATION_MS + 1_000L);
+            AppLog.w(this, "SmartAlarm direct-boot bounded ringing started id=" + alarmId
+                    + " target=" + targetAt + " durationMs=" + durationMs);
+            return START_NOT_STICKY;
+        }
         SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
         int alertDurationMs = settings.alertDurationSeconds() * 1000;
         holdCpuWhileRinging(alertDurationMs);
@@ -95,6 +121,17 @@ public final class SmartAlarmRingingService extends Service {
                 alarmId, targetAt, wakeCheckEscalation), 1_200L);
         handler.postDelayed(this::stopSelf, alertDurationMs + 1_000L);
         return START_NOT_STICKY;
+    }
+
+    private Notification directBootNotification() {
+        return new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Smart Alarm")
+                .setContentText("ההתראה פעילה לאחר הפעלה מחדש")
+                .setOngoing(true)
+                .setCategory(Notification.CATEGORY_ALARM)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .build();
     }
 
     private Notification notification(int alarmId, long targetAt, boolean wakeCheckEscalation) {

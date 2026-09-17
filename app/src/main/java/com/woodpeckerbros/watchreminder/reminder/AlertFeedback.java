@@ -60,6 +60,14 @@ public class AlertFeedback {
         return feedback;
     }
 
+    /** Bounded direct-boot fallback used when credential-protected alarm settings are unavailable. */
+    public static AlertFeedback startEmergencyAlarm(Context context, int durationMs) {
+        AlertFeedback feedback = new AlertFeedback(context);
+        feedback.startConfigured(durationMs, true, ReminderSettings.VIBRATION_NORMAL, 10,
+                true, 100, "");
+        return feedback;
+    }
+
     public static AlertFeedback preview(Context context, boolean vibrationEnabled, String vibrationStyle,
                                         int vibrationStrength, boolean soundEnabled, int volumePercent,
                                         String soundUri) {

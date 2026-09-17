@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder;
 
 import com.woodpeckerbros.watchreminder.reminder.*;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
 
 import android.Manifest;
 import android.app.AlarmManager;
@@ -10,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.UserManager;
 import android.util.Log;
 
 import java.text.SimpleDateFormat;
@@ -23,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 public class AppLog {
     private static final String TAG = "WatchReminder";
     private static final String PREFS_NAME = "app_logs";
+    private static final String DIRECT_BOOT_PREFS_NAME = "app_logs_direct_boot";
     private static final String KEY_TEXT = "text";
     private static final int MAX_CHARS = 160_000;
     private static final ExecutorService LOG_WRITER = Executors.newSingleThreadExecutor(r -> {
@@ -61,6 +64,8 @@ public class AppLog {
         builder.append("Full screen intent: ").append(fullScreenIntentAllowed(context)).append('\n');
         builder.append("Foreground service enabled: ").append(new ReminderSettings(context).serviceEnabled()).append('\n');
         builder.append(ReminderMonitoringService.diagnosticSummary(context));
+        builder.append('\n').append("Smart Alarm state:\n")
+                .append(SmartAlarmScheduler.diagnosticSummary(context));
         builder.append('\n').append("Logs:\n");
         builder.append(text(context));
         builder.append('\n').append("Computed reminder state:\n");
@@ -90,9 +95,12 @@ public class AppLog {
 
     public static String text(Context context) {
         flushPendingWrites();
-        return context.getApplicationContext()
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        Context appContext = context.getApplicationContext();
+        String directBootText = directBootPreferences(appContext).getString(KEY_TEXT, "");
+        if (!isUserUnlocked(appContext)) return directBootText;
+        String credentialText = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_TEXT, "");
+        return credentialText + directBootText;
     }
 
     public static void clear(Context context) {
@@ -102,6 +110,7 @@ public class AppLog {
                 .edit()
                 .remove(KEY_TEXT)
                 .apply();
+        directBootPreferences(context).edit().remove(KEY_TEXT).apply();
     }
 
     private static void append(Context context, String level, String message) {
@@ -115,15 +124,39 @@ public class AppLog {
             if (generation != clearGeneration) {
                 return;
             }
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             String line = format(System.currentTimeMillis()) + " " + level + " " + message + "\n";
-            String next = prefs.getString(KEY_TEXT, "") + line;
+            boolean userUnlocked = isUserUnlocked(context);
+            SharedPreferences prefs = userUnlocked
+                    ? context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    : directBootPreferences(context);
+            String directBootText = userUnlocked
+                    ? directBootPreferences(context).getString(KEY_TEXT, "") : "";
+            String next = prefs.getString(KEY_TEXT, "") + directBootText + line;
             if (next.length() > MAX_CHARS) {
                 next = next.substring(next.length() - MAX_CHARS);
             }
-            prefs.edit().putString(KEY_TEXT, next).apply();
+            if (userUnlocked) {
+                prefs.edit().putString(KEY_TEXT, next).apply();
+                if (!directBootText.isEmpty()) {
+                    directBootPreferences(context).edit().remove(KEY_TEXT).apply();
+                }
+            } else {
+                // A boot receiver can exit immediately after returning. Persist its small number
+                // of recovery events synchronously so the forensic trail survives process death.
+                prefs.edit().putString(KEY_TEXT, next).commit();
+            }
         } catch (Exception ignored) {
         }
+    }
+
+    private static SharedPreferences directBootPreferences(Context context) {
+        return context.getApplicationContext().createDeviceProtectedStorageContext()
+                .getSharedPreferences(DIRECT_BOOT_PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    private static boolean isUserUnlocked(Context context) {
+        UserManager userManager = context.getSystemService(UserManager.class);
+        return userManager == null || userManager.isUserUnlocked();
     }
 
     private static void flushPendingWrites() {

@@ -11,10 +11,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.UserManager;
 
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.R;
@@ -24,13 +26,25 @@ import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
 public final class SmartAlarmReceiver extends BroadcastReceiver {
     private static final String CHANNEL_PREFIX = "smart_alarm_alert_v9";
     private static final String CHANNEL_ATTENTION = CHANNEL_PREFIX + "_attention";
+    private static final String CHANNEL_DIRECT_BOOT = "smart_alarm_direct_boot_v1";
     private static final long[] ATTENTION_VIBRATION = {0L, 1L};
     private static final int NOTIFICATION_BASE = 0x534d5704;
+    private static final Object DELIVERY_LOCK = new Object();
 
     @Override public void onReceive(Context context, Intent intent) {
         long targetAt = intent.getLongExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, 0L);
         int alarmId = intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
-        fire(context, alarmId, targetAt, intent.getStringExtra("reason"));
+        String reason = intent.getStringExtra("reason");
+        UserManager userManager = context.getSystemService(UserManager.class);
+        boolean userUnlocked = userManager == null || userManager.isUserUnlocked();
+        AppLog.w(context, "FINAL_ALARM_RECEIVED id=" + alarmId + " occurrence_id="
+                + alarmId + ":" + targetAt + " target=" + targetAt + " reason=" + reason
+                + " userUnlocked=" + userUnlocked);
+        if (!userUnlocked) {
+            fireDirectBoot(context, alarmId, targetAt);
+            return;
+        }
+        fire(context, alarmId, targetAt, reason);
     }
 
     public static void fire(Context context, int alarmId, long targetAt, String reason) {
@@ -39,23 +53,32 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
             EntitlementEnforcer.disableDeliveries(context);
             return;
         }
-        SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
-        if (!state.claimFire(targetAt)) {
-            AppLog.w(context, "SmartAlarm duplicate/stale fire target=" + targetAt + " reason=" + reason);
-            return;
+        synchronized (DELIVERY_LOCK) {
+            SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+            if (!state.canFire(targetAt)) {
+                AppLog.w(context, "SmartAlarm duplicate/stale fire target=" + targetAt
+                        + " reason=" + reason);
+                return;
+            }
+            try {
+                if (!deliver(context, alarmId, targetAt, reason)) {
+                    AppLog.e(context, "SmartAlarm delivery failed before durable notification",
+                            new IllegalStateException("notification manager unavailable"));
+                }
+            } catch (RuntimeException error) {
+                AppLog.e(context, "SmartAlarm delivery failed before durable notification", error);
+            }
         }
-        deliver(context, alarmId, targetAt, reason);
     }
 
     public static void fireWakeCheckEscalation(Context context, int alarmId, long targetAt) {
         deliver(context, alarmId, targetAt, "wake_check_escalation");
     }
 
-    private static void deliver(Context context, int alarmId, long targetAt, String reason) {
+    private static boolean deliver(Context context, int alarmId, long targetAt, String reason) {
         boolean wakeCheckEscalation = "wake_check_escalation".equals(reason);
-        if (!"deadline".equals(reason)) SmartAlarmScheduler.cancelDeadline(context, alarmId);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager == null) return;
+        if (manager == null) return false;
         SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
         // OnePlus Wear OS does not present a full-screen notification that it considers entirely
         // silent.  Keep sound under the ringing service/activity, but give this transport channel
@@ -114,6 +137,20 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         }
         Notification notification = builder.build();
         manager.notify(NOTIFICATION_BASE + alarmId, notification);
+        // manager.notify() is the first durable alert-delivery point.  An internal Smart Wake
+        // decision must never terminalize state or remove the independent final deadline first.
+        boolean occurrenceStateDurable = wakeCheckEscalation
+                || new SmartAlarmStateStore(context, alarmId).markFireDelivered(targetAt);
+        if (!occurrenceStateDurable) {
+            AppLog.e(context, "SmartAlarm notification posted but fired state was not durable; "
+                    + "retaining final deadline", new IllegalStateException("state commit failed"));
+        }
+        if (shouldCancelFinalDeadline(reason, occurrenceStateDurable)) {
+            SmartAlarmScheduler.cancelDeadline(context, alarmId, targetAt,
+                    "EARLY_ALERT_NOTIFICATION_POSTED");
+        } else if ("deadline".equals(reason) && occurrenceStateDurable) {
+            SmartAlarmBootStore.disarm(context, alarmId, targetAt);
+        }
         AppLog.d(context, "SmartAlarm notified id=" + alarmId
                 + " fullScreen=" + AppLog.fullScreenIntentAllowed(context)
                 + " notifications=" + AppLog.notificationPermissionAllowed(context));
@@ -142,6 +179,57 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         }, 2_000L);
         AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason
                 + " WAKE_REASON=" + diagnosticWakeReason(reason));
+        return true;
+    }
+
+    static boolean shouldCancelFinalDeadline(String deliveryReason, boolean deliveryDurable) {
+        return deliveryDurable && !"deadline".equals(deliveryReason)
+                && !"wake_check_escalation".equals(deliveryReason);
+    }
+
+    private static void fireDirectBoot(Context context, int alarmId, long targetAt) {
+        synchronized (DELIVERY_LOCK) {
+            if (!SmartAlarmBootStore.matches(context, alarmId, targetAt)
+                    || SmartAlarmBootStore.delivered(context, alarmId, targetAt)) {
+                AppLog.w(context, "SmartAlarm direct-boot duplicate/stale id=" + alarmId
+                        + " target=" + targetAt);
+                return;
+            }
+            try {
+                NotificationManager manager = context.getSystemService(NotificationManager.class);
+                if (manager == null) throw new IllegalStateException("notification manager unavailable");
+                NotificationChannel channel = new NotificationChannel(
+                        CHANNEL_DIRECT_BOOT, "Smart Alarm after restart", NotificationManager.IMPORTANCE_HIGH);
+                AudioAttributes attributes = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build();
+                channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), attributes);
+                channel.setVibrationPattern(new long[]{0L, 500L, 300L, 500L});
+                channel.enableVibration(true);
+                channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                manager.createNotificationChannel(channel);
+                Notification notification = new Notification.Builder(context, CHANNEL_DIRECT_BOOT)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle("Smart Alarm")
+                        .setContentText("זמן להתעורר · יש לפתוח את השעון לניהול ההתראה")
+                        .setCategory(Notification.CATEGORY_ALARM)
+                        .setPriority(Notification.PRIORITY_MAX)
+                        .setVisibility(Notification.VISIBILITY_PUBLIC)
+                        .setTimeoutAfter(SmartAlarmRingingService.DIRECT_BOOT_ALERT_DURATION_MS)
+                        .build();
+                manager.notify(NOTIFICATION_BASE + alarmId, notification);
+                boolean markedDelivered = SmartAlarmBootStore.markDirectBootDelivered(
+                        context, alarmId, targetAt);
+                boolean serviceStarted = SmartAlarmRingingService.startDirectBoot(
+                        context, alarmId, targetAt);
+                AppLog.w(context, "SmartAlarm direct-boot final alert posted id=" + alarmId
+                        + " target=" + targetAt + " stateDurable=" + markedDelivered
+                        + " ringingServiceRequested=" + serviceStarted);
+            } catch (RuntimeException error) {
+                AppLog.e(context, "SmartAlarm direct-boot delivery failed before durable notification", error);
+            }
+        }
     }
 
     static String diagnosticWakeReason(String deliveryReason) {
