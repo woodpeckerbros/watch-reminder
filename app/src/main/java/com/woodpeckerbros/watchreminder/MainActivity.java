@@ -3656,7 +3656,7 @@ public class MainActivity extends Activity {
         dateTitle.setPadding(0, dp(2), 0, dp(8));
         timesCard.addView(dateTitle);
         addZmanimParshaRows(timesCard, dayMillis);
-        addCurrentFastRows(timesCard);
+        addCurrentFastRows(timesCard, dayMillis);
 
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
@@ -7786,19 +7786,16 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void addCurrentFastRows(LinearLayout timesCard) {
+    private void addCurrentFastRows(LinearLayout timesCard, long dayMillis) {
         long today = zmanimStartOfDay(System.currentTimeMillis());
-        JewishFastInfo fast = JewishFastInfo.forDay(this, today);
-        boolean tomorrow = false;
-        if (fast == null) {
-            fast = JewishFastInfo.forDay(this, zmanimDayOffset(today, 1));
-            tomorrow = fast != null;
-        }
+        JewishFastInfo fast = JewishFastInfo.forDay(this, dayMillis);
         if (fast == null) return;
 
+        boolean todaySelected = dayMillis == today;
+        boolean tomorrowSelected = dayMillis == zmanimDayOffset(today, 1);
         String prefix = AppLanguage.isEnglish(this)
-                ? (tomorrow ? "Tomorrow's fast: " : "Today's fast: ")
-                : (tomorrow ? "מחר צום: " : "היום צום: ");
+                ? (todaySelected ? "Today's fast: " : tomorrowSelected ? "Tomorrow's fast: " : "Fast: ")
+                : (todaySelected ? "היום צום: " : tomorrowSelected ? "מחר צום: " : "צום: ");
         TextView title = text(prefix + fast.label, 14, COLOR_WARNING);
         AppFont.bold(title);
         title.setGravity(Gravity.CENTER);
@@ -7806,6 +7803,9 @@ public class MainActivity extends Activity {
         timesCard.addView(title, matchParams());
         timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this) ? "Fast begins" : "תחילת הצום", fast.startsAt));
         timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this) ? "Fast ends" : "צאת הצום", fast.endsAt));
+        timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this)
+                        ? "Fast ends (Rabbeinu Tam)" : "צאת הצום לפי ר״ת",
+                fast.endsAtRabbeinuTam));
     }
 
     private Calendar upcomingShabbos(long dayMillis) {

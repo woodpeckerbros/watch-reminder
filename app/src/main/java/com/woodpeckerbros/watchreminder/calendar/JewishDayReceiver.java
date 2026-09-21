@@ -28,6 +28,12 @@ public class JewishDayReceiver extends BroadcastReceiver {
         }
         String kind = intent == null ? "" : intent.getStringExtra(JewishDayScheduler.EXTRA_KIND);
         String label = intent == null ? "" : intent.getStringExtra(JewishDayScheduler.EXTRA_LABEL);
+        long eventDay = intent == null ? 0L
+                : intent.getLongExtra(JewishDayScheduler.EXTRA_EVENT_DAY, 0L);
+        if (eventDay > 0L) {
+            String localized = JewishDayScheduler.localizedLabelForDay(context, eventDay);
+            if (!localized.isEmpty()) label = localized;
+        }
         if (label == null || label.trim().isEmpty()) {
             JewishDayScheduler.Event event = JewishDayScheduler.nextEvent(context, System.currentTimeMillis() - 60_000L);
             if (event != null) {
@@ -37,8 +43,6 @@ public class JewishDayReceiver extends BroadcastReceiver {
         }
         if (label != null && !label.trim().isEmpty()) {
             showNotification(context, kind, label);
-            long eventDay = intent == null ? 0L
-                    : intent.getLongExtra(JewishDayScheduler.EXTRA_EVENT_DAY, 0L);
             if (eventDay > 0L) {
                 JewishDayScheduler.markDelivered(context, eventDay, kind, label);
             }

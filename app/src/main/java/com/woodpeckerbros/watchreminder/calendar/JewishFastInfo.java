@@ -14,11 +14,13 @@ public final class JewishFastInfo {
     public final String label;
     public final long startsAt;
     public final long endsAt;
+    public final long endsAtRabbeinuTam;
 
-    private JewishFastInfo(String label, long startsAt, long endsAt) {
+    private JewishFastInfo(String label, long startsAt, long endsAt, long endsAtRabbeinuTam) {
         this.label = label;
         this.startsAt = startsAt;
         this.endsAt = endsAt;
+        this.endsAtRabbeinuTam = endsAtRabbeinuTam;
     }
 
     public static JewishFastInfo forDay(Context context, long dayMillis) {
@@ -42,7 +44,8 @@ public final class JewishFastInfo {
             startsAt = ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_ALOS, dayMillis);
         }
         return new JewishFastInfo(label, startsAt,
-                ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_TZAIS, dayMillis));
+                ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_TZAIS, dayMillis),
+                ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis));
     }
 
     public static boolean isFastIndex(int index) {

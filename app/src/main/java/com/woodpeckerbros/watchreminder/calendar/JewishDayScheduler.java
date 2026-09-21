@@ -168,6 +168,20 @@ public class JewishDayScheduler {
         markDelivered(context, deliveryKey(eventDay, kind, label));
     }
 
+    /** Rebuilds the event label using the language selected at delivery time. */
+    static String localizedLabelForDay(Context context, long eventDay) {
+        ZmanimSettings settings = new ZmanimSettings(context);
+        TimeZone timeZone = TimeZone.getTimeZone(settings.timeZoneId());
+        Calendar day = Calendar.getInstance(timeZone);
+        day.setTimeInMillis(eventDay);
+        day.set(Calendar.HOUR_OF_DAY, 12);
+        day.set(Calendar.MINUTE, 0);
+        day.set(Calendar.SECOND, 0);
+        day.set(Calendar.MILLISECOND, 0);
+        EventInfo info = eventInfo(context, JewishCalendarHelper.calendar(context, day));
+        return info == null ? "" : info.label;
+    }
+
     private static void markDelivered(Context context, String key) {
         deliveryPrefs(context).edit().putString(KEY_LAST_DELIVERED, key).apply();
     }
