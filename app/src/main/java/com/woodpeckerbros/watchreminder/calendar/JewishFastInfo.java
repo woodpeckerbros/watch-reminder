@@ -6,6 +6,7 @@ import com.kosherjava.zmanim.hebrewcalendar.HebrewDateFormatter;
 import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
 import com.woodpeckerbros.watchreminder.zmanim.ZmanimHelper;
 import com.woodpeckerbros.watchreminder.zmanim.ZmanimSettings;
+import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
 
 import java.util.Calendar;
 
@@ -38,10 +39,10 @@ public final class JewishFastInfo {
         if (startsPreviousEvening(index)) {
             Calendar previousDay = calendarFor(context, dayMillis);
             previousDay.add(Calendar.DAY_OF_YEAR, -1);
-            startsAt = ZmanimHelper.timeForKey(context, startTimeKey(index),
+            startsAt = floorRawTime(context, startTimeKey(index),
                     previousDay.getTimeInMillis());
         } else {
-            startsAt = ZmanimHelper.timeForKey(context, startTimeKey(index), dayMillis);
+            startsAt = floorRawTime(context, startTimeKey(index), dayMillis);
         }
         return new JewishFastInfo(label, startsAt,
                 ZmanimHelper.timeForKey(context, endTimeKey(), dayMillis),
@@ -70,6 +71,11 @@ public final class JewishFastInfo {
 
     static String endTimeKey() {
         return ZmanimHelper.KEY_SHABBAT_END;
+    }
+
+    private static long floorRawTime(Context context, String key, long dayMillis) {
+        long raw = ZmanimHelper.shabbatTimeForKey(context, key, dayMillis);
+        return raw == Long.MAX_VALUE ? raw : ReminderScheduler.floorToMinute(raw);
     }
 
     private static java.util.Calendar calendarFor(Context context, long dayMillis) {
