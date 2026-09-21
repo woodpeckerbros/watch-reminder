@@ -66,7 +66,7 @@ public class MoonBlessingAlertActivity extends Activity {
         card.setBackground(rounded(COLOR_SURFACE, 20));
 
         ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.ic_alert_ringing_bell);
+        icon.setImageResource(R.drawable.ic_jewish_alert);
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         card.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
 
