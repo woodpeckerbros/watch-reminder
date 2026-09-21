@@ -38,13 +38,13 @@ public final class JewishFastInfo {
         if (startsPreviousEvening(index)) {
             Calendar previousDay = calendarFor(context, dayMillis);
             previousDay.add(Calendar.DAY_OF_YEAR, -1);
-            startsAt = ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_SUNSET,
+            startsAt = ZmanimHelper.timeForKey(context, startTimeKey(index),
                     previousDay.getTimeInMillis());
         } else {
-            startsAt = ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_ALOS, dayMillis);
+            startsAt = ZmanimHelper.timeForKey(context, startTimeKey(index), dayMillis);
         }
         return new JewishFastInfo(label, startsAt,
-                ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_TZAIS, dayMillis),
+                ZmanimHelper.timeForKey(context, endTimeKey(), dayMillis),
                 ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis));
     }
 
@@ -57,9 +57,19 @@ public final class JewishFastInfo {
                 || index == JewishCalendar.YOM_KIPPUR;
     }
 
-    /** Yom Kippur and Tisha B'Av begin at sunset on the preceding civil day. */
+    /** Yom Kippur and Tisha B'Av begin at candle-lighting time on the preceding civil day. */
     public static boolean startsPreviousEvening(int index) {
         return index == JewishCalendar.TISHA_BEAV || index == JewishCalendar.YOM_KIPPUR;
+    }
+
+    static String startTimeKey(int index) {
+        return startsPreviousEvening(index)
+                ? ZmanimHelper.KEY_CANDLE_LIGHTING
+                : ZmanimHelper.KEY_ALOS;
+    }
+
+    static String endTimeKey() {
+        return ZmanimHelper.KEY_SHABBAT_END;
     }
 
     private static java.util.Calendar calendarFor(Context context, long dayMillis) {
