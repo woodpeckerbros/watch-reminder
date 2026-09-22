@@ -51,4 +51,14 @@ public final class JewishDailyHalacha {
                 || index == JewishCalendar.EREV_YOM_KIPPUR
                 || index == JewishCalendar.EREV_SUCCOS;
     }
+
+    /** Major Yom Tov days that should receive their own status block. */
+    public static boolean isMajorYomTov(int index) {
+        return index == JewishCalendar.ROSH_HASHANA
+                || index == JewishCalendar.PESACH
+                || index == JewishCalendar.SHAVUOS
+                || index == JewishCalendar.SUCCOS
+                || index == JewishCalendar.SHEMINI_ATZERES
+                || index == JewishCalendar.SIMCHAS_TORAH;
+    }
 }

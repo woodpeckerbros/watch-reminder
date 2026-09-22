@@ -3657,6 +3657,7 @@ public class MainActivity extends Activity {
         timesCard.addView(dateHeader, dateHeaderParams);
         addTachanunNotice(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
+        addCurrentJewishHolidayRows(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
         addZmanimParshaRows(timesCard, dayMillis);
 
@@ -7888,6 +7889,41 @@ public class MainActivity extends Activity {
         timesCard.addView(zmanimTimeRow(english ? "Candle lighting" : "הדלקת נרות", entry));
         timesCard.addView(zmanimTimeRow(english ? "Holiday ends" : "צאת החג", exit));
         timesCard.addView(zmanimTimeRow(english ? "Holiday ends (Rabbeinu Tam)" : "צאת החג לפי ר״ת", rabbeinuTam));
+    }
+
+    private void addCurrentJewishHolidayRows(LinearLayout timesCard, long dayMillis) {
+        JewishCalendar calendar = JewishCalendarHelper.calendar(this, zmanimCalendar(dayMillis));
+        int index = calendar.getYomTovIndex();
+        if (!JewishDailyHalacha.isMajorYomTov(index) || index == JewishCalendar.YOM_KIPPUR) return;
+
+        boolean english = AppLanguage.isEnglish(this);
+        String label = JewishCalendarHelper.formatter(this).formatYomTov(calendar);
+        TextView title = text((english ? "Holiday: " : "חג: ") + label, 14, COLOR_WARNING);
+        AppFont.bold(title);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(5), 0, dp(2));
+        timesCard.addView(title, matchParams());
+
+        Calendar previousDay = (Calendar) zmanimCalendar(dayMillis).clone();
+        previousDay.add(Calendar.DAY_OF_YEAR, -1);
+        long entry = ReminderScheduler.floorToMinute(ZmanimHelper.shabbatTimeForKey(this,
+                ZmanimHelper.KEY_CANDLE_LIGHTING, previousDay.getTimeInMillis()));
+
+        Calendar exitDay = (Calendar) zmanimCalendar(dayMillis).clone();
+        JewishCalendar exitCalendar = calendar;
+        while (exitCalendar.isYomTovAssurBemelacha()) {
+            exitDay.add(Calendar.DAY_OF_YEAR, 1);
+            exitCalendar = JewishCalendarHelper.calendar(this, exitDay);
+        }
+        exitDay.add(Calendar.DAY_OF_YEAR, -1);
+        long exit = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_SHABBAT_END,
+                exitDay.getTimeInMillis());
+        long rabbeinuTam = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM,
+                exitDay.getTimeInMillis());
+        timesCard.addView(zmanimTimeRow(english ? "Holiday entry" : "כניסת החג", entry));
+        timesCard.addView(zmanimTimeRow(english ? "Holiday ends" : "צאת החג", exit));
+        timesCard.addView(zmanimTimeRow(english ? "Holiday ends (Rabbeinu Tam)" : "צאת החג לפי ר״ת",
+                rabbeinuTam));
     }
 
     private void addTachanunNotice(LinearLayout timesCard, long dayMillis) {

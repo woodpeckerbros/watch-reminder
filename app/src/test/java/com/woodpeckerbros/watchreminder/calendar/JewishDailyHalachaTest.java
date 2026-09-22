@@ -38,4 +38,14 @@ public class JewishDailyHalachaTest {
         assertTrue(JewishDailyHalacha.isErevMajorHoliday(JewishCalendar.EREV_SUCCOS));
         assertFalse(JewishDailyHalacha.isErevMajorHoliday(JewishCalendar.CHANUKAH));
     }
+
+    @Test public void recognizesAllMajorYomTovDays() {
+        assertTrue(JewishDailyHalacha.isMajorYomTov(JewishCalendar.ROSH_HASHANA));
+        assertTrue(JewishDailyHalacha.isMajorYomTov(JewishCalendar.PESACH));
+        assertTrue(JewishDailyHalacha.isMajorYomTov(JewishCalendar.SHAVUOS));
+        assertTrue(JewishDailyHalacha.isMajorYomTov(JewishCalendar.SUCCOS));
+        assertTrue(JewishDailyHalacha.isMajorYomTov(JewishCalendar.SHEMINI_ATZERES));
+        assertTrue(JewishDailyHalacha.isMajorYomTov(JewishCalendar.SIMCHAS_TORAH));
+        assertFalse(JewishDailyHalacha.isMajorYomTov(JewishCalendar.CHOL_HAMOED_SUCCOS));
+    }
 }
