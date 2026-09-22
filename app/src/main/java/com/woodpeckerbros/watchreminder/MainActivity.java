@@ -7743,16 +7743,20 @@ public class MainActivity extends Activity {
         }
     }
 
-    private String zmanimDateLine(long dayMillis) {
+    private String zmanimGregorianDateLine(long dayMillis) {
         Calendar calendar = zmanimCalendar(dayMillis);
-        JewishDate jewishDate = new JewishDate(calendar);
         return String.format(
                 Locale.US,
                 "%02d/%02d/%04d",
                 calendar.get(Calendar.DAY_OF_MONTH),
                 calendar.get(Calendar.MONTH) + 1,
                 calendar.get(Calendar.YEAR)
-        ) + " | " + hebrewDayLabel(jewishDate.getJewishDayOfMonth())
+        );
+    }
+
+    private String zmanimHebrewDateLine(long dayMillis) {
+        JewishDate jewishDate = new JewishDate(zmanimCalendar(dayMillis));
+        return hebrewDayLabel(jewishDate.getJewishDayOfMonth())
                 + " " + hebrewMonthLabel(jewishDate.getJewishMonth())
                 + " " + jewishDate.getJewishYear();
     }
@@ -7761,24 +7765,31 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.VERTICAL);
         header.setGravity(Gravity.CENTER);
-        header.setPadding(dp(10), dp(7), dp(10), dp(7));
+        header.setPadding(dp(8), dp(4), dp(8), dp(4));
         header.setBackground(rounded(COLOR_SURFACE_2, dp(14), 0x66747D63));
 
-        TextView weekday = text(zmanimWeekdayLine(dayMillis), 15, COLOR_TEXT);
+        LinearLayout.LayoutParams compactTextParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+
+        TextView weekday = text(zmanimWeekdayLine(dayMillis), 14, COLOR_TEXT);
         AppFont.bold(weekday);
         weekday.setGravity(Gravity.CENTER);
-        header.addView(weekday, matchParams());
+        header.addView(weekday, compactTextParams);
 
         View divider = new View(this);
         divider.setBackground(rounded(0xAAC77B58, dp(1), 0));
         LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(dp(54), dp(1));
-        dividerParams.setMargins(0, dp(3), 0, dp(4));
+        dividerParams.setMargins(0, dp(1), 0, dp(2));
         header.addView(divider, dividerParams);
 
-        TextView date = text(zmanimDateLine(dayMillis), 13, COLOR_MUTED);
-        AppFont.bold(date);
-        date.setGravity(Gravity.CENTER);
-        header.addView(date, matchParams());
+        TextView hebrewDate = text(zmanimHebrewDateLine(dayMillis), 12, COLOR_TEXT);
+        AppFont.bold(hebrewDate);
+        hebrewDate.setGravity(Gravity.CENTER);
+        header.addView(hebrewDate, new LinearLayout.LayoutParams(compactTextParams));
+
+        TextView gregorianDate = text(zmanimGregorianDateLine(dayMillis), 11, COLOR_MUTED);
+        gregorianDate.setGravity(Gravity.CENTER);
+        header.addView(gregorianDate, new LinearLayout.LayoutParams(compactTextParams));
         return header;
     }
 
