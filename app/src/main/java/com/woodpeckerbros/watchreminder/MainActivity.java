@@ -3651,17 +3651,10 @@ public class MainActivity extends Activity {
         navRow.addView(next);
         timesCard.addView(navRow);
 
-        TextView weekdayTitle = text(zmanimWeekdayLine(dayMillis), 14, COLOR_TEXT);
-        AppFont.bold(weekdayTitle);
-        weekdayTitle.setGravity(Gravity.CENTER);
-        weekdayTitle.setPadding(0, dp(2), 0, dp(1));
-        timesCard.addView(weekdayTitle, matchParams());
-
-        TextView dateTitle = text(zmanimDateLine(dayMillis), 13, COLOR_TEXT);
-        AppFont.bold(dateTitle);
-        dateTitle.setGravity(Gravity.CENTER);
-        dateTitle.setPadding(0, dp(2), 0, dp(8));
-        timesCard.addView(dateTitle);
+        LinearLayout.LayoutParams dateHeaderParams = matchParams();
+        dateHeaderParams.setMargins(dp(3), dp(5), dp(3), dp(8));
+        View dateHeader = zmanimDateHeader(dayMillis);
+        timesCard.addView(dateHeader, dateHeaderParams);
         addTachanunNotice(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
@@ -3696,7 +3689,7 @@ public class MainActivity extends Activity {
         content.addView(backRow);
         setScrollableContent(content, zmanimBackgroundResource);
         if (scrollTarget == 1) {
-            scrollToViewTop(dateTitle, dp(8));
+            scrollToViewTop(dateHeader, dp(8));
         } else if (scrollTarget == 2) {
             scrollToViewTop(navRow, dp(8));
         } else {
@@ -7761,6 +7754,31 @@ public class MainActivity extends Activity {
         ) + " | " + hebrewDayLabel(jewishDate.getJewishDayOfMonth())
                 + " " + hebrewMonthLabel(jewishDate.getJewishMonth())
                 + " " + jewishDate.getJewishYear();
+    }
+
+    private View zmanimDateHeader(long dayMillis) {
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setGravity(Gravity.CENTER);
+        header.setPadding(dp(10), dp(7), dp(10), dp(7));
+        header.setBackground(rounded(COLOR_SURFACE_2, dp(14), 0x66747D63));
+
+        TextView weekday = text(zmanimWeekdayLine(dayMillis), 15, COLOR_TEXT);
+        AppFont.bold(weekday);
+        weekday.setGravity(Gravity.CENTER);
+        header.addView(weekday, matchParams());
+
+        View divider = new View(this);
+        divider.setBackground(rounded(0xAAC77B58, dp(1), 0));
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(dp(54), dp(1));
+        dividerParams.setMargins(0, dp(3), 0, dp(4));
+        header.addView(divider, dividerParams);
+
+        TextView date = text(zmanimDateLine(dayMillis), 13, COLOR_MUTED);
+        AppFont.bold(date);
+        date.setGravity(Gravity.CENTER);
+        header.addView(date, matchParams());
+        return header;
     }
 
     private String zmanimWeekdayLine(long dayMillis) {
