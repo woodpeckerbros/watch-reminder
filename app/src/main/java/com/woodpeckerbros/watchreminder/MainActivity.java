@@ -3662,10 +3662,10 @@ public class MainActivity extends Activity {
         dateTitle.setGravity(Gravity.CENTER);
         dateTitle.setPadding(0, dp(2), 0, dp(8));
         timesCard.addView(dateTitle);
-        addZmanimParshaRows(timesCard, dayMillis);
+        addTachanunNotice(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
-        addTachanunNotice(timesCard, dayMillis);
+        addZmanimParshaRows(timesCard, dayMillis);
 
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
