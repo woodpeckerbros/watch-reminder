@@ -6,12 +6,14 @@ import com.woodpeckerbros.watchreminder.*;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -22,8 +24,8 @@ public class DafYomiAlertActivity extends Activity {
     private static final int COLOR_SURFACE = 0xFF142A3A;
     private static final int COLOR_TEXT = 0xFFF4EBDD;
     private static final int COLOR_MUTED = 0xFFB8B7AE;
-    private static final int COLOR_ACCENT = 0xFFC77B58;
-    private static final int COLOR_ACCENT_DARK = 0xFF66745D;
+    private static final int COLOR_ACCENT = 0xFFE0C38D;
+    private static final int COLOR_ACCENT_DARK = 0xFF738368;
     private List<DafYomiHelper.Item> dueItems;
     private DafYomiHelper.Item currentItem;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -53,14 +55,22 @@ public class DafYomiAlertActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(8), dp(12), dp(8), dp(12));
-        content.setBackgroundColor(COLOR_BG);
+        content.setPadding(dp(17), dp(42), dp(17), dp(22));
 
         LinearLayout textArea = new LinearLayout(this);
         textArea.setOrientation(LinearLayout.VERTICAL);
         textArea.setGravity(Gravity.CENTER);
-        TextView title = text("דף היומי", 19, COLOR_ACCENT);
+        FrameLayout iconBadge = new FrameLayout(this);
+        iconBadge.setBackground(iconBadgeBackground());
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.ic_jewish_alert);
+        icon.setPadding(dp(8), dp(8), dp(8), dp(8));
+        iconBadge.addView(icon, new FrameLayout.LayoutParams(-1, -1));
+        textArea.addView(iconBadge, new LinearLayout.LayoutParams(dp(56), dp(56)));
+
+        TextView title = text("דף היומי", 22, COLOR_TEXT);
         AppFont.bold(title);
+        title.setShadowLayer(dp(2), 0, 0, 0xAAFFF3D5);
         textArea.addView(title);
 
         TextView question = text(questionText(), 19, COLOR_TEXT);
@@ -121,10 +131,14 @@ public class DafYomiAlertActivity extends Activity {
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
+        root.addView(new ReminderAlertFrameView(this), new FrameLayout.LayoutParams(-1, -1));
         root.addView(content, new FrameLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
+        TopArcClockView clock = TopArcClockView.addTo(root);
+        clock.setTranslationY(dp(4));
+        root.addView(new ReminderAlertFrameView(this, false), new FrameLayout.LayoutParams(-1, -1));
         AppTextStyle.apply(root);
         setContentView(root);
         startVibration(new ReminderSettings(this));
@@ -212,10 +226,11 @@ public class DafYomiAlertActivity extends Activity {
         Button button = new Button(this);
         AppFont.apply(button);
         button.setText(UiText.t(this, value));
-        button.setTextColor(android.graphics.Color.WHITE);
+        button.setTextColor(COLOR_TEXT);
         button.setTextSize(value.length() > 9 ? 11 : 13);
         button.setAllCaps(false);
-        button.setBackground(rounded(color));
+        button.setBackground(new DepthButtonDrawable(color, dp(20)));
+        button.setPadding(0, 0, 0, 0);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
         params.setMargins(dp(3), dp(4), dp(3), dp(4));
         button.setLayoutParams(params);
@@ -233,11 +248,11 @@ public class DafYomiAlertActivity extends Activity {
         return view;
     }
 
-    private android.graphics.drawable.GradientDrawable rounded(int color) {
-        android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
-        drawable.setColor(color);
-        drawable.setCornerRadius(dp(18));
-        if (color == COLOR_SURFACE) drawable.setStroke(dp(1), COLOR_ACCENT);
+    private GradientDrawable iconBadgeBackground() {
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF28526A, 0xFF0B2537});
+        drawable.setShape(GradientDrawable.OVAL);
+        drawable.setStroke(dp(1), COLOR_ACCENT);
         return drawable;
     }
 
