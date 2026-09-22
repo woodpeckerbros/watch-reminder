@@ -3661,11 +3661,24 @@ public class MainActivity extends Activity {
         addErevJewishDayRows(timesCard, dayMillis);
         addZmanimParshaRows(timesCard, dayMillis);
 
+        long nearestZmanTime = nearestDisplayedZmanTime(dayMillis);
+        View nearestZmanRow = null;
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
-            timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
+            long zmanTime = ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis);
+            boolean nearest = nearestZmanTime != Long.MAX_VALUE && zmanTime == nearestZmanTime;
+            View zmanRow = zmanimTimeRow(ZmanimHelper.LABELS[i], zmanTime, nearest);
+            timesCard.addView(zmanRow);
+            if (nearest && nearestZmanRow == null) {
+                nearestZmanRow = zmanRow;
+            }
             if (ZmanimHelper.KEY_TZAIS.equals(ZmanimHelper.KEYS[i])) {
-                timesCard.addView(zmanimTimeRow("צ.כוכבים ר״ת",
-                        ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis)));
+                long rabbeinuTam = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis);
+                boolean nearestRabbeinuTam = nearestZmanTime != Long.MAX_VALUE && rabbeinuTam == nearestZmanTime;
+                View rabbeinuTamRow = zmanimTimeRow("צ.כוכבים ר״ת", rabbeinuTam, nearestRabbeinuTam);
+                timesCard.addView(rabbeinuTamRow);
+                if (nearestRabbeinuTam && nearestZmanRow == null) {
+                    nearestZmanRow = rabbeinuTamRow;
+                }
             }
         }
         addTikkunChatzotRow(timesCard, dayMillis);
@@ -3693,6 +3706,8 @@ public class MainActivity extends Activity {
             scrollToViewTop(dateHeader, dp(8));
         } else if (scrollTarget == 2) {
             scrollToViewTop(navRow, dp(8));
+        } else if (nearestZmanRow != null) {
+            scrollToViewCenter(nearestZmanRow);
         } else {
             restoreScrollY(scrollY);
         }
@@ -4419,6 +4434,7 @@ public class MainActivity extends Activity {
     }
 
     private void createBlessingReminder(String blessing) {
+        AppLog.d(this, "blessing reminder requested source=blessing_screen button=" + blessing);
         if (requestExactAlarmAccessIfNeeded(true)) {
             return;
         }
@@ -6561,6 +6577,27 @@ public class MainActivity extends Activity {
         activeScrollView.postDelayed(scroll, 150);
     }
 
+    private void scrollToViewCenter(View target) {
+        if (activeScrollView == null || target == null) {
+            return;
+        }
+        Runnable scroll = () -> {
+            int targetY = 0;
+            View view = target;
+            while (view != null && view != activeScrollView) {
+                targetY += view.getTop();
+                if (!(view.getParent() instanceof View)) {
+                    break;
+                }
+                view = (View) view.getParent();
+            }
+            int centeredY = targetY - (activeScrollView.getHeight() - target.getHeight()) / 2;
+            activeScrollView.scrollTo(0, Math.max(0, centeredY));
+        };
+        activeScrollView.post(scroll);
+        activeScrollView.postDelayed(scroll, 150);
+    }
+
     private void scrollToFocusedReminder(View focusTarget) {
         if (activeScrollView == null || focusTarget == null) {
             return;
@@ -7694,6 +7731,30 @@ public class MainActivity extends Activity {
         return zmanimStartOfDay(calendar.getTimeInMillis());
     }
 
+    /** Returns the displayed zman nearest to now, only when today is on screen. */
+    private long nearestDisplayedZmanTime(long dayMillis) {
+        if (dayMillis != zmanimStartOfDay(System.currentTimeMillis())) {
+            return Long.MAX_VALUE;
+        }
+        long now = System.currentTimeMillis();
+        long nearest = Long.MAX_VALUE;
+        long shortestDistance = Long.MAX_VALUE;
+        for (String key : ZmanimHelper.KEYS) {
+            long time = ZmanimHelper.timeForKey(this, key, dayMillis);
+            if (time == Long.MAX_VALUE) continue;
+            long distance = Math.abs(time - now);
+            if (distance < shortestDistance) {
+                nearest = time;
+                shortestDistance = distance;
+            }
+        }
+        long rabbeinuTam = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis);
+        if (rabbeinuTam != Long.MAX_VALUE && Math.abs(rabbeinuTam - now) < shortestDistance) {
+            nearest = rabbeinuTam;
+        }
+        return nearest;
+    }
+
     private long gregorianZmanimDate(int year, int month, int day) {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(new ZmanimSettings(this).timeZoneId()));
         calendar.set(Calendar.YEAR, year);
@@ -7978,11 +8039,19 @@ public class MainActivity extends Activity {
     }
 
     private View zmanimTimeRow(String label, long time) {
+        return zmanimTimeRow(label, time, false);
+    }
+
+    private View zmanimTimeRow(String label, long time, boolean highlighted) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER);
-        row.setPadding(0, dp(3), 0, dp(3));
-        TextView name = text(label, 13, COLOR_MUTED);
-        TextView value = text(time == Long.MAX_VALUE ? "לא זמין" : NextReminderCalculator.formatTime(time), 18, time == Long.MAX_VALUE ? COLOR_MUTED : COLOR_TEXT);
+        row.setPadding(dp(highlighted ? 7 : 0), dp(highlighted ? 5 : 3), dp(highlighted ? 7 : 0), dp(highlighted ? 5 : 3));
+        if (highlighted) {
+            row.setBackground(rounded(0xE62D4A4B, dp(13), COLOR_WARNING));
+        }
+        TextView name = text((highlighted ? "● " : "") + label, 13, highlighted ? COLOR_WARNING : COLOR_MUTED);
+        TextView value = text(time == Long.MAX_VALUE ? "לא זמין" : NextReminderCalculator.formatTime(time),
+                highlighted ? 20 : 18, time == Long.MAX_VALUE ? COLOR_MUTED : highlighted ? COLOR_WARNING : COLOR_TEXT);
         AppFont.bold(value);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
