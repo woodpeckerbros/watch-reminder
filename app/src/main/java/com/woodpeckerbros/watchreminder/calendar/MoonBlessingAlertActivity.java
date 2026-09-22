@@ -22,11 +22,11 @@ import android.widget.TextView;
 
 public class MoonBlessingAlertActivity extends Activity {
     private static final int COLOR_BG = 0xFF061522;
-    private static final int COLOR_SURFACE = 0xFF0B2133;
+    private static final int COLOR_SURFACE = 0xFF142A3A;
     private static final int COLOR_TEXT = 0xFFF4EBDD;
     private static final int COLOR_MUTED = 0xFFB8B7AE;
-    private static final int COLOR_ACCENT = 0xFFC77B58;
-    private static final int COLOR_ACTION = 0xFF66745D;
+    private static final int COLOR_ACCENT = 0xFFE0C38D;
+    private static final int COLOR_ACTION = 0xFF738368;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable autoCloseRunnable;
@@ -59,28 +59,46 @@ public class MoonBlessingAlertActivity extends Activity {
         AppLog.d(this, "moon blessing pre-start alert open month=" + monthKey
                 + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
 
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER);
+        content.setPadding(dp(17), dp(42), dp(17), dp(22));
+
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(14), dp(10), dp(14), dp(12));
-        card.setBackground(rounded(COLOR_SURFACE, 20));
+        card.setPadding(dp(9), dp(4), dp(9), dp(12));
 
+        FrameLayout iconBadge = new FrameLayout(this);
+        iconBadge.setBackground(iconBadgeBackground());
         ImageView icon = new ImageView(this);
         icon.setImageResource(R.drawable.ic_jewish_alert);
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        card.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
+        int iconInset = dp(8);
+        icon.setPadding(iconInset, iconInset, iconInset, iconInset);
+        iconBadge.addView(icon, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(56), dp(56));
+        iconParams.setMargins(0, 0, 0, dp(4));
+        card.addView(iconBadge, iconParams);
 
-        TextView title = text("ברכת הלבנה", 20, COLOR_TEXT);
+        TextView title = text("ברכת הלבנה", 22, COLOR_TEXT);
         AppFont.bold(title);
-        title.setPadding(0, dp(2), 0, dp(5));
+        title.setPadding(dp(4), dp(1), dp(4), dp(5));
+        title.setShadowLayer(dp(2), 0, 0, 0xAAFFF3D5);
         card.addView(title);
 
-        TextView message = text(messageText, 14, COLOR_MUTED);
-        message.setPadding(dp(4), 0, dp(4), dp(7));
+        TextView message = text(messageText, 15, COLOR_MUTED);
+        message.setLineSpacing(dp(2), 1f);
+        message.setPadding(dp(5), 0, dp(5), dp(9));
         card.addView(message);
 
         if (MoonBlessingScheduler.KIND_PRE_START.equals(kind)) {
             Button done = button("בוצע", COLOR_ACTION);
+            LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(-1, dp(48));
+            doneParams.setMargins(dp(3), dp(4), dp(3), dp(3));
+            done.setLayoutParams(doneParams);
+            done.setTextSize(18);
+            done.setShadowLayer(dp(2), 0, 0, 0xAAFFF3D5);
             done.setOnClickListener(v -> finishDone());
             card.addView(done);
         } else {
@@ -88,10 +106,10 @@ public class MoonBlessingAlertActivity extends Activity {
             answerRow.setGravity(Gravity.CENTER);
             Button yes = button("כן", COLOR_ACTION);
             Button no = button("לא", COLOR_SURFACE);
-            LinearLayout.LayoutParams answerParams = new LinearLayout.LayoutParams(0, dp(42), 1f);
+            LinearLayout.LayoutParams answerParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
             answerParams.setMargins(dp(3), dp(3), dp(3), dp(3));
             yes.setLayoutParams(answerParams);
-            LinearLayout.LayoutParams noParams = new LinearLayout.LayoutParams(0, dp(42), 1f);
+            LinearLayout.LayoutParams noParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
             noParams.setMargins(dp(3), dp(3), dp(3), dp(3));
             no.setLayoutParams(noParams);
             yes.setOnClickListener(v -> answer(true));
@@ -101,8 +119,8 @@ public class MoonBlessingAlertActivity extends Activity {
             card.addView(answerRow);
         }
 
-        TextView snoozeTitle = text("אפשר לדחות", 12, COLOR_MUTED);
-        snoozeTitle.setPadding(0, dp(7), 0, dp(2));
+        TextView snoozeTitle = text("אפשר לדחות", 13, COLOR_MUTED);
+        snoozeTitle.setPadding(0, dp(8), 0, dp(3));
         card.addView(snoozeTitle);
 
         LinearLayout row = new LinearLayout(this);
@@ -111,17 +129,19 @@ public class MoonBlessingAlertActivity extends Activity {
         row.addView(snoozeButton("30 דקות", 30));
         card.addView(row);
 
+        content.addView(card, new LinearLayout.LayoutParams(-1, -2));
+
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
-        scroll.setPadding(dp(14), dp(18), dp(14), dp(18));
         scroll.setClipToPadding(false);
-        scroll.addView(card, new ScrollView.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
+        scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BG);
+        root.addView(new ReminderAlertFrameView(this), new FrameLayout.LayoutParams(-1, -1));
         root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        TopArcClockView clock = TopArcClockView.addTo(root);
+        clock.setTranslationY(dp(4));
+        root.addView(new ReminderAlertFrameView(this, false), new FrameLayout.LayoutParams(-1, -1));
         AppTextStyle.apply(root);
         setContentView(root);
 
@@ -132,7 +152,7 @@ public class MoonBlessingAlertActivity extends Activity {
     private Button snoozeButton(String label, int minutes) {
         Button button = button(label, COLOR_SURFACE);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(38), 1f);
-        params.setMargins(dp(3), dp(2), dp(3), dp(2));
+        params.setMargins(dp(3), dp(3), dp(3), dp(3));
         button.setLayoutParams(params);
         button.setOnClickListener(v -> snooze(minutes));
         return button;
@@ -214,10 +234,8 @@ public class MoonBlessingAlertActivity extends Activity {
         button.setTextColor(COLOR_TEXT);
         button.setTextSize(14);
         button.setAllCaps(false);
-        button.setBackground(rounded(color, 18));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(160), dp(42));
-        params.setMargins(dp(3), dp(3), dp(3), dp(3));
-        button.setLayoutParams(params);
+        button.setBackground(new DepthButtonDrawable(color, dp(20)));
+        button.setPadding(0, 0, 0, 0);
         return button;
     }
 
@@ -228,14 +246,17 @@ public class MoonBlessingAlertActivity extends Activity {
         view.setTextSize(sp);
         view.setTextColor(color);
         view.setGravity(Gravity.CENTER);
+        view.setTextDirection(AppLanguage.isRtl(this) ? TextView.TEXT_DIRECTION_RTL : TextView.TEXT_DIRECTION_LTR);
         return view;
     }
 
-    private GradientDrawable rounded(int color, int radiusDp) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(color);
-        drawable.setCornerRadius(dp(radiusDp));
-        drawable.setStroke(dp(1), 0x33747D63);
+    private GradientDrawable iconBadgeBackground() {
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF28526A, 0xFF0B2537}
+        );
+        drawable.setShape(GradientDrawable.OVAL);
+        drawable.setStroke(dp(1), COLOR_ACCENT);
         return drawable;
     }
 

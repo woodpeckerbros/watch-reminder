@@ -11,15 +11,15 @@ import android.graphics.Shader;
 import android.view.View;
 
 /** Fixed decorative background and rim for the full-screen reminder alert. */
-final class ReminderAlertFrameView extends View {
+public final class ReminderAlertFrameView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final boolean background;
 
-    ReminderAlertFrameView(Context context) {
+    public ReminderAlertFrameView(Context context) {
         this(context, true);
     }
 
-    ReminderAlertFrameView(Context context, boolean background) {
+    public ReminderAlertFrameView(Context context, boolean background) {
         super(context);
         this.background = background;
         setClickable(false);
