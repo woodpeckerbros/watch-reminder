@@ -11,19 +11,24 @@ import com.kosherjava.zmanim.hebrewcalendar.TefilaRules;
  */
 public final class JewishDailyHalacha {
     public enum TikkunChatzot { NONE, LEAH, RACHEL_AND_LEAH }
-    private static final TefilaRules TEFILA_RULES = new TefilaRules();
+    private static final TefilaRules TEFILA_RULES = createTefilaRules();
 
     private JewishDailyHalacha() {
     }
 
     /** Whether tachanun is omitted at Shacharit for this calendar day. */
     public static boolean omitsTachanun(JewishCalendar day) {
-        // KosherJava covers the standard calendar/minhag exceptions. Its default
-        // Tishrei policy also covers the days after Yom Kippur; the explicit
-        // Aseres-Yemei-Teshuva check fills the days 3-8 that are not included in
-        // TefilaRules' end-of-Tishrei switch.
-        return day.isAseresYemeiTeshuva()
-                || !TEFILA_RULES.isTachanunRecitedShacharis(day);
+        return !TEFILA_RULES.isTachanunRecitedShacharis(day);
+    }
+
+    private static TefilaRules createTefilaRules() {
+        TefilaRules rules = new TefilaRules();
+        // Sephardic calendar display requested for this app: after Yom Kippur,
+        // tachanun remains omitted through the end of Tishrei. This setting does
+        // not suppress tachanun merely because a day is in the first part of the
+        // Aseres Yemei Teshuva.
+        rules.setTachanunRecitedEndOfTishrei(false);
+        return rules;
     }
 
     /**

@@ -16,9 +16,9 @@ public class JewishDailyHalachaTest {
         assertFalse(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.IYAR, 9)));
     }
 
-    @Test public void aseresYemeiTeshuvaOmitTachanunIncludingTheWeekBeforeYomKippur() {
-        assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 3)));
-        assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 8)));
+    @Test public void firstPartOfAseresYemeiTeshuvaStillUsesTachanun() {
+        assertFalse(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 3)));
+        assertFalse(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 7)));
         assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 11)));
     }
 
