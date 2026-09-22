@@ -3651,8 +3651,15 @@ public class MainActivity extends Activity {
         navRow.addView(next);
         timesCard.addView(navRow);
 
+        TextView weekdayTitle = text(zmanimWeekdayLine(dayMillis), 14, COLOR_TEXT);
+        AppFont.bold(weekdayTitle);
+        weekdayTitle.setGravity(Gravity.CENTER);
+        weekdayTitle.setPadding(0, dp(2), 0, dp(1));
+        timesCard.addView(weekdayTitle, matchParams());
+
         TextView dateTitle = text(zmanimDateLine(dayMillis), 13, COLOR_TEXT);
         AppFont.bold(dateTitle);
+        dateTitle.setGravity(Gravity.CENTER);
         dateTitle.setPadding(0, dp(2), 0, dp(8));
         timesCard.addView(dateTitle);
         addZmanimParshaRows(timesCard, dayMillis);
@@ -7745,18 +7752,27 @@ public class MainActivity extends Activity {
     private String zmanimDateLine(long dayMillis) {
         Calendar calendar = zmanimCalendar(dayMillis);
         JewishDate jewishDate = new JewishDate(calendar);
-        String weekday = AppLanguage.isEnglish(this)
-                ? new java.text.DateFormatSymbols(Locale.US).getShortWeekdays()[calendar.get(Calendar.DAY_OF_WEEK)]
-                : new String[]{"", "א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"}[calendar.get(Calendar.DAY_OF_WEEK)];
         return String.format(
                 Locale.US,
                 "%02d/%02d/%04d",
                 calendar.get(Calendar.DAY_OF_MONTH),
                 calendar.get(Calendar.MONTH) + 1,
                 calendar.get(Calendar.YEAR)
-        ) + " " + weekday + " | " + hebrewDayLabel(jewishDate.getJewishDayOfMonth())
+        ) + " | " + hebrewDayLabel(jewishDate.getJewishDayOfMonth())
                 + " " + hebrewMonthLabel(jewishDate.getJewishMonth())
                 + " " + jewishDate.getJewishYear();
+    }
+
+    private String zmanimWeekdayLine(long dayMillis) {
+        Calendar calendar = zmanimCalendar(dayMillis);
+        if (AppLanguage.isEnglish(this)) {
+            String weekday = new java.text.DateFormatSymbols(Locale.US)
+                    .getShortWeekdays()[calendar.get(Calendar.DAY_OF_WEEK)];
+            return "Day " + weekday;
+        }
+        String weekday = new String[]{"", "א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"}
+                [calendar.get(Calendar.DAY_OF_WEEK)];
+        return "יום " + weekday;
     }
 
     private void addZmanimParshaRows(LinearLayout timesCard, long dayMillis) {
