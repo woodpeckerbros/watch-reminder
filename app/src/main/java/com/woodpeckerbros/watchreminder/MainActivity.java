@@ -3665,7 +3665,7 @@ public class MainActivity extends Activity {
         addZmanimParshaRows(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
-        addTachanunRow(timesCard, dayMillis);
+        addTachanunNotice(timesCard, dayMillis);
 
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
@@ -7872,11 +7872,15 @@ public class MainActivity extends Activity {
         timesCard.addView(zmanimTimeRow(english ? "Holiday ends (Rabbeinu Tam)" : "צאת החג לפי ר״ת", rabbeinuTam));
     }
 
-    private void addTachanunRow(LinearLayout timesCard, long dayMillis) {
+    private void addTachanunNotice(LinearLayout timesCard, long dayMillis) {
         JewishCalendar calendar = JewishCalendarHelper.calendar(this, zmanimCalendar(dayMillis));
         if (JewishDailyHalacha.omitsTachanun(calendar)) {
-            timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this) ? "Tachanun" : "תחנון",
-                    AppLanguage.isEnglish(this) ? "Not recited" : "ל״א תחנון"));
+            TextView notice = text(AppLanguage.isEnglish(this)
+                    ? "Tachanun is not recited" : "לא אומרים תחנון", 14, 0xFFE05B62);
+            AppFont.bold(notice);
+            notice.setGravity(Gravity.CENTER);
+            notice.setPadding(0, dp(5), 0, dp(4));
+            timesCard.addView(notice, matchParams());
         }
     }
 

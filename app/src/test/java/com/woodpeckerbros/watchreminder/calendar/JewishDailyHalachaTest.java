@@ -16,6 +16,12 @@ public class JewishDailyHalachaTest {
         assertFalse(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.IYAR, 9)));
     }
 
+    @Test public void aseresYemeiTeshuvaOmitTachanunIncludingTheWeekBeforeYomKippur() {
+        assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 3)));
+        assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 8)));
+        assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.TISHREI, 11)));
+    }
+
     @Test public void ordinaryNightGetsRachelAndLeah() {
         assertEquals(JewishDailyHalacha.TikkunChatzot.RACHEL_AND_LEAH,
                 JewishDailyHalacha.tikkunForNight(new JewishCalendar(5787, JewishDate.IYAR, 9)));

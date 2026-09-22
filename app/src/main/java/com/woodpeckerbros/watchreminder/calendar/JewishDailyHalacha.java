@@ -2,6 +2,7 @@ package com.woodpeckerbros.watchreminder.calendar;
 
 import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
 import com.kosherjava.zmanim.hebrewcalendar.JewishDate;
+import com.kosherjava.zmanim.hebrewcalendar.TefilaRules;
 
 /**
  * Compact day-status rules for the daily-zmanim screen, following the common
@@ -10,31 +11,19 @@ import com.kosherjava.zmanim.hebrewcalendar.JewishDate;
  */
 public final class JewishDailyHalacha {
     public enum TikkunChatzot { NONE, LEAH, RACHEL_AND_LEAH }
+    private static final TefilaRules TEFILA_RULES = new TefilaRules();
 
     private JewishDailyHalacha() {
     }
 
     /** Whether tachanun is omitted at Shacharit for this calendar day. */
     public static boolean omitsTachanun(JewishCalendar day) {
-        if (day.getDayOfWeek() == java.util.Calendar.SATURDAY
-                || day.isRoshChodesh()
-                || day.getJewishMonth() == JewishDate.NISSAN
-                || day.isYomTov()
-                || day.isCholHamoed()
-                || day.isChanukah()) {
-            return true;
-        }
-        int index = day.getYomTovIndex();
-        return index == JewishCalendar.PESACH_SHENI
-                || index == JewishCalendar.TU_BEAV
-                || index == JewishCalendar.TU_BESHVAT
-                || index == JewishCalendar.PURIM
-                || index == JewishCalendar.SHUSHAN_PURIM
-                || index == JewishCalendar.PURIM_KATAN
-                || index == JewishCalendar.SHUSHAN_PURIM_KATAN
-                || index == JewishCalendar.LAG_BAOMER
-                || index == JewishCalendar.ISRU_CHAG
-                || index == JewishCalendar.TISHA_BEAV;
+        // KosherJava covers the standard calendar/minhag exceptions. Its default
+        // Tishrei policy also covers the days after Yom Kippur; the explicit
+        // Aseres-Yemei-Teshuva check fills the days 3-8 that are not included in
+        // TefilaRules' end-of-Tishrei switch.
+        return day.isAseresYemeiTeshuva()
+                || !TEFILA_RULES.isTachanunRecitedShacharis(day);
     }
 
     /**
