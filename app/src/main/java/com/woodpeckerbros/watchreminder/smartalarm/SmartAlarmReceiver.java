@@ -179,6 +179,11 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         }, 2_000L);
         AppLog.d(context, "SmartAlarm fired target=" + targetAt + " reason=" + reason
                 + " WAKE_REASON=" + diagnosticWakeReason(reason));
+        if ("deadline".equals(reason)) {
+            AppLog.w(context, "SMART_WAKE_DEADLINE_FALLBACK id=" + alarmId
+                    + " target=" + targetAt
+                    + " reason=NO_CONFIRMED_EARLY_WAKE_OPPORTUNITY");
+        }
         return true;
     }
 

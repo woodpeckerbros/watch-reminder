@@ -53,13 +53,19 @@ public final class SmartAlarmAlertActivity extends Activity {
     private float previewDownY;
     private boolean resumed;
     private boolean windowFocused;
+    private long lastVisibleAt;
     private long lastInitialInteractionAt;
     private boolean autoSnoozed;
     private Runnable interactionGraceClose;
 
     static boolean isShowing(int expectedAlarmId, long expectedTargetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
-        return activity != null && activity.resumed && activity.windowFocused
+        // Wear OS can briefly put a system card or another alert above the alarm without
+        // destroying it.  Treat that short handoff as visible so the screen guard does not
+        // recreate the same alarm task on top of the user.
+        boolean recentlyVisible = activity != null
+                && android.os.SystemClock.uptimeMillis() - activity.lastVisibleAt < 12_000L;
+        return activity != null && (activity.resumed && activity.windowFocused || recentlyVisible)
                 && !activity.isFinishing() && !activity.isDestroyed()
                 && activity.alarmId == expectedAlarmId
                 && (expectedTargetAt == 0L || activity.targetAt == expectedTargetAt);
@@ -88,6 +94,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        lastVisibleAt = android.os.SystemClock.uptimeMillis();
         AppLog.d(this, "SmartAlarm alert activity onResume id=" + alarmId + " target=" + targetAt);
     }
 
@@ -99,6 +106,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         windowFocused = hasFocus;
+        if (hasFocus) lastVisibleAt = android.os.SystemClock.uptimeMillis();
         AppLog.d(this, "SmartAlarm alert window focus id=" + alarmId + " focused=" + hasFocus);
     }
 

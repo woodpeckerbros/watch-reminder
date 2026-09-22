@@ -43,6 +43,8 @@ final class WakeTaskController implements SensorEventListener {
     private long lastMotionAt;
     private float gravity = SensorManager.GRAVITY_EARTH;
     private boolean stepPeakActive;
+    private int lastRotationDirection;
+    private long lastRotationAt;
 
     WakeTaskController(Activity activity, LinearLayout body, SmartAlarmStore settings, Runnable completed) {
         this.activity = activity;
@@ -82,7 +84,7 @@ final class WakeTaskController implements SensorEventListener {
             body.addView(title(isEnglish() ? tasksIncludingCurrent + " tasks remaining"
                     : "נותרו " + tasksIncludingCurrent + " משימות", 12));
         }
-        if (SmartAlarmStore.DISMISS_SHAKE.equals(method)) startMotion(false);
+        if (SmartAlarmStore.DISMISS_SHAKE.equals(method)) startWristRotation();
         else if (SmartAlarmStore.DISMISS_STEPS.equals(method)) startMotion(true);
         else if (SmartAlarmStore.DISMISS_MATH.equals(method)) startMath();
         else if (SmartAlarmStore.DISMISS_MEMORY.equals(method)) startMemory();
@@ -138,11 +140,62 @@ final class WakeTaskController implements SensorEventListener {
         body.setTag(counter);
     }
 
+    private void startWristRotation() {
+        progress = 0;
+        lastRotationDirection = 0;
+        lastRotationAt = 0L;
+        // A complete right-left movement counts once.  Keep this achievable even
+        // for users who previously chose a large number of simple shakes.
+        target = Math.max(3, Math.min(8, (settings.shakeCount() + 3) / 4));
+        TextView instruction = title(isEnglish()
+                ? "Rotate your wrist right and left " + target + " times"
+                : "סובבו את פרק היד ימינה ושמאלה " + target + " פעמים", 16);
+        TextView counter = title("0 / " + target, 30);
+        WristRotationGestureView illustration = new WristRotationGestureView(activity);
+        body.addView(instruction);
+        body.addView(illustration, new LinearLayout.LayoutParams(dp(100), dp(82)));
+        body.addView(counter);
+        sensors = (SensorManager) activity.getSystemService(Activity.SENSOR_SERVICE);
+        Sensor gyroscope = sensors == null ? null : sensors.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        if (gyroscope == null) {
+            body.addView(title(isEnglish() ? "Rotation sensor unavailable — tap to continue"
+                    : "חיישן הסיבוב אינו זמין — לחצו להמשך", 12));
+            Button fallback = action(isEnglish() ? "Continue" : "המשך");
+            fallback.setOnClickListener(v -> next());
+            body.addView(fallback);
+            return;
+        }
+        sensors.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
+        counter.setTag("rotation");
+        body.setTag(counter);
+    }
+
     @Override public void onSensorChanged(SensorEvent event) {
         TextView counter = body.getTag() instanceof TextView ? (TextView) body.getTag() : null;
         if (counter == null) return;
+        boolean rotation = "rotation".equals(counter.getTag());
         boolean steps = Boolean.TRUE.equals(counter.getTag());
         long now = SystemClock.uptimeMillis();
+        if (rotation) {
+            if (event.sensor.getType() != Sensor.TYPE_GYROSCOPE || event.values.length < 3) return;
+            int axis = Math.abs(event.values[1]) >= Math.abs(event.values[2]) ? 1 : 2;
+            float angularVelocity = event.values[axis];
+            if (Math.abs(angularVelocity) < 1.55f) return;
+            int direction = angularVelocity > 0f ? 1 : -1;
+            // A gesture requires a real reversal and a short travel interval;
+            // sensor jitter or a tiny wrist twitch cannot advance the counter.
+            if (lastRotationDirection != 0 && direction != lastRotationDirection
+                    && now - lastRotationAt >= 340L && now - lastRotationAt <= 2_000L) {
+                progress++;
+                counter.setText(progress + " / " + target);
+                if (progress >= target) { next(); return; }
+            }
+            if (direction != lastRotationDirection || now - lastRotationAt > 2_000L) {
+                lastRotationDirection = direction;
+                lastRotationAt = now;
+            }
+            return;
+        }
         boolean hit = event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR
                 && now - lastMotionAt >= 260L;
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER && event.values.length >= 3) {

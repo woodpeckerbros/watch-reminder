@@ -17,6 +17,8 @@ import android.os.Build;
 
 public class ReminderReceiver extends BroadcastReceiver {
     private static final String CHANNEL_ID = "reminder_alerts_no_system_vibration_v2";
+    /** Serializes all delivery paths (alarm, watchdog, boot and on-body catch-up). */
+    private static final Object FIRE_LOCK = new Object();
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -149,6 +151,7 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     private static void fireNow(Context context, Reminder reminder, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze, boolean deferred) {
+        synchronized (FIRE_LOCK) {
         ReminderEventStore eventStore = new ReminderEventStore(context);
         if (!reminder.isPeriodic() && !reminder.isAnnualEvent() && eventStore.hasDoneOnDay(reminderId, scheduledAt)) {
             AppLog.w(context, "fire skipped already done id=" + reminderId + " at=" + NextReminderCalculator.formatDateTime(scheduledAt));
@@ -201,7 +204,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
         ReminderScheduler.scheduleAutoSnooze(context, occurrenceId, reminderId, reminderName, originalScheduledAt);
         showNotification(context, occurrenceId, reminderId, reminderName, scheduledAt, originalScheduledAt, day, isSnooze);
-
+        }
     }
 
     public static void dispatchNextQueued(Context context) {

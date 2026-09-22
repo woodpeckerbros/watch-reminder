@@ -3657,6 +3657,8 @@ public class MainActivity extends Activity {
         timesCard.addView(dateTitle);
         addZmanimParshaRows(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
+        addErevJewishDayRows(timesCard, dayMillis);
+        addTachanunRow(timesCard, dayMillis);
 
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             timesCard.addView(zmanimTimeRow(ZmanimHelper.LABELS[i], ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis)));
@@ -3665,6 +3667,7 @@ public class MainActivity extends Activity {
                         ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis)));
             }
         }
+        addTikkunChatzotRow(timesCard, dayMillis);
         timesCard.addView(zmanimTimeRow("דף היומי בבלי", DafYomiHelper.bavliLabel(this, dayMillis)));
         timesCard.addView(zmanimTimeRow("דף היומי ירושלמי", DafYomiHelper.yerushalmiLabel(this, dayMillis)));
         timesCard.addView(moonBlessingRow(dayMillis));
@@ -7742,13 +7745,16 @@ public class MainActivity extends Activity {
     private String zmanimDateLine(long dayMillis) {
         Calendar calendar = zmanimCalendar(dayMillis);
         JewishDate jewishDate = new JewishDate(calendar);
+        String weekday = AppLanguage.isEnglish(this)
+                ? new java.text.DateFormatSymbols(Locale.US).getShortWeekdays()[calendar.get(Calendar.DAY_OF_WEEK)]
+                : new String[]{"", "א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"}[calendar.get(Calendar.DAY_OF_WEEK)];
         return String.format(
                 Locale.US,
                 "%02d/%02d/%04d",
                 calendar.get(Calendar.DAY_OF_MONTH),
                 calendar.get(Calendar.MONTH) + 1,
                 calendar.get(Calendar.YEAR)
-        ) + " | " + hebrewDayLabel(jewishDate.getJewishDayOfMonth())
+        ) + " " + weekday + " | " + hebrewDayLabel(jewishDate.getJewishDayOfMonth())
                 + " " + hebrewMonthLabel(jewishDate.getJewishMonth())
                 + " " + jewishDate.getJewishYear();
     }
@@ -7806,6 +7812,70 @@ public class MainActivity extends Activity {
         timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this)
                         ? "Fast ends (Rabbeinu Tam)" : "צאת הצום לפי ר״ת",
                 fast.endsAtRabbeinuTam));
+    }
+
+    private void addErevJewishDayRows(LinearLayout timesCard, long dayMillis) {
+        Calendar selected = zmanimCalendar(dayMillis);
+        JewishCalendar calendar = JewishCalendarHelper.calendar(this, selected);
+        Calendar tomorrow = (Calendar) selected.clone();
+        tomorrow.add(Calendar.DAY_OF_YEAR, 1);
+        JewishCalendar tomorrowCalendar = JewishCalendarHelper.calendar(this, tomorrow);
+        JewishFastInfo tomorrowFast = JewishFastInfo.forDay(this, tomorrow.getTimeInMillis());
+        int index = calendar.getYomTovIndex();
+        boolean erevHoliday = JewishDailyHalacha.isErevMajorHoliday(index);
+        if (!erevHoliday && tomorrowFast == null) return;
+
+        String label = erevHoliday
+                ? JewishCalendarHelper.formatter(this).formatYomTov(tomorrowCalendar)
+                : tomorrowFast.label;
+        boolean english = AppLanguage.isEnglish(this);
+        TextView title = text((english ? "Eve of " : "ערב ") + label, 14, COLOR_WARNING);
+        AppFont.bold(title);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(5), 0, dp(2));
+        timesCard.addView(title, matchParams());
+        if (tomorrowFast != null) {
+            timesCard.addView(zmanimTimeRow(english ? "Fast begins" : "תחילת הצום", tomorrowFast.startsAt));
+            timesCard.addView(zmanimTimeRow(english ? "Fast ends" : "צאת הצום", tomorrowFast.endsAt));
+            timesCard.addView(zmanimTimeRow(english ? "Fast ends (Rabbeinu Tam)" : "צאת הצום לפי ר״ת", tomorrowFast.endsAtRabbeinuTam));
+            return;
+        }
+        long entry = ReminderScheduler.floorToMinute(ZmanimHelper.shabbatTimeForKey(this,
+                ZmanimHelper.KEY_CANDLE_LIGHTING, dayMillis));
+        Calendar exitDay = (Calendar) tomorrow.clone();
+        JewishCalendar exitCalendar = tomorrowCalendar;
+        while (exitCalendar.isYomTovAssurBemelacha()) {
+            exitDay.add(Calendar.DAY_OF_YEAR, 1);
+            exitCalendar = JewishCalendarHelper.calendar(this, exitDay);
+        }
+        exitDay.add(Calendar.DAY_OF_YEAR, -1);
+        long exit = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_SHABBAT_END, exitDay.getTimeInMillis());
+        long rabbeinuTam = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, exitDay.getTimeInMillis());
+        timesCard.addView(zmanimTimeRow(english ? "Candle lighting" : "הדלקת נרות", entry));
+        timesCard.addView(zmanimTimeRow(english ? "Holiday ends" : "צאת החג", exit));
+        timesCard.addView(zmanimTimeRow(english ? "Holiday ends (Rabbeinu Tam)" : "צאת החג לפי ר״ת", rabbeinuTam));
+    }
+
+    private void addTachanunRow(LinearLayout timesCard, long dayMillis) {
+        JewishCalendar calendar = JewishCalendarHelper.calendar(this, zmanimCalendar(dayMillis));
+        if (JewishDailyHalacha.omitsTachanun(calendar)) {
+            timesCard.addView(zmanimTimeRow(AppLanguage.isEnglish(this) ? "Tachanun" : "תחנון",
+                    AppLanguage.isEnglish(this) ? "Not recited" : "ל״א תחנון"));
+        }
+    }
+
+    private void addTikkunChatzotRow(LinearLayout timesCard, long dayMillis) {
+        Calendar night = zmanimCalendar(dayMillis);
+        night.add(Calendar.DAY_OF_YEAR, 1);
+        JewishDailyHalacha.TikkunChatzot tikkun = JewishDailyHalacha.tikkunForNight(
+                JewishCalendarHelper.calendar(this, night));
+        boolean english = AppLanguage.isEnglish(this);
+        String value = tikkun == JewishDailyHalacha.TikkunChatzot.NONE
+                ? (english ? "Not recited" : "לא אומרים")
+                : tikkun == JewishDailyHalacha.TikkunChatzot.LEAH
+                ? (english ? "Tikkun Leah" : "תיקון לאה")
+                : (english ? "Tikkun Leah and Rachel" : "תיקון לאה ורחל");
+        timesCard.addView(zmanimTimeRow(english ? "Tikkun Chatzot (tonight)" : "תיקון חצות (הלילה)", value));
     }
 
     private Calendar upcomingShabbos(long dayMillis) {
