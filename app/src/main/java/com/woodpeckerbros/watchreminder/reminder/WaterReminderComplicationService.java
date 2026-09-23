@@ -108,7 +108,9 @@ public final class WaterReminderComplicationService extends ComplicationDataSour
     }
 
     private PendingIntent openProgressIntent() {
-        Intent intent = WaterProgressActivity.createIntent(this, true)
+        Intent intent = new Intent(this, MainActivity.class)
+                .putExtra(MainActivity.EXTRA_OPEN_WATER_SETTINGS, true)
+                .putExtra(MainActivity.EXTRA_FROM_COMPLICATION, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(this, 8343, intent,
                 PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);

@@ -768,7 +768,7 @@ public class MainActivity extends Activity {
         }
         if (new ReminderSettings(this).waterRemindersEnabled()) {
             Button waterButton = pillButton(getString(R.string.water_reminders_title), COLOR_SURFACE_2);
-            waterButton.setOnClickListener(v -> startActivity(WaterProgressActivity.createIntent(this, false)));
+            waterButton.setOnClickListener(v -> showWaterReminderSettings());
             content.addView(waterButton, matchParams());
         }
         Button settingsButton = pillButton("הגדרות", COLOR_SURFACE_2);
@@ -2983,32 +2983,57 @@ public class MainActivity extends Activity {
         LinearLayout content = baseContent();
         addTitle(content, getString(R.string.water_reminders_title), getString(R.string.water_reminders_subtitle));
 
-        if (settings.waterRemindersEnabled()
-                && ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())) {
-            LinearLayout progressCard = card(true);
-            TextView progress = text(getString(R.string.water_today_progress,
-                    new WaterReminderStore(this).consumedTodayMl(), settings.waterDailyTargetMl()), 13, COLOR_CARD_TEXT);
-            AppFont.bold(progress);
-            progress.setGravity(Gravity.CENTER);
-            progressCard.addView(progress);
-            Button reset = pillButton(getString(R.string.water_reset_today), COLOR_SURFACE_2);
-            clearButtonIcon(reset);
-            reset.setTextSize(11);
-            reset.setOnClickListener(v -> {
-                new WaterReminderStore(this).resetToday();
-                WaterReminderScheduler.schedule(this);
-                ComplicationRefresh.requestWater(this);
-                showWaterReminderSettings();
-            });
-            progressCard.addView(reset, matchParams());
-            content.addView(progressCard, cardParams());
-        }
+        // The daily hydration view lives here. Recording water updates only these views.
+        LinearLayout progressCard = card(true);
+        WaterPitcherView pitcher = new WaterPitcherView(this);
+        progressCard.addView(pitcher, new LinearLayout.LayoutParams(dp(120), dp(140)));
+        TextView percent = text("", 20, COLOR_ACCENT);
+        AppFont.bold(percent);
+        percent.setGravity(Gravity.CENTER);
+        progressCard.addView(percent, matchParams());
+        TextView progress = text("", 13, COLOR_CARD_TEXT);
+        AppFont.bold(progress);
+        progress.setGravity(Gravity.CENTER);
+        progressCard.addView(progress, matchParams());
+        TextView remaining = text("", 12, COLOR_MUTED);
+        remaining.setGravity(Gravity.CENTER);
+        remaining.setPadding(0, dp(2), 0, dp(4));
+        progressCard.addView(remaining, matchParams());
+        Button addGlass = pillButton(getString(R.string.water_dashboard_add_glass), COLOR_ACCENT_DARK);
+        addGlass.setTextSize(11);
+        progressCard.addView(addGlass, matchParams());
+        Button reset = pillButton(getString(R.string.water_reset_today), COLOR_SURFACE_2);
+        clearButtonIcon(reset);
+        reset.setTextSize(11);
+        progressCard.addView(reset, matchParams());
+        content.addView(progressCard, cardParams());
 
-        if (settings.waterRemindersEnabled()) {
-            Button today = pillButton(getString(R.string.water_dashboard_title), COLOR_SURFACE_2);
-            today.setOnClickListener(v -> startActivity(WaterProgressActivity.createIntent(this, false)));
-            content.addView(today, matchParams());
-        }
+        Runnable refreshWaterProgress = () -> {
+            ReminderSettings liveSettings = new ReminderSettings(this);
+            int target = waterProgressTargetMl(liveSettings);
+            int consumed = new WaterReminderStore(this).consumedTodayMl();
+            int remainingMl = Math.max(0, target - consumed);
+            int completedPercent = Math.min(100, Math.round(consumed * 100f / Math.max(1, target)));
+            pitcher.setProgress(consumed / (float) Math.max(1, target));
+            percent.setText(getString(R.string.water_dashboard_percent, completedPercent));
+            progress.setText(getString(R.string.water_today_progress, consumed, target));
+            remaining.setText(remainingMl == 0
+                    ? getString(R.string.water_dashboard_goal_reached)
+                    : getString(R.string.water_dashboard_remaining, remainingMl));
+        };
+        addGlass.setOnClickListener(v -> {
+            new WaterReminderStore(this).addConsumedMl(250);
+            WaterReminderScheduler.schedule(this);
+            ComplicationRefresh.requestWater(this);
+            refreshWaterProgress.run();
+        });
+        reset.setOnClickListener(v -> {
+            new WaterReminderStore(this).resetToday();
+            WaterReminderScheduler.schedule(this);
+            ComplicationRefresh.requestWater(this);
+            refreshWaterProgress.run();
+        });
+        refreshWaterProgress.run();
 
         LinearLayout enabledCard = card();
         Switch enabled = new Switch(this);
@@ -3142,7 +3167,7 @@ public class MainActivity extends Activity {
             }
             ComplicationRefresh.requestWater(this);
             Toast.makeText(this, getString(R.string.water_settings_saved), Toast.LENGTH_SHORT).show();
-            showSettings();
+            refreshWaterProgress.run();
         });
         Button back = pillButton("חזרה", COLOR_SURFACE_2);
         back.setOnClickListener(v -> showSettings());
@@ -3151,6 +3176,17 @@ public class MainActivity extends Activity {
         content.addView(actions);
         content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(12)));
         setScrollableContent(content);
+    }
+
+    private int waterProgressTargetMl(ReminderSettings settings) {
+        if (ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())) {
+            return Math.max(1, settings.waterDailyTargetMl());
+        }
+        int reminders = WaterReminderScheduler.remindersPerDay(
+                settings.waterStartHour() * 60 + settings.waterStartMinute(),
+                settings.waterEndHour() * 60 + settings.waterEndMinute(),
+                settings.waterIntervalMinutes());
+        return Math.max(1, reminders * settings.waterAmountMl());
     }
 
     private LinearLayout fastingActionRow() {
