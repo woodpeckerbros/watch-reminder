@@ -87,7 +87,7 @@ public final class WaterProgressActivity extends Activity {
 
         WaterPitcherView pitcher = new WaterPitcherView(this);
         pitcher.setProgress(consumed / (float) Math.max(1, target));
-        content.addView(pitcher, new LinearLayout.LayoutParams(dp(132), dp(158)));
+        content.addView(pitcher, new LinearLayout.LayoutParams(dp(120), dp(140)));
 
         TextView percentText = text(getString(R.string.water_dashboard_percent, percent), 24, COLOR_WATER);
         AppFont.bold(percentText);
