@@ -28,7 +28,7 @@ public class ReminderSettings {
     public static final String WATER_MODE_FIXED_AMOUNT = "fixed_amount";
     public static final int DEFAULT_WATER_DAILY_TARGET_ML = 2000;
     public static final int DEFAULT_WATER_AMOUNT_ML = 250;
-    public static final int DEFAULT_WATER_INTERVAL_MINUTES = 120;
+    public static final int DEFAULT_WATER_INTERVAL_MINUTES = 60;
 
     private static final String PREFS_NAME = "reminder_settings";
     private static final String KEY_SERVICE_ENABLED = "service_enabled";

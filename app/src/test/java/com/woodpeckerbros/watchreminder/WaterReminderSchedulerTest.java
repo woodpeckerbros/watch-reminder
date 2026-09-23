@@ -8,6 +8,11 @@ import org.junit.Test;
 
 public class WaterReminderSchedulerTest {
     @Test
+    public void defaultWaterIntervalIsOneHour() {
+        assertEquals(60, ReminderSettings.DEFAULT_WATER_INTERVAL_MINUTES);
+    }
+
+    @Test
     public void remindersPerDayIncludesStartAndLastAlignedSlot() {
         assertEquals(8, WaterReminderScheduler.remindersPerDay(8 * 60, 22 * 60, 120));
     }
