@@ -4,9 +4,7 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
 
-import android.app.Activity;
 import android.content.Context;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,19 +12,10 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
-public class MoonBlessingAlertActivity extends Activity {
-    private static final int COLOR_BG = 0xFF061522;
-    private static final int COLOR_SURFACE = 0xFF142A3A;
-    private static final int COLOR_TEXT = 0xFFF4EBDD;
-    private static final int COLOR_MUTED = 0xFFB8B7AE;
-    private static final int COLOR_ACCENT = 0xFFE0C38D;
-    private static final int COLOR_ACTION = 0xFF738368;
+public class MoonBlessingAlertActivity extends JewishAlertBaseActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable autoCloseRunnable;
@@ -37,15 +26,8 @@ public class MoonBlessingAlertActivity extends Activity {
     private AlertFeedback alertFeedback;
 
     @Override
-    protected void attachBaseContext(Context newBase) {
-        super.attachBaseContext(AppLanguage.wrap(newBase));
-    }
-
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setShowWhenLocked(true);
-        setTurnScreenOn(true);
         MoonBlessingReceiver.cancelNotification(this);
 
         monthKey = getIntent().getStringExtra(MoonBlessingScheduler.EXTRA_MONTH_KEY);
@@ -59,35 +41,10 @@ public class MoonBlessingAlertActivity extends Activity {
         AppLog.d(this, "moon blessing pre-start alert open month=" + monthKey
                 + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
 
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(17), dp(42), dp(17), dp(22));
+        LinearLayout content = jewishAlertContent();
+        LinearLayout card = jewishAlertCard("ברכת הלבנה");
 
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(9), dp(4), dp(9), dp(12));
-
-        FrameLayout iconBadge = new FrameLayout(this);
-        iconBadge.setBackground(iconBadgeBackground());
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.ic_jewish_alert);
-        icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        int iconInset = dp(8);
-        icon.setPadding(iconInset, iconInset, iconInset, iconInset);
-        iconBadge.addView(icon, new FrameLayout.LayoutParams(-1, -1));
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(56), dp(56));
-        iconParams.setMargins(0, 0, 0, dp(4));
-        card.addView(iconBadge, iconParams);
-
-        TextView title = text("ברכת הלבנה", 22, COLOR_TEXT);
-        AppFont.bold(title);
-        title.setPadding(dp(4), dp(1), dp(4), dp(5));
-        title.setShadowLayer(dp(2), 0, 0, 0xAAFFF3D5);
-        card.addView(title);
-
-        TextView message = text(messageText, 15, COLOR_MUTED);
+        TextView message = jewishAlertText(messageText, 15, COLOR_MUTED);
         message.setLineSpacing(dp(2), 1f);
         message.setPadding(dp(5), 0, dp(5), dp(9));
         card.addView(message);
@@ -119,7 +76,7 @@ public class MoonBlessingAlertActivity extends Activity {
             card.addView(answerRow);
         }
 
-        TextView snoozeTitle = text("אפשר לדחות", 13, COLOR_MUTED);
+        TextView snoozeTitle = jewishAlertText("אפשר לדחות", 13, COLOR_MUTED);
         snoozeTitle.setPadding(0, dp(8), 0, dp(3));
         card.addView(snoozeTitle);
 
@@ -130,20 +87,7 @@ public class MoonBlessingAlertActivity extends Activity {
         card.addView(row);
 
         content.addView(card, new LinearLayout.LayoutParams(-1, -2));
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setClipToPadding(false);
-        scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(COLOR_BG);
-        root.addView(new ReminderAlertFrameView(this), new FrameLayout.LayoutParams(-1, -1));
-        root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
-        TopArcClockView clock = TopArcClockView.addTo(root);
-        clock.setTranslationY(dp(4));
-        root.addView(new ReminderAlertFrameView(this, false), new FrameLayout.LayoutParams(-1, -1));
-        AppTextStyle.apply(root);
-        setContentView(root);
+        setJewishAlertContent(content);
 
         alertFeedback = AlertFeedback.start(this, new ReminderSettings(this));
         scheduleAutoClose();
@@ -228,39 +172,6 @@ public class MoonBlessingAlertActivity extends Activity {
     }
 
     private Button button(String value, int color) {
-        Button button = new Button(this);
-        AppFont.apply(button);
-        button.setText(UiText.t(this, value));
-        button.setTextColor(COLOR_TEXT);
-        button.setTextSize(14);
-        button.setAllCaps(false);
-        button.setBackground(new DepthButtonDrawable(color, dp(20)));
-        button.setPadding(0, 0, 0, 0);
-        return button;
-    }
-
-    private TextView text(String value, int sp, int color) {
-        TextView view = new TextView(this);
-        AppFont.apply(view);
-        view.setText(UiText.t(this, value));
-        view.setTextSize(sp);
-        view.setTextColor(color);
-        view.setGravity(Gravity.CENTER);
-        view.setTextDirection(AppLanguage.isRtl(this) ? TextView.TEXT_DIRECTION_RTL : TextView.TEXT_DIRECTION_LTR);
-        return view;
-    }
-
-    private GradientDrawable iconBadgeBackground() {
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF28526A, 0xFF0B2537}
-        );
-        drawable.setShape(GradientDrawable.OVAL);
-        drawable.setStroke(dp(1), COLOR_ACCENT);
-        return drawable;
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+        return jewishAlertButton(value, color);
     }
 }

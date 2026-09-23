@@ -4,28 +4,18 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.*;
 
-import android.app.Activity;
 import android.content.Context;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.List;
 
-public class DafYomiAlertActivity extends Activity {
-    private static final int COLOR_BG = 0xFF061522;
-    private static final int COLOR_SURFACE = 0xFF142A3A;
-    private static final int COLOR_TEXT = 0xFFF4EBDD;
-    private static final int COLOR_MUTED = 0xFFB8B7AE;
-    private static final int COLOR_ACCENT = 0xFFE0C38D;
-    private static final int COLOR_ACCENT_DARK = 0xFF738368;
+public class DafYomiAlertActivity extends JewishAlertBaseActivity {
     private List<DafYomiHelper.Item> dueItems;
     private DafYomiHelper.Item currentItem;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -34,15 +24,8 @@ public class DafYomiAlertActivity extends Activity {
     private AlertFeedback alertFeedback;
 
     @Override
-    protected void attachBaseContext(Context newBase) {
-        super.attachBaseContext(AppLanguage.wrap(newBase));
-    }
-
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setShowWhenLocked(true);
-        setTurnScreenOn(true);
         AppLog.d(this, "daf yomi alert open");
         DafYomiReceiver.cancelNotification(this);
         dueItems = new DafYomiStore(this).dueItems(this);
@@ -52,43 +35,19 @@ public class DafYomiAlertActivity extends Activity {
             return;
         }
         currentItem = dueItems.get(0);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER);
-        content.setPadding(dp(17), dp(42), dp(17), dp(22));
-
-        LinearLayout textArea = new LinearLayout(this);
-        textArea.setOrientation(LinearLayout.VERTICAL);
-        textArea.setGravity(Gravity.CENTER);
-        FrameLayout iconBadge = new FrameLayout(this);
-        iconBadge.setBackground(iconBadgeBackground());
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.ic_jewish_alert);
-        icon.setPadding(dp(8), dp(8), dp(8), dp(8));
-        iconBadge.addView(icon, new FrameLayout.LayoutParams(-1, -1));
-        textArea.addView(iconBadge, new LinearLayout.LayoutParams(dp(56), dp(56)));
-
-        TextView title = text("דף היומי", 22, COLOR_TEXT);
-        AppFont.bold(title);
-        title.setShadowLayer(dp(2), 0, 0, 0xAAFFF3D5);
-        textArea.addView(title);
-
-        TextView question = text(questionText(), 19, COLOR_TEXT);
+        LinearLayout content = jewishAlertContent();
+        LinearLayout card = jewishAlertCard("דף היומי");
+        TextView question = jewishAlertText(questionText(), 19, COLOR_TEXT);
         question.setPadding(dp(4), dp(8), dp(4), dp(8));
-        textArea.addView(question);
+        card.addView(question);
 
         if (dueItems.size() > 1) {
-            TextView counter = text(AppLanguage.isEnglish(this) ? "Page 1 of " + dueItems.size() : "דף " + 1 + " מתוך " + dueItems.size(), 12, COLOR_MUTED);
+            TextView counter = jewishAlertText(AppLanguage.isEnglish(this) ? "Page 1 of " + dueItems.size() : "דף " + 1 + " מתוך " + dueItems.size(), 12, COLOR_MUTED);
             counter.setPadding(0, 0, 0, dp(4));
-            textArea.addView(counter);
+            card.addView(counter);
         }
-        content.addView(textArea, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                0.65f
-        ));
 
-        Button yes = button("כן", COLOR_ACCENT_DARK);
+        Button yes = button("כן", COLOR_ACTION);
         yes.setOnClickListener(v -> {
             actionClosed = true;
             handler.removeCallbacksAndMessages(null);
@@ -123,24 +82,9 @@ public class DafYomiAlertActivity extends Activity {
         buttonArea.addView(yes);
         buttonArea.addView(no);
         buttonArea.addView(retry);
-        content.addView(buttonArea, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1.35f
-        ));
-
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(COLOR_BG);
-        root.addView(new ReminderAlertFrameView(this), new FrameLayout.LayoutParams(-1, -1));
-        root.addView(content, new FrameLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-        ));
-        TopArcClockView clock = TopArcClockView.addTo(root);
-        clock.setTranslationY(dp(4));
-        root.addView(new ReminderAlertFrameView(this, false), new FrameLayout.LayoutParams(-1, -1));
-        AppTextStyle.apply(root);
-        setContentView(root);
+        card.addView(buttonArea, new LinearLayout.LayoutParams(-1, -2));
+        content.addView(card, new LinearLayout.LayoutParams(-1, -2));
+        setJewishAlertContent(content);
         startVibration(new ReminderSettings(this));
         scheduleAutoClose();
     }
@@ -223,40 +167,12 @@ public class DafYomiAlertActivity extends Activity {
     }
 
     private Button button(String value, int color) {
-        Button button = new Button(this);
-        AppFont.apply(button);
-        button.setText(UiText.t(this, value));
-        button.setTextColor(COLOR_TEXT);
+        Button button = jewishAlertButton(value, color);
         button.setTextSize(value.length() > 9 ? 11 : 13);
-        button.setAllCaps(false);
-        button.setBackground(new DepthButtonDrawable(color, dp(20)));
-        button.setPadding(0, 0, 0, 0);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(48));
         params.setMargins(dp(3), dp(4), dp(3), dp(4));
         button.setLayoutParams(params);
         return button;
     }
 
-    private TextView text(String value, int sp, int color) {
-        TextView view = new TextView(this);
-        AppFont.apply(view);
-        view.setText(UiText.t(this, value));
-        view.setTextSize(sp);
-        view.setTextColor(color);
-        view.setGravity(Gravity.CENTER);
-        view.setTextDirection(AppLanguage.isRtl(this) ? TextView.TEXT_DIRECTION_RTL : TextView.TEXT_DIRECTION_LTR);
-        return view;
-    }
-
-    private GradientDrawable iconBadgeBackground() {
-        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF28526A, 0xFF0B2537});
-        drawable.setShape(GradientDrawable.OVAL);
-        drawable.setStroke(dp(1), COLOR_ACCENT);
-        return drawable;
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
-    }
 }
