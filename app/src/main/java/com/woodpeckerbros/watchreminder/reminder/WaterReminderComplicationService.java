@@ -51,14 +51,14 @@ public final class WaterReminderComplicationService extends ComplicationDataSour
                     new PlainComplicationText.Builder(value.shortText).build(), description)
                     .setTitle(new PlainComplicationText.Builder(value.secondLine).build())
                     .setMonochromaticImage(image())
-                    .setTapAction(openSettingsIntent())
+                    .setTapAction(openProgressIntent())
                     .build();
         }
         if (type.equals(ComplicationType.LONG_TEXT)) {
             return new LongTextComplicationData.Builder(
                     new PlainComplicationText.Builder(value.longText).build(), description)
                     .setMonochromaticImage(image())
-                    .setTapAction(openSettingsIntent())
+                    .setTapAction(openProgressIntent())
                     .build();
         }
         return new NoDataComplicationData();
@@ -107,10 +107,8 @@ public final class WaterReminderComplicationService extends ComplicationDataSour
                 Icon.createWithResource(this, R.drawable.ic_water_drop_notification)).build();
     }
 
-    private PendingIntent openSettingsIntent() {
-        Intent intent = new Intent(this, MainActivity.class)
-                .putExtra(MainActivity.EXTRA_OPEN_WATER_SETTINGS, true)
-                .putExtra(MainActivity.EXTRA_FROM_COMPLICATION, true)
+    private PendingIntent openProgressIntent() {
+        Intent intent = WaterProgressActivity.createIntent(this, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(this, 8343, intent,
                 PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);

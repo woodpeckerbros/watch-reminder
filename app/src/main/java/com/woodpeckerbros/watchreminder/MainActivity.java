@@ -768,7 +768,7 @@ public class MainActivity extends Activity {
         }
         if (new ReminderSettings(this).waterRemindersEnabled()) {
             Button waterButton = pillButton(getString(R.string.water_reminders_title), COLOR_SURFACE_2);
-            waterButton.setOnClickListener(v -> showWaterReminderSettings());
+            waterButton.setOnClickListener(v -> startActivity(WaterProgressActivity.createIntent(this, false)));
             content.addView(waterButton, matchParams());
         }
         Button settingsButton = pillButton("הגדרות", COLOR_SURFACE_2);
@@ -3002,6 +3002,12 @@ public class MainActivity extends Activity {
             });
             progressCard.addView(reset, matchParams());
             content.addView(progressCard, cardParams());
+        }
+
+        if (settings.waterRemindersEnabled()) {
+            Button today = pillButton(getString(R.string.water_dashboard_title), COLOR_SURFACE_2);
+            today.setOnClickListener(v -> startActivity(WaterProgressActivity.createIntent(this, false)));
+            content.addView(today, matchParams());
         }
 
         LinearLayout enabledCard = card();

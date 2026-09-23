@@ -46,11 +46,25 @@ public final class WaterReminderScheduler {
     }
 
     public static void scheduleSnooze(Context context, int minutes) {
-        long triggerAt = ReminderScheduler.ceilToMinute(System.currentTimeMillis() + Math.max(1, minutes) * 60_000L);
-        triggerAt = QuietTimeHelper.adjust(context, triggerAt);
-        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            cancel(context);
+            return;
+        }
+        ReminderSettings settings = new ReminderSettings(context);
+        if (!settings.waterRemindersEnabled()) {
+            cancel(context);
+            return;
+        }
+        long requestedAt = ReminderScheduler.ceilToMinute(
+                System.currentTimeMillis() + Math.max(1, minutes) * 60_000L);
+        long triggerAt = QuietTimeHelper.adjust(context, requestedAt);
+        // A snooze replaces the normal periodic alarm, never competes with it.
+        cancel(context);
         scheduleAt(context, triggerAt);
-        AppLog.d(context, "water snooze scheduled at=" + NextReminderCalculator.formatDateTime(triggerAt));
+        AppLog.d(context, "water snooze minutes=" + Math.max(1, minutes)
+                + " requested_at=" + NextReminderCalculator.formatDateTime(requestedAt)
+                + " scheduled_at=" + NextReminderCalculator.formatDateTime(triggerAt)
+                + " quiet_adjusted=" + (triggerAt != requestedAt));
     }
 
     static void scheduleAt(Context context, long triggerAt) {
@@ -78,16 +92,25 @@ public final class WaterReminderScheduler {
             return settings.waterAmountMl();
         }
         int consumed = new WaterReminderStore(context).consumedTodayMl();
-        int remaining = Math.max(0, settings.waterDailyTargetMl() - consumed);
+        int target = settings.waterDailyTargetMl();
+        int remaining = Math.max(0, target - consumed);
         if (remaining == 0) {
             return 0;
         }
-        Calendar trigger = Calendar.getInstance();
-        trigger.setTimeInMillis(triggerAt);
-        int triggerMinute = trigger.get(Calendar.HOUR_OF_DAY) * 60 + trigger.get(Calendar.MINUTE);
-        int endMinute = settings.waterEndHour() * 60 + settings.waterEndMinute();
-        int remainingSlots = Math.max(1, ((endMinute - triggerMinute) / settings.waterIntervalMinutes()) + 1);
-        return amountForRemaining(remaining, remainingSlots);
+        // A daily goal is a steady plan, not a catch-up mechanism. Recalculating based
+        // on the remaining time made a later reminder ask for more even after a user
+        // had followed the preceding suggestion.
+        return dailyTargetAmountForReminderMl(target, consumed, remindersPerDay(settings));
+    }
+
+    public static int dailyTargetPortionMl(int targetMl, int remindersPerDay) {
+        return amountForRemaining(targetMl, remindersPerDay);
+    }
+
+    /** The last request is reduced to the remaining goal; requests never grow to catch up. */
+    public static int dailyTargetAmountForReminderMl(int targetMl, int consumedMl, int remindersPerDay) {
+        int remaining = Math.max(0, targetMl - Math.max(0, consumedMl));
+        return Math.min(remaining, dailyTargetPortionMl(targetMl, remindersPerDay));
     }
 
     public static int amountForRemaining(int remainingMl, int remainingSlots) {

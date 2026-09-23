@@ -298,6 +298,11 @@
             android:theme="@style/AppTheme" />
 
         <activity
+            android:name=".reminder.WaterProgressActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <activity
             android:name=".calendar.MoonBlessingAlertActivity"
             android:excludeFromRecents="true"
             android:exported="false"

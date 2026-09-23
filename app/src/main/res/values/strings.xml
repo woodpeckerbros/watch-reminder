@@ -47,6 +47,13 @@
     <string name="water_skip">דלג</string>
     <string name="water_snooze">הזכר לי בעוד 15 דקות</string>
     <string name="water_icon_description">טיפת מים</string>
+    <string name="water_dashboard_title">השתייה שלי היום</string>
+    <string name="water_dashboard_subtitle">התקדמות אל היעד היומי</string>
+    <string name="water_dashboard_percent">%1$d%% הושלמו</string>
+    <string name="water_dashboard_remaining">נשארו %1$d מ״ל</string>
+    <string name="water_dashboard_goal_reached">היעד היומי הושלם</string>
+    <string name="water_dashboard_add_glass">הוספתי כוס · 250 מ״ל</string>
+    <string name="water_dashboard_settings">הגדרות תזכורות המים</string>
     <string name="fasting_start_message">חלון האכילה שלך נפתח עכשיו. הוא יימשך %1$d שעות.</string>
     <string name="shabbat_fallback_label">השבת הקרובה</string>
     <string name="regular_shabbat">שבת רגילה</string>

@@ -42,6 +42,16 @@ public final class WaterReminderStore {
                 .apply();
     }
 
+    /** Records water entered from the daily progress screen, independent of an alert. */
+    public void addConsumedMl(int amountMl) {
+        if (amountMl <= 0) {
+            return;
+        }
+        ensureToday();
+        int consumed = Math.max(0, prefs.getInt(KEY_CONSUMED_ML, 0));
+        prefs.edit().putInt(KEY_CONSUMED_ML, consumed + amountMl).apply();
+    }
+
     public void resetToday() {
         prefs.edit()
                 .putString(KEY_DAY, todayKey())

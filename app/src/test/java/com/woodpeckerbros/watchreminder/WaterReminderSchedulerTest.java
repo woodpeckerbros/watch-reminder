@@ -30,6 +30,21 @@ public class WaterReminderSchedulerTest {
     }
 
     @Test
+    public void dailyGoalUsesAStablePortionRatherThanCatchUpAmounts() {
+        int portion = WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 0, 8);
+        assertEquals(250, portion);
+        // After recording the requested 250 ml, the next request remains 250 ml,
+        // instead of being increased because an earlier time slot has passed.
+        assertEquals(portion, WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 250, 8));
+    }
+
+    @Test
+    public void lastDailyPortionCanOnlyShrinkToTheRemainingGoal() {
+        assertEquals(250, WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 1_750, 8));
+        assertEquals(120, WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 1_880, 8));
+    }
+
+    @Test
     public void noRemainingWaterProducesNoAmount() {
         assertEquals(0, WaterReminderScheduler.amountForRemaining(0, 4));
         assertEquals(0, WaterReminderScheduler.amountForRemaining(1000, 0));

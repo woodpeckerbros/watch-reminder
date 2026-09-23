@@ -47,6 +47,13 @@
     <string name="water_skip">Skip</string>
     <string name="water_snooze">Remind me in 15 minutes</string>
     <string name="water_icon_description">Water drop</string>
+    <string name="water_dashboard_title">Today’s water</string>
+    <string name="water_dashboard_subtitle">Progress toward your daily goal</string>
+    <string name="water_dashboard_percent">%1$d%% complete</string>
+    <string name="water_dashboard_remaining">%1$d ml remaining</string>
+    <string name="water_dashboard_goal_reached">Daily goal reached</string>
+    <string name="water_dashboard_add_glass">I added a glass · 250 ml</string>
+    <string name="water_dashboard_settings">Water reminder settings</string>
     <string name="fasting_start_message">Your eating window is open now. It will last %1$d hours.</string>
     <string name="shabbat_fallback_label">Upcoming Shabbat</string>
     <string name="regular_shabbat">Regular Shabbat</string>
