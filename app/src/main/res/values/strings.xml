@@ -25,8 +25,8 @@
     <string name="water_reminders_title">תזכורת לשתיית מים</string>
     <string name="water_reminders_subtitle">תוכנית שתייה אישית לאורך היום</string>
     <string name="water_plan_title">אופן חישוב השתייה</string>
-    <string name="water_mode_daily_target">יעד יומי וחלוקה אוטומטית</string>
-    <string name="water_mode_fixed_amount">כמות קבועה בכל תזכורת</string>
+    <string name="water_mode_daily_target">אני בוחר מרווח · הכמות אוטומטית</string>
+    <string name="water_mode_fixed_amount">אני בוחר גודל כוס · המרווח אוטומטי</string>
     <string name="water_daily_target">יעד יומי במ״ל</string>
     <string name="water_amount_each">כמות בכל תזכורת במ״ל</string>
     <string name="water_schedule_title">שעות ומרווח תזכורות</string>
@@ -35,6 +35,10 @@
     <string name="water_end_time">עד שעה</string>
     <string name="water_plan_summary_target">%1$d תזכורות ביום · כ־%2$d מ״ל בכל פעם</string>
     <string name="water_plan_summary_fixed">%1$d תזכורות ביום · %2$d מ״ל בכל פעם · עד %3$d מ״ל ביום</string>
+    <string name="water_plan_summary_glass">%1$d תזכורות ביום · כוס של %2$d מ״ל</string>
+    <string name="water_plan_choice_explanation">בחר דרך תכנון אחת: מרווח קבוע או גודל כוס קבוע</string>
+    <string name="water_glass_size">גודל כוס במ״ל</string>
+    <string name="water_auto_interval">המרווח שנבחר אוטומטית: כל %1$d דקות</string>
     <string name="water_invalid_window">שעת הסיום חייבת להיות מאוחרת משעת ההתחלה</string>
     <string name="water_settings_saved">הגדרות תזכורות המים נשמרו</string>
     <string name="water_today_progress">היום: %1$d מתוך %2$d מ״ל</string>
@@ -54,6 +58,9 @@
     <string name="water_dashboard_goal_reached">היעד היומי הושלם</string>
     <string name="water_dashboard_add_glass">הוספתי כוס · 250 מ״ל</string>
     <string name="water_dashboard_settings">הגדרות תזכורות המים</string>
+    <string name="water_manual_add_title">הוספת מים בכמות אחרת</string>
+    <string name="water_manual_add_amount">כמות להוספה במ״ל</string>
+    <string name="water_add_selected_amount">הוסף %1$d מ״ל</string>
     <string name="fasting_start_message">חלון האכילה שלך נפתח עכשיו. הוא יימשך %1$d שעות.</string>
     <string name="shabbat_fallback_label">השבת הקרובה</string>
     <string name="regular_shabbat">שבת רגילה</string>

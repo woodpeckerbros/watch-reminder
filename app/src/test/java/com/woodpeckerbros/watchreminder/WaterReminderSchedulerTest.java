@@ -50,6 +50,20 @@ public class WaterReminderSchedulerTest {
     }
 
     @Test
+    public void glassSizePlanDerivesAnIntervalThatFitsTheDailyGoal() {
+        // 2,000 ml as ten 200 ml glasses between 08:00 and 22:00 fits every 90 minutes.
+        assertEquals(90, WaterReminderScheduler.automaticIntervalMinutes(
+                8 * 60, 22 * 60, 2000, 200));
+        assertEquals(10, WaterReminderScheduler.remindersPerDay(8 * 60, 22 * 60, 90));
+    }
+
+    @Test
+    public void glassSizePlanUsesQuarterHourMinimumForDensePlans() {
+        assertEquals(15, WaterReminderScheduler.automaticIntervalMinutes(
+                8 * 60, 22 * 60, 5000, 100));
+    }
+
+    @Test
     public void noRemainingWaterProducesNoAmount() {
         assertEquals(0, WaterReminderScheduler.amountForRemaining(0, 4));
         assertEquals(0, WaterReminderScheduler.amountForRemaining(1000, 0));

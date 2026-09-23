@@ -73,9 +73,7 @@ public final class WaterReminderAlertActivity extends Activity {
         amount.setPadding(0, dp(2), 0, dp(2));
         content.addView(amount);
 
-        String progressText = ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())
-                ? getString(R.string.water_alert_progress, consumedMl, targetMl)
-                : getString(R.string.water_alert_fixed_interval, settings.waterIntervalMinutes());
+        String progressText = getString(R.string.water_alert_progress, consumedMl, targetMl);
         TextView progress = text(progressText, 11, COLOR_MUTED);
         content.addView(progress);
 

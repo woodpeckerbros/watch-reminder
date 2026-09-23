@@ -26,8 +26,8 @@ public final class WaterReminderScheduler {
             return;
         }
         long now = System.currentTimeMillis();
-        boolean targetReached = ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())
-                && new WaterReminderStore(context).consumedTodayMl() >= settings.waterDailyTargetMl();
+        boolean targetReached = new WaterReminderStore(context).consumedTodayMl()
+                >= settings.waterDailyTargetMl();
         long triggerAt = nextTriggerAt(settings, now, targetReached);
         triggerAt = QuietTimeHelper.adjust(context, triggerAt);
         if (triggerAt <= now) {
@@ -88,14 +88,14 @@ public final class WaterReminderScheduler {
 
     static int plannedAmountMl(Context context, long triggerAt) {
         ReminderSettings settings = new ReminderSettings(context);
-        if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
-            return settings.waterAmountMl();
-        }
         int consumed = new WaterReminderStore(context).consumedTodayMl();
         int target = settings.waterDailyTargetMl();
         int remaining = Math.max(0, target - consumed);
         if (remaining == 0) {
             return 0;
+        }
+        if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
+            return Math.min(remaining, settings.waterAmountMl());
         }
         // A daily goal is a steady plan, not a catch-up mechanism. Recalculating based
         // on the remaining time made a later reminder ask for more even after a user
@@ -111,6 +111,25 @@ public final class WaterReminderScheduler {
     public static int dailyTargetAmountForReminderMl(int targetMl, int consumedMl, int remindersPerDay) {
         int remaining = Math.max(0, targetMl - Math.max(0, consumedMl));
         return Math.min(remaining, dailyTargetPortionMl(targetMl, remindersPerDay));
+    }
+
+    /**
+     * Derives the widest 15-minute-aligned interval that still fits the selected cups
+     * in the daily window. The final cup may be smaller so the goal is never exceeded.
+     */
+    public static int automaticIntervalMinutes(int startMinute, int endMinute,
+                                               int dailyTargetMl, int glassSizeMl) {
+        int window = endMinute - startMinute;
+        if (window <= 0 || dailyTargetMl <= 0 || glassSizeMl <= 0) {
+            return 0;
+        }
+        int cups = (int) Math.ceil(dailyTargetMl / (double) glassSizeMl);
+        if (cups <= 1) {
+            return Math.max(15, Math.min(240, window));
+        }
+        int maximumInterval = window / (cups - 1);
+        int aligned = (maximumInterval / 15) * 15;
+        return Math.max(15, Math.min(240, aligned));
     }
 
     public static int amountForRemaining(int remainingMl, int remainingSlots) {

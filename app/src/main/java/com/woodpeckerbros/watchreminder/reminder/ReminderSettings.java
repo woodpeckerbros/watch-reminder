@@ -357,11 +357,11 @@ public class ReminderSettings {
     }
 
     public int waterIntervalMinutes() {
-        return clamp(prefs.getInt(KEY_WATER_INTERVAL_MINUTES, DEFAULT_WATER_INTERVAL_MINUTES), 30, 240);
+        return clamp(prefs.getInt(KEY_WATER_INTERVAL_MINUTES, DEFAULT_WATER_INTERVAL_MINUTES), 15, 240);
     }
 
     public void setWaterIntervalMinutes(int minutes) {
-        prefs.edit().putInt(KEY_WATER_INTERVAL_MINUTES, clamp(minutes, 30, 240)).apply();
+        prefs.edit().putInt(KEY_WATER_INTERVAL_MINUTES, clamp(minutes, 15, 240)).apply();
     }
 
     public int waterStartHour() {

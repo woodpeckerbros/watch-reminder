@@ -25,8 +25,8 @@
     <string name="water_reminders_title">Water Reminder</string>
     <string name="water_reminders_subtitle">A personal hydration plan throughout the day</string>
     <string name="water_plan_title">Hydration calculation</string>
-    <string name="water_mode_daily_target">Daily goal with automatic split</string>
-    <string name="water_mode_fixed_amount">Fixed amount per reminder</string>
+    <string name="water_mode_daily_target">I choose the interval · amount is automatic</string>
+    <string name="water_mode_fixed_amount">I choose a glass size · interval is automatic</string>
     <string name="water_daily_target">Daily goal in ml</string>
     <string name="water_amount_each">Amount per reminder in ml</string>
     <string name="water_schedule_title">Hours and reminder interval</string>
@@ -35,6 +35,10 @@
     <string name="water_end_time">Until</string>
     <string name="water_plan_summary_target">%1$d reminders per day · about %2$d ml each</string>
     <string name="water_plan_summary_fixed">%1$d reminders per day · %2$d ml each · up to %3$d ml daily</string>
+    <string name="water_plan_summary_glass">%1$d reminders per day · %2$d ml glass</string>
+    <string name="water_plan_choice_explanation">Choose one plan: a fixed interval or a fixed glass size</string>
+    <string name="water_glass_size">Glass size in ml</string>
+    <string name="water_auto_interval">Automatic interval: every %1$d minutes</string>
     <string name="water_invalid_window">The end time must be later than the start time</string>
     <string name="water_settings_saved">Water reminder settings saved</string>
     <string name="water_today_progress">Today: %1$d of %2$d ml</string>
@@ -54,6 +58,9 @@
     <string name="water_dashboard_goal_reached">Daily goal reached</string>
     <string name="water_dashboard_add_glass">I added a glass · 250 ml</string>
     <string name="water_dashboard_settings">Water reminder settings</string>
+    <string name="water_manual_add_title">Add another water amount</string>
+    <string name="water_manual_add_amount">Amount to add in ml</string>
+    <string name="water_add_selected_amount">Add %1$d ml</string>
     <string name="fasting_start_message">Your eating window is open now. It will last %1$d hours.</string>
     <string name="shabbat_fallback_label">Upcoming Shabbat</string>
     <string name="regular_shabbat">Regular Shabbat</string>

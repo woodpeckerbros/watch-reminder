@@ -3002,6 +3002,15 @@ public class MainActivity extends Activity {
         Button addGlass = pillButton(getString(R.string.water_dashboard_add_glass), COLOR_ACCENT_DARK);
         addGlass.setTextSize(11);
         progressCard.addView(addGlass, matchParams());
+        TextView manualAmountTitle = text(getString(R.string.water_manual_add_title), 12, COLOR_MUTED);
+        manualAmountTitle.setGravity(Gravity.CENTER);
+        manualAmountTitle.setPadding(0, dp(6), 0, 0);
+        progressCard.addView(manualAmountTitle, matchParams());
+        NumberPicker manualAmountPicker = steppedNumberPicker(100, 1000, 100, 200);
+        progressCard.addView(pickerColumn(getString(R.string.water_manual_add_amount), manualAmountPicker));
+        Button addSelectedAmount = pillButton("", COLOR_SURFACE_2);
+        addSelectedAmount.setTextSize(11);
+        progressCard.addView(addSelectedAmount, matchParams());
         Button reset = pillButton(getString(R.string.water_reset_today), COLOR_SURFACE_2);
         clearButtonIcon(reset);
         reset.setTextSize(11);
@@ -3023,6 +3032,18 @@ public class MainActivity extends Activity {
         };
         addGlass.setOnClickListener(v -> {
             new WaterReminderStore(this).addConsumedMl(250);
+            WaterReminderScheduler.schedule(this);
+            ComplicationRefresh.requestWater(this);
+            refreshWaterProgress.run();
+        });
+        Runnable updateSelectedAmountLabel = () -> addSelectedAmount.setText(getString(
+                R.string.water_add_selected_amount,
+                steppedPickerValue(manualAmountPicker, 100, 100)));
+        manualAmountPicker.setOnValueChangedListener((picker, oldValue, newValue) -> updateSelectedAmountLabel.run());
+        updateSelectedAmountLabel.run();
+        addSelectedAmount.setOnClickListener(v -> {
+            new WaterReminderStore(this).addConsumedMl(
+                    steppedPickerValue(manualAmountPicker, 100, 100));
             WaterReminderScheduler.schedule(this);
             ComplicationRefresh.requestWater(this);
             refreshWaterProgress.run();
@@ -3054,6 +3075,10 @@ public class MainActivity extends Activity {
         mode.setAdapter(spinnerAdapter(modeLabels));
         mode.setSelection(ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode()) ? 1 : 0);
         planCard.addView(mode, matchParams());
+        TextView choiceExplanation = text(getString(R.string.water_plan_choice_explanation), 11, COLOR_MUTED);
+        choiceExplanation.setGravity(Gravity.CENTER);
+        choiceExplanation.setPadding(dp(2), dp(4), dp(2), 0);
+        planCard.addView(choiceExplanation, matchParams());
         content.addView(planCard, cardParams());
 
         LinearLayout targetCard = card();
@@ -3063,15 +3088,22 @@ public class MainActivity extends Activity {
 
         LinearLayout fixedCard = card();
         NumberPicker amountPicker = steppedNumberPicker(50, 1000, 50, settings.waterAmountMl());
-        fixedCard.addView(pickerColumn(getString(R.string.water_amount_each), amountPicker));
+        fixedCard.addView(pickerColumn(getString(R.string.water_glass_size), amountPicker));
         content.addView(fixedCard, cardParams());
 
         LinearLayout scheduleCard = card();
         TextView scheduleTitle = text(getString(R.string.water_schedule_title), 15, COLOR_TEXT);
         AppFont.bold(scheduleTitle);
         scheduleCard.addView(scheduleTitle);
-        NumberPicker intervalPicker = steppedNumberPicker(30, 240, 15, settings.waterIntervalMinutes());
-        scheduleCard.addView(pickerColumn(getString(R.string.water_interval), intervalPicker));
+        NumberPicker intervalPicker = steppedNumberPicker(15, 240, 15, settings.waterIntervalMinutes());
+        LinearLayout intervalChoice = new LinearLayout(this);
+        intervalChoice.setOrientation(LinearLayout.VERTICAL);
+        intervalChoice.addView(pickerColumn(getString(R.string.water_interval), intervalPicker));
+        scheduleCard.addView(intervalChoice, matchParams());
+        TextView automaticInterval = text("", 12, COLOR_ACCENT);
+        automaticInterval.setGravity(Gravity.CENTER);
+        automaticInterval.setPadding(dp(2), dp(4), dp(2), dp(2));
+        scheduleCard.addView(automaticInterval, matchParams());
 
         NumberPicker startHour = numberPicker(0, 23, settings.waterStartHour());
         NumberPicker startMinute = steppedNumberPicker(0, 55, 5, settings.waterStartMinute());
@@ -3095,23 +3127,30 @@ public class MainActivity extends Activity {
 
         Runnable updatePlan = () -> {
             boolean targetMode = mode.getSelectedItemPosition() == 0;
-            targetCard.setVisibility(targetMode ? View.VISIBLE : View.GONE);
+            targetCard.setVisibility(View.VISIBLE);
             fixedCard.setVisibility(targetMode ? View.GONE : View.VISIBLE);
             int start = startHour.getValue() * 60 + steppedPickerValue(startMinute, 0, 5);
             int end = endHour.getValue() * 60 + steppedPickerValue(endMinute, 0, 5);
-            int interval = steppedPickerValue(intervalPicker, 30, 15);
-            int reminders = WaterReminderScheduler.remindersPerDay(start, end, interval);
-            if (reminders <= 0) {
+            int target = steppedPickerValue(targetPicker, 500, 100);
+            if (end <= start) {
                 summary.setText(getString(R.string.water_invalid_window));
                 return;
             }
             if (targetMode) {
-                int target = steppedPickerValue(targetPicker, 500, 100);
-                int each = ((int) Math.ceil(target / (double) reminders) + 9) / 10 * 10;
+                intervalChoice.setVisibility(View.VISIBLE);
+                automaticInterval.setVisibility(View.GONE);
+                int interval = steppedPickerValue(intervalPicker, 15, 15);
+                int reminders = WaterReminderScheduler.remindersPerDay(start, end, interval);
+                int each = WaterReminderScheduler.dailyTargetPortionMl(target, reminders);
                 summary.setText(getString(R.string.water_plan_summary_target, reminders, each));
             } else {
-                int each = steppedPickerValue(amountPicker, 50, 50);
-                summary.setText(getString(R.string.water_plan_summary_fixed, reminders, each, reminders * each));
+                intervalChoice.setVisibility(View.GONE);
+                automaticInterval.setVisibility(View.VISIBLE);
+                int glassSize = steppedPickerValue(amountPicker, 50, 50);
+                int interval = WaterReminderScheduler.automaticIntervalMinutes(start, end, target, glassSize);
+                int reminders = WaterReminderScheduler.remindersPerDay(start, end, interval);
+                automaticInterval.setText(getString(R.string.water_auto_interval, interval));
+                summary.setText(getString(R.string.water_plan_summary_glass, reminders, glassSize));
             }
         };
         mode.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -3152,8 +3191,12 @@ public class MainActivity extends Activity {
             settings.setWaterRemindersEnabled(enabled.isChecked());
             settings.setWaterMode(selectedMode);
             settings.setWaterDailyTargetMl(selectedTarget);
-            settings.setWaterAmountMl(steppedPickerValue(amountPicker, 50, 50));
-            settings.setWaterIntervalMinutes(steppedPickerValue(intervalPicker, 30, 15));
+            int selectedAmount = steppedPickerValue(amountPicker, 50, 50);
+            int selectedInterval = ReminderSettings.WATER_MODE_DAILY_TARGET.equals(selectedMode)
+                    ? steppedPickerValue(intervalPicker, 15, 15)
+                    : WaterReminderScheduler.automaticIntervalMinutes(start, end, selectedTarget, selectedAmount);
+            settings.setWaterAmountMl(selectedAmount);
+            settings.setWaterIntervalMinutes(selectedInterval);
             settings.setWaterWindow(startHour.getValue(), steppedPickerValue(startMinute, 0, 5),
                     endHour.getValue(), steppedPickerValue(endMinute, 0, 5));
             WaterReminderReceiver.cancelNotification(this);
@@ -3179,14 +3222,7 @@ public class MainActivity extends Activity {
     }
 
     private int waterProgressTargetMl(ReminderSettings settings) {
-        if (ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())) {
-            return Math.max(1, settings.waterDailyTargetMl());
-        }
-        int reminders = WaterReminderScheduler.remindersPerDay(
-                settings.waterStartHour() * 60 + settings.waterStartMinute(),
-                settings.waterEndHour() * 60 + settings.waterEndMinute(),
-                settings.waterIntervalMinutes());
-        return Math.max(1, reminders * settings.waterAmountMl());
+        return Math.max(1, settings.waterDailyTargetMl());
     }
 
     private LinearLayout fastingActionRow() {

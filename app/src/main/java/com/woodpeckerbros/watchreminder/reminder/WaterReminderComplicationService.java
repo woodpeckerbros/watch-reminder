@@ -73,16 +73,10 @@ public final class WaterReminderComplicationService extends ComplicationDataSour
                     localized.getString(R.string.water_complication_disabled));
         }
         int consumed = preview ? 750 : new WaterReminderStore(localized).consumedTodayMl();
-        int planned;
-        if (preview || ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())) {
-            planned = preview ? 2000 : settings.waterDailyTargetMl();
-        } else {
-            planned = WaterReminderScheduler.remindersPerDay(settings) * settings.waterAmountMl();
-        }
+        int planned = preview ? 2000 : settings.waterDailyTargetMl();
         planned = Math.max(1, planned);
         String shortText = compactLiters(consumed) + "/" + compactLiters(planned) + "L";
-        boolean targetReached = ReminderSettings.WATER_MODE_DAILY_TARGET.equals(settings.waterMode())
-                && consumed >= settings.waterDailyTargetMl();
+        boolean targetReached = consumed >= settings.waterDailyTargetMl();
         String nextTime = NextReminderCalculator.formatTime(
                 WaterReminderScheduler.nextTriggerAt(settings, System.currentTimeMillis(), targetReached));
         String secondLine = localized.getString(R.string.water_complication_next_time_short, nextTime);
