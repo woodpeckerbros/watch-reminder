@@ -237,7 +237,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 + " fullScreen=" + AppLog.fullScreenIntentAllowed(context)
                 + " notifications=" + AppLog.notificationPermissionAllowed(context));
         String notificationText = alertCount > 1
-                ? reminderName + " (" + alertCount + " תאריכים שפוספסו)"
+                ? reminderName + " (פוספסו " + alertCount + " התראות כאלה)"
                 : reminderName;
         Intent alertIntent = new Intent(context, ReminderAlertActivity.class)
                 .putExtra(ReminderScheduler.EXTRA_OCCURRENCE_ID, occurrenceId)

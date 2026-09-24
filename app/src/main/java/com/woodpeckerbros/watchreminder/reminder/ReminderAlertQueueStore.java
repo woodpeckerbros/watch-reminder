@@ -10,6 +10,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class ReminderAlertQueueStore {
@@ -19,6 +21,8 @@ public class ReminderAlertQueueStore {
     private static final String KEY_ACTIVE_AT = "active_at";
     private static final String KEY_QUEUE = "queue";
     private static final long MIN_ACTIVE_TIMEOUT_MS = 2 * 60_000L;
+    /** One lock for every store instance: alarms, wear-state callbacks and UI actions may overlap. */
+    private static final Object QUEUE_LOCK = new Object();
 
     private final Context context;
     private final SharedPreferences prefs;
@@ -29,84 +33,100 @@ public class ReminderAlertQueueStore {
     }
 
     public boolean claimOrEnqueue(QueuedAlert alert) {
-        clearStaleActive();
-        String active = prefs.getString(KEY_ACTIVE, null);
-        if (active == null || active.equals(alert.occurrenceId)) {
-            prefs.edit()
-                    .putString(KEY_ACTIVE, alert.occurrenceId)
-                    .putString(KEY_ACTIVE_ALERT, alert.toJsonString())
-                    .putLong(KEY_ACTIVE_AT, System.currentTimeMillis())
-                    .apply();
-            return true;
-        }
-        QueuedAlert activeAlert = getActiveAlert();
-        if (activeAlert != null && activeAlert.canMerge(alert)) {
-            prefs.edit()
-                    .putString(KEY_ACTIVE_ALERT, activeAlert.merge(alert).toJsonString())
-                    .putLong(KEY_ACTIVE_AT, System.currentTimeMillis())
-                    .apply();
+        synchronized (QUEUE_LOCK) {
+            clearStaleActive();
+            String active = prefs.getString(KEY_ACTIVE, null);
+            if (active == null || active.equals(alert.occurrenceId)) {
+                prefs.edit()
+                        .putString(KEY_ACTIVE, alert.occurrenceId)
+                        .putString(KEY_ACTIVE_ALERT, alert.toJsonString())
+                        .putLong(KEY_ACTIVE_AT, System.currentTimeMillis())
+                        .commit();
+                return true;
+            }
+            QueuedAlert activeAlert = getActiveAlert();
+            if (activeAlert != null && activeAlert.canMerge(alert)) {
+                prefs.edit()
+                        .putString(KEY_ACTIVE_ALERT, activeAlert.merge(alert).toJsonString())
+                        .putLong(KEY_ACTIVE_AT, System.currentTimeMillis())
+                        .commit();
+                return false;
+            }
+            enqueue(alert);
             return false;
         }
-        enqueue(alert);
-        return false;
     }
 
     public void enqueueDeferred(QueuedAlert alert) {
-        clearStaleActive();
-        enqueue(alert);
+        synchronized (QUEUE_LOCK) {
+            clearStaleActive();
+            enqueue(alert);
+        }
     }
 
     public boolean moveActiveToDeferred(String occurrenceId) {
-        QueuedAlert activeAlert = getActiveAlert(occurrenceId);
-        if (activeAlert == null) {
-            return false;
+        synchronized (QUEUE_LOCK) {
+            QueuedAlert activeAlert = getActiveAlert(occurrenceId);
+            if (activeAlert == null) {
+                return false;
+            }
+            enqueue(activeAlert);
+            complete(occurrenceId);
+            return true;
         }
-        enqueue(activeAlert);
-        complete(occurrenceId);
-        return true;
     }
 
     public boolean hasDeferredAlerts() {
-        return !getQueue().isEmpty();
+        synchronized (QUEUE_LOCK) {
+            return !getQueue().isEmpty();
+        }
     }
 
     public boolean hasActiveAlert() {
-        clearStaleActive();
-        return prefs.getString(KEY_ACTIVE, null) != null;
+        synchronized (QUEUE_LOCK) {
+            clearStaleActive();
+            return prefs.getString(KEY_ACTIVE, null) != null;
+        }
     }
 
     public void complete(String occurrenceId) {
-        String active = prefs.getString(KEY_ACTIVE, null);
-        if (occurrenceId == null || occurrenceId.equals(active)) {
-            prefs.edit().remove(KEY_ACTIVE).remove(KEY_ACTIVE_ALERT).remove(KEY_ACTIVE_AT).apply();
+        synchronized (QUEUE_LOCK) {
+            String active = prefs.getString(KEY_ACTIVE, null);
+            if (occurrenceId == null || occurrenceId.equals(active)) {
+                prefs.edit().remove(KEY_ACTIVE).remove(KEY_ACTIVE_ALERT).remove(KEY_ACTIVE_AT).commit();
+            }
         }
     }
 
     public QueuedAlert getActiveAlert(String occurrenceId) {
-        QueuedAlert alert = getActiveAlert();
-        if (alert == null || occurrenceId == null || !occurrenceId.equals(alert.occurrenceId)) {
-            return null;
+        synchronized (QUEUE_LOCK) {
+            QueuedAlert alert = getActiveAlert();
+            if (alert == null || occurrenceId == null || !occurrenceId.equals(alert.occurrenceId)) {
+                return null;
+            }
+            return alert;
         }
-        return alert;
     }
 
     public QueuedAlert popNext() {
-        clearStaleActive();
-        if (prefs.getString(KEY_ACTIVE, null) != null) {
-            return null;
+        synchronized (QUEUE_LOCK) {
+            clearStaleActive();
+            if (prefs.getString(KEY_ACTIVE, null) != null) {
+                return null;
+            }
+            ArrayList<QueuedAlert> queue = new ArrayList<>(getQueue());
+            if (queue.isEmpty()) {
+                return null;
+            }
+            QueuedAlert next = queue.remove(0);
+            saveQueue(queue);
+            prefs.edit()
+                    .putString(KEY_ACTIVE, next.occurrenceId)
+                    .putString(KEY_ACTIVE_ALERT, next.toJsonString())
+                    .putLong(KEY_ACTIVE_AT, System.currentTimeMillis())
+                    .commit();
+            return next;
         }
-        ArrayList<QueuedAlert> queue = new ArrayList<>(getQueue());
-        if (queue.isEmpty()) {
-            return null;
-        }
-        QueuedAlert next = queue.remove(0);
-        saveQueue(queue);
-        prefs.edit()
-                .putString(KEY_ACTIVE, next.occurrenceId)
-                .putString(KEY_ACTIVE_ALERT, next.toJsonString())
-                .putLong(KEY_ACTIVE_AT, System.currentTimeMillis())
-                .apply();
-        return next;
     }
 
     private void enqueue(QueuedAlert alert) {
@@ -118,11 +138,13 @@ public class ReminderAlertQueueStore {
             }
             if (existing.canMerge(alert)) {
                 queue.set(i, existing.merge(alert));
+                sortChronologically(queue);
                 saveQueue(queue);
                 return;
             }
         }
         queue.add(alert);
+        sortChronologically(queue);
         saveQueue(queue);
     }
 
@@ -161,16 +183,22 @@ public class ReminderAlertQueueStore {
             for (QueuedAlert alert : queue) {
                 array.put(alert.toJson());
             }
-            prefs.edit().putString(KEY_QUEUE, array.toString()).apply();
+            // This queue is the recovery ledger. Persist it before returning from an alarm or
+            // wear-state callback, so a process restart cannot drop a missed reminder.
+            prefs.edit().putString(KEY_QUEUE, array.toString()).commit();
         } catch (JSONException ignored) {
         }
+    }
+
+    private static void sortChronologically(List<QueuedAlert> queue) {
+        Collections.sort(queue, Comparator.comparingLong(alert -> alert.scheduledAt));
     }
 
     private void clearStaleActive() {
         long activeAt = prefs.getLong(KEY_ACTIVE_AT, 0);
         long timeout = Math.max(MIN_ACTIVE_TIMEOUT_MS, new ReminderSettings(context).autoSnoozeDelayMs() + 60_000L);
         if (activeAt > 0 && System.currentTimeMillis() - activeAt > timeout) {
-            prefs.edit().remove(KEY_ACTIVE).remove(KEY_ACTIVE_ALERT).remove(KEY_ACTIVE_AT).apply();
+            prefs.edit().remove(KEY_ACTIVE).remove(KEY_ACTIVE_ALERT).remove(KEY_ACTIVE_AT).commit();
         }
     }
 
@@ -240,8 +268,7 @@ public class ReminderAlertQueueStore {
 
         boolean canMerge(QueuedAlert other) {
             return other != null
-                    && reminderId.equals(other.reminderId)
-                    && snooze == other.snooze;
+                    && reminderId.equals(other.reminderId);
         }
 
         QueuedAlert merge(QueuedAlert other) {

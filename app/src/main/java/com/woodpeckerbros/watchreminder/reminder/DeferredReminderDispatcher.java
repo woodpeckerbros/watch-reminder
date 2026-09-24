@@ -16,8 +16,10 @@ public class DeferredReminderDispatcher {
         }
         long now = System.currentTimeMillis();
         ReminderDueChecker.dispatchDue(context, now - ReminderDueChecker.CATCH_UP_LOOKBACK_MS, now);
-        new ReminderStore(context).rescheduleAll();
+        // Claim and present the first recovered alert before maintenance work.  Rebuilding every
+        // reminder schedule can be comparatively slow on a watch and must not hold up the burst.
         ReminderReceiver.dispatchNextQueued(context);
+        new ReminderStore(context).rescheduleAll();
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.request(context);
     }

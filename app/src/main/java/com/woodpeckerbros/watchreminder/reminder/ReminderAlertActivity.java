@@ -427,18 +427,23 @@ public class ReminderAlertActivity extends Activity {
         }
         actionClosed = true;
         handler.removeCallbacksAndMessages(null);
+        // Stop only the old alert before opening the next queue item.  In particular,
+        // stopVibration() cancels notification sounds globally on some Wear builds, so it must
+        // not run later from the background worker after the next alert has been posted.
+        stopVibration();
+        cancelNotification(activeOccurrenceId);
         finishAndRemoveTask();
+        // The next recovered alert must not wait for event-history writes, snooze cancellation or
+        // a possible one-time-reminder deletion.  The queue state is already durable and the old
+        // occurrence IDs are captured above, so it is safe to hand off immediately.
+        new ReminderAlertQueueStore(this).complete(activeOccurrenceId);
+        ReminderReceiver.dispatchNextQueued(this);
         ALERT_ACTION_EXECUTOR.execute(() -> {
             try {
-                stopVibration();
-                cancelNotification(activeOccurrenceId);
                 action.run();
-                new ReminderAlertQueueStore(this).complete(activeOccurrenceId);
                 ComplicationRefresh.request(this);
             } catch (Exception exception) {
                 AppLog.e(this, "alert action persistence failed", exception);
-            } finally {
-                ReminderReceiver.dispatchNextQueued(this);
             }
         });
     }
