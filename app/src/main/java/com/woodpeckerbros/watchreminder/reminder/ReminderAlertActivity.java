@@ -482,7 +482,7 @@ public class ReminderAlertActivity extends Activity {
 
     private void startVibration(ReminderSettings settings) {
         stopVibration();
-        alertFeedback = AlertFeedback.start(this, settings);
+        alertFeedback = AlertFeedback.start(this, settings, "REMINDER_ALERT", activeOccurrenceId);
     }
 
     private void stopVibration() {

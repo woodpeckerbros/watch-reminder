@@ -517,7 +517,10 @@ public class UiText {
         }
         Integer resId = RES.get(value);
         if (resId != null) {
-            return context.getString(resId);
+            // Broadcast receivers are created with the device configuration, which can differ
+            // from the application's saved language. Resolve every mapped UI string through the
+            // app-language context so a Hebrew alert cannot inherit an English receiver locale.
+            return AppLanguage.wrap(context).getString(resId);
         }
         return value;
     }

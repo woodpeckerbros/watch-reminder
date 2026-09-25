@@ -49,6 +49,9 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private static final int NOTIFICATION_ID = 0x534d5705;
     private static final String ACTION_STOP = "smartwake.STOP";
     private static final String ACTION_ACTIVITY = "smartwake.ACTIVITY";
+    private static final String EXTRA_ACTIVITY_STATE = "user_activity";
+    private static final String EXTRA_ACTIVITY_STATE_CHANGE_AT = "user_activity_state_change_at";
+    private static final String EXTRA_ACTIVITY_CALLBACK_RECEIVED_AT = "user_activity_callback_received_at";
     private static final String ACTION_WINDOW_START = "smartwake.WINDOW_START";
     private static final String ACTION_HARD_STOP = "smartwake.HARD_STOP";
     static final String EXTRA_DIRECT_BOOT_RECOVERY = "smartwake.direct_boot_recovery";
@@ -79,9 +82,11 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             List<SampleDataPoint<Double>> points = data.getData(DataType.HEART_RATE_BPM);
             long now = System.currentTimeMillis();
             for (SampleDataPoint<Double> point : points) {
-                long sampleAt = epochMillisFromBootDuration(point.getTimeDurationFromBoot().toMillis(), now);
+                long sampleElapsedAt = point.getTimeDurationFromBoot().toMillis();
+                long sampleAt = epochMillisFromBootDuration(sampleElapsedAt, now);
+                SelfStimulusContamination.Taint taint = SelfStimulusTracker.taintAt(sampleElapsedAt);
                 for (MonitorSession session : sessions.values()) {
-                    session.detector.addHeartRate(point.getValue(), sampleAt);
+                    session.detector.addHeartRate(point.getValue(), sampleAt, taint.cardio);
                 }
             }
             if (!points.isEmpty() && !hasDirectBootSession()) {
@@ -167,10 +172,13 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 .putExtra(EXTRA_DIRECT_BOOT_RECOVERY, true);
         ContextCompat.startForegroundService(context, intent);
     }
-    public static void updateActivity(Context context, SmartWakeDetector.UserActivity activity) {
+    public static void updateActivity(Context context, SmartWakeDetector.UserActivity activity,
+                                      long stateChangeAt, long callbackReceivedAt) {
         if (!active) return;
         context.startService(new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_ACTIVITY)
-                .putExtra("user_activity", activity.name()));
+                .putExtra(EXTRA_ACTIVITY_STATE, activity.name())
+                .putExtra(EXTRA_ACTIVITY_STATE_CHANGE_AT, stateChangeAt)
+                .putExtra(EXTRA_ACTIVITY_CALLBACK_RECEIVED_AT, callbackReceivedAt));
     }
 
     @Override public void onCreate() {
@@ -213,9 +221,12 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             return START_NOT_STICKY;
         }
         if (intent != null && ACTION_ACTIVITY.equals(intent.getAction())) {
-            SmartWakeDetector.UserActivity activity = userActivity(intent.getStringExtra("user_activity"));
-            long now = System.currentTimeMillis();
-            for (MonitorSession session : sessions.values()) session.detector.setUserActivity(activity, now);
+            SmartWakeDetector.UserActivity activity = userActivity(intent.getStringExtra(EXTRA_ACTIVITY_STATE));
+            long stateChangeAt = intent.getLongExtra(EXTRA_ACTIVITY_STATE_CHANGE_AT, 0L);
+            long callbackReceivedAt = intent.getLongExtra(EXTRA_ACTIVITY_CALLBACK_RECEIVED_AT, 0L);
+            for (MonitorSession session : sessions.values()) {
+                session.detector.setUserActivity(activity, stateChangeAt, callbackReceivedAt);
+            }
             return START_NOT_STICKY;
         }
         boolean windowStartCheckpoint = intent != null && ACTION_WINDOW_START.equals(intent.getAction());
@@ -269,8 +280,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             if (!directBootEligible) {
                 WearStateStore wearState = new WearStateStore(this);
                 SmartWakeDetector.UserActivity storedActivity = userActivity(wearState.userActivityState());
-                detector.seedValidatedUserActivity(storedActivity,
-                        wearState.previousNonAsleepObservedAt(), wearState.userActivityObservedAt());
+                detector.seedUserActivity(storedActivity, wearState.userActivityStateChangeAt(),
+                        wearState.userActivityCallbackReceivedAt());
             } else {
                 AppLog.d(this, "SMART_WAKE_DIRECT_BOOT_SESSION id=" + alarmId
                         + " occurrence_id=" + sessionId(alarmId, targetAt)
@@ -482,6 +493,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 continue;
             }
             session.evaluationCount++;
+            session.detector.setSelfStimulus(SelfStimulusTracker.snapshot());
             SmartWakeDetector.Decision decision = session.detector.evaluate(now);
             AppLog.d(this, "SmartWake summary id=" + session.alarmId + " " + decision.summary(now));
             AppLog.d(this, "SmartWake score id=" + session.alarmId + "\n" + decision.telemetry());
@@ -514,22 +526,24 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         if (sessions.isEmpty() || event.values.length == 0) return;
         long now = System.currentTimeMillis();
         long sampleAt = epochMillisForSensorEvent(event.timestamp, now);
+        long sampleElapsedAt = event.timestamp / 1_000_000L;
+        SelfStimulusContamination.Taint taint = SelfStimulusTracker.taintAt(sampleElapsedAt);
         if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
-            for (MonitorSession session : sessions.values()) session.detector.addHeartRate(event.values[0], sampleAt);
+            for (MonitorSession session : sessions.values()) session.detector.addHeartRate(event.values[0], sampleAt, taint.cardio);
             if (!hasDirectBootSession()) SmartWakeSamplingProfile.recordHeartRateDelivery(this, now);
         }
         else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER && event.values.length >= 3) {
             accelerometerSampleCount++;
             gravityX = .8f * gravityX + .2f * event.values[0]; gravityY = .8f * gravityY + .2f * event.values[1]; gravityZ = .8f * gravityZ + .2f * event.values[2];
             double linear = Math.sqrt(Math.pow(event.values[0]-gravityX,2)+Math.pow(event.values[1]-gravityY,2)+Math.pow(event.values[2]-gravityZ,2));
-            for (MonitorSession session : sessions.values()) session.detector.addAccelerometerMotion(linear, sampleAt);
+            for (MonitorSession session : sessions.values()) session.detector.addAccelerometerMotion(linear, sampleAt, taint.movement);
         } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE && event.values.length >= 3) {
             gyroscopeSampleCount++;
             double rotation = Math.sqrt(event.values[0]*event.values[0]+event.values[1]*event.values[1]+event.values[2]*event.values[2]);
-            for (MonitorSession session : sessions.values()) session.detector.addGyroscopeMotion(rotation, sampleAt);
+            for (MonitorSession session : sessions.values()) session.detector.addGyroscopeMotion(rotation, sampleAt, taint.movement);
         } else if (event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
             stepSampleCount++;
-            for (MonitorSession session : sessions.values()) session.detector.addStep(sampleAt);
+            for (MonitorSession session : sessions.values()) session.detector.addStep(sampleAt, taint.step);
         }
     }
 
@@ -667,7 +681,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     private void seedUnlockedWearState(SmartWakeDetector detector) {
         WearStateStore wearState = new WearStateStore(this);
-        detector.seedValidatedUserActivity(userActivity(wearState.userActivityState()),
-                wearState.previousNonAsleepObservedAt(), wearState.userActivityObservedAt());
+        detector.seedUserActivity(userActivity(wearState.userActivityState()),
+                wearState.userActivityStateChangeAt(), wearState.userActivityCallbackReceivedAt());
     }
 }

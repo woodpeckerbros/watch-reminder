@@ -14,16 +14,24 @@ public class ReminderHealthPassiveService extends PassiveListenerService {
     public void onUserActivityInfoReceived(UserActivityInfo info) {
         boolean asleep = UserActivityState.USER_ACTIVITY_ASLEEP.equals(info.getUserActivityState());
         SmartWakeDetector.UserActivity activity = userActivity(info.getUserActivityState());
+        long stateChangeAt = info.getStateChangeTime().toEpochMilli();
+        long callbackReceivedAt = System.currentTimeMillis();
         AppLog.d(this, "HealthPassive userActivity asleep=" + asleep + " state=" + info.getUserActivityState()
-                + " smartWakeState=" + activity);
+                + " smartWakeState=" + activity + " stateChangeTime=" + stateChangeAt
+                + " callbackReceivedAt=" + callbackReceivedAt);
         WearStateStore stateStore = new WearStateStore(this);
-        stateStore.setUserActivityState(activity.name());
+        boolean acceptedEpisode = stateStore.setUserActivityState(activity.name(), stateChangeAt, callbackReceivedAt);
+        if (!acceptedEpisode) {
+            AppLog.w(this, "HealthPassive ignored stale or ambiguous episode state=" + activity
+                    + " stateChangeTime=" + stateChangeAt + " callbackReceivedAt=" + callbackReceivedAt);
+            return;
+        }
         if (asleep) {
             stateStore.setAsleep(true);
         } else {
             stateStore.markAvailable();
         }
-        SmartWakeMonitoringService.updateActivity(this, activity);
+        SmartWakeMonitoringService.updateActivity(this, activity, stateChangeAt, callbackReceivedAt);
         ReminderAlertQueueStore queueStore = new ReminderAlertQueueStore(this);
         if (shouldDispatchAfterUserActivity(asleep, queueStore.hasDeferredAlerts())) {
             AppLog.d(this, "HealthPassive awake with deferred alerts, dispatching");

@@ -14,6 +14,7 @@ import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.media.RingtoneManager;
 import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmStore;
+import com.woodpeckerbros.watchreminder.smartalarm.SelfStimulusTracker;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,14 +37,21 @@ public class AlertFeedback {
     private long vibrationDeadlineAt;
     private String vibrationStyle;
     private int vibrationStrength;
+    private long selfStimulusId;
 
     private AlertFeedback(Context context) {
         this.context = context.getApplicationContext();
     }
 
     public static AlertFeedback start(Context context, ReminderSettings settings) {
+        return start(context, settings, "REMINDER_ALERT", "");
+    }
+
+    /** Associates a normal full-screen reminder with its queued occurrence for Smart Wake diagnostics. */
+    public static AlertFeedback start(Context context, ReminderSettings settings, String stimulusType,
+                                      String sourceOccurrenceId) {
         AlertFeedback feedback = new AlertFeedback(context);
-        feedback.startInternal(settings);
+        feedback.startInternal(settings, stimulusType, sourceOccurrenceId);
         return feedback;
     }
 
@@ -56,7 +64,7 @@ public class AlertFeedback {
                 settings.vibrationStrength(),
                 settings.soundEnabled(),
                 settings.soundVolumePercent(),
-                settings.soundUri());
+                settings.soundUri(), "SMART_ALARM", "", true);
         return feedback;
     }
 
@@ -64,7 +72,7 @@ public class AlertFeedback {
     public static AlertFeedback startEmergencyAlarm(Context context, int durationMs) {
         AlertFeedback feedback = new AlertFeedback(context);
         feedback.startConfigured(durationMs, true, ReminderSettings.VIBRATION_NORMAL, 10,
-                true, 100, "");
+                true, 100, "", "EMERGENCY_SMART_ALARM", "", true);
         return feedback;
     }
 
@@ -73,7 +81,7 @@ public class AlertFeedback {
                                         String soundUri) {
         AlertFeedback feedback = new AlertFeedback(context);
         feedback.startConfigured(4_000, vibrationEnabled, vibrationStyle, vibrationStrength,
-                soundEnabled, volumePercent, soundUri);
+                soundEnabled, volumePercent, soundUri, "ALERT_PREVIEW", "", false);
         return feedback;
     }
 
@@ -81,16 +89,29 @@ public class AlertFeedback {
         handler.removeCallbacksAndMessages(null);
         stopSound();
         stopOwnedVibration();
+        SelfStimulusTracker.end(selfStimulusId);
+        selfStimulusId = 0L;
     }
 
-    private void startInternal(ReminderSettings settings) {
+    private void startInternal(ReminderSettings settings, String stimulusType, String sourceOccurrenceId) {
         startConfigured(settings.alertDurationMs(), settings.vibrationEnabled(), settings.vibrationStyle(),
                 settings.vibrationStrength(),
-                settings.alertSoundEnabled(), settings.alertVolumePercent(), settings.alertSoundUri());
+                settings.alertSoundEnabled(), settings.alertVolumePercent(), settings.alertSoundUri(),
+                stimulusType, sourceOccurrenceId, true);
     }
 
     private void startConfigured(int durationMs, boolean vibrationEnabled, String vibrationStyle, int vibrationStrength,
-                                 boolean soundEnabled, int volumePercent, String soundUri) {
+                                 boolean soundEnabled, int volumePercent, String soundUri,
+                                 String stimulusType, String sourceOccurrenceId, boolean fullScreenAlert) {
+        boolean physicalOutput = (vibrationEnabled && !ReminderSettings.VIBRATION_OFF.equals(vibrationStyle))
+                || (soundEnabled && volumePercent > 0);
+        // A full-screen alert can turn on the display and cause a reflexive interaction even if
+        // its configured sound is silent. Background-only notifications do not use this path.
+        if (fullScreenAlert || physicalOutput) {
+            selfStimulusId = SelfStimulusTracker.begin(stimulusType, sourceOccurrenceId);
+            AppLog.d(context, "SELF_STIMULUS_STARTED type=" + stimulusType
+                    + " occurrence=" + (sourceOccurrenceId == null ? "" : sourceOccurrenceId));
+        }
         if (vibrationEnabled) startVibration(vibrationStyle, vibrationStrength, durationMs);
         if (soundEnabled && volumePercent > 0) startSound(soundUri, volumePercent, durationMs);
         handler.postDelayed(this::stop, durationMs);

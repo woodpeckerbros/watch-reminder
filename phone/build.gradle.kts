@@ -10,8 +10,8 @@ android {
         applicationId = "com.woodpeckerbros.watchreminder"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1018
-        versionName = "1.18"
+        versionCode = 1019
+        versionName = "1.19"
     }
 
     compileOptions {

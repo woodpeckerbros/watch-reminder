@@ -11,9 +11,8 @@ public class WearStateStore {
     private static final String KEY_OFF_BODY = "off_body";
     private static final String KEY_UPDATED_AT = "updated_at";
     private static final String KEY_USER_ACTIVITY_STATE = "user_activity_state";
-    private static final String KEY_USER_ACTIVITY_OBSERVED_AT = "user_activity_observed_at";
-    private static final String KEY_PREVIOUS_NON_ASLEEP_OBSERVED_AT = "previous_non_asleep_observed_at";
-    private static final long NON_ASLEEP_HISTORY_GAP_MS = 30 * 60_000L;
+    private static final String KEY_USER_ACTIVITY_STATE_CHANGE_AT = "user_activity_state_change_at";
+    private static final String KEY_USER_ACTIVITY_CALLBACK_RECEIVED_AT = "user_activity_callback_received_at";
     private static final long STATE_TTL_MS = 6 * 60 * 60_000L;
 
     private final SharedPreferences prefs;
@@ -38,32 +37,35 @@ public class WearStateStore {
         return fresh() ? prefs.getString(KEY_USER_ACTIVITY_STATE, "UNKNOWN") : "UNKNOWN";
     }
 
-    /** Stores the public Health Services activity state for Smart Wake scoring. */
-    public void setUserActivityState(String state) {
+    /**
+     * Stores the latest Health Services episode identity, not a synthesized callback count.
+     * Older or time-ambiguous deliveries are logged by the caller but must not roll persistent
+     * state back before a future Smart Wake service restart.
+     */
+    public boolean setUserActivityState(String state, long stateChangeAt, long callbackReceivedAt) {
         long now = System.currentTimeMillis();
         String normalized = state == null ? "UNKNOWN" : state;
         String previousState = prefs.getString(KEY_USER_ACTIVITY_STATE, "UNKNOWN");
-        long previousObservedAt = prefs.getLong(KEY_USER_ACTIVITY_OBSERVED_AT, 0L);
-        long priorNonAsleepObservedAt = 0L;
-        if (isNonAsleep(normalized) && isNonAsleep(previousState)
-                && previousObservedAt > 0L && now >= previousObservedAt
-                && now - previousObservedAt <= NON_ASLEEP_HISTORY_GAP_MS) {
-            priorNonAsleepObservedAt = previousObservedAt;
+        long previousStateChangeAt = prefs.getLong(KEY_USER_ACTIVITY_STATE_CHANGE_AT, 0L);
+        if (previousStateChangeAt > 0L && (stateChangeAt < previousStateChangeAt
+                || (stateChangeAt == previousStateChangeAt && !normalized.equals(previousState)))) {
+            return false;
         }
         prefs.edit()
                 .putString(KEY_USER_ACTIVITY_STATE, normalized)
-                .putLong(KEY_USER_ACTIVITY_OBSERVED_AT, now)
-                .putLong(KEY_PREVIOUS_NON_ASLEEP_OBSERVED_AT, priorNonAsleepObservedAt)
+                .putLong(KEY_USER_ACTIVITY_STATE_CHANGE_AT, stateChangeAt)
+                .putLong(KEY_USER_ACTIVITY_CALLBACK_RECEIVED_AT, callbackReceivedAt)
                 .putLong(KEY_UPDATED_AT, now)
                 .apply();
+        return true;
     }
 
-    public long userActivityObservedAt() {
-        return prefs.getLong(KEY_USER_ACTIVITY_OBSERVED_AT, 0L);
+    public long userActivityStateChangeAt() {
+        return prefs.getLong(KEY_USER_ACTIVITY_STATE_CHANGE_AT, 0L);
     }
 
-    public long previousNonAsleepObservedAt() {
-        return prefs.getLong(KEY_PREVIOUS_NON_ASLEEP_OBSERVED_AT, 0L);
+    public long userActivityCallbackReceivedAt() {
+        return prefs.getLong(KEY_USER_ACTIVITY_CALLBACK_RECEIVED_AT, 0L);
     }
 
     public void setAsleep(boolean asleep) {
@@ -96,9 +98,5 @@ public class WearStateStore {
     private boolean fresh() {
         long updatedAt = prefs.getLong(KEY_UPDATED_AT, 0);
         return updatedAt > 0 && System.currentTimeMillis() - updatedAt < STATE_TTL_MS;
-    }
-
-    private static boolean isNonAsleep(String state) {
-        return "PASSIVE".equals(state) || "EXERCISE".equals(state);
     }
 }
