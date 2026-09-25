@@ -254,6 +254,14 @@ public class ReminderReceiver extends BroadcastReceiver {
                 alertIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+        Intent dismissedIntent = new Intent(context, ReminderAlertDismissedReceiver.class)
+                .putExtra(ReminderScheduler.EXTRA_OCCURRENCE_ID, occurrenceId);
+        PendingIntent dismissedPendingIntent = PendingIntent.getBroadcast(
+                context,
+                occurrenceId.hashCode(),
+                dismissedIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         Notification.Builder builder = new Notification.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
@@ -265,6 +273,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setPriority(Notification.PRIORITY_MAX)
                 .setContentIntent(pendingIntent)
                 .setFullScreenIntent(pendingIntent, true)
+                .setDeleteIntent(dismissedPendingIntent)
                 .setVibrate(new long[]{0})
                 .setSound(null)
                 .setDefaults(0)

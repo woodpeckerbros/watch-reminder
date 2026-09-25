@@ -277,6 +277,22 @@ public class ReminderAlertActivity extends Activity {
         return true;
     }
 
+    public static boolean closeExternallyDismissed(String occurrenceId) {
+        ReminderAlertActivity activity = activeActivity == null ? null : activeActivity.get();
+        if (activity == null || activity.actionClosed || occurrenceId == null
+                || !occurrenceId.equals(activity.activeOccurrenceId)) {
+            return false;
+        }
+        activity.handler.post(() -> {
+            if (!activity.actionClosed && occurrenceId.equals(activity.activeOccurrenceId)) {
+                AppLog.d(activity, "alert close after notification dismissal occurrence=" + occurrenceId);
+                activity.handler.removeCallbacksAndMessages(null);
+                activity.closeAfterAction();
+            }
+        });
+        return true;
+    }
+
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent event) {
         if (activeScrollView != null

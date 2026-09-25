@@ -142,6 +142,40 @@ class BackupStorage {
         }
     }
 
+    static boolean delete(Context context, BackupEntry entry) {
+        if (entry == null || entry.uri == null) return false;
+        boolean deleted = false;
+        try {
+            if ("file".equals(entry.uri.getScheme())) {
+                String path = entry.uri.getPath();
+                deleted = path != null && new File(path).delete();
+            } else {
+                deleted = context.getContentResolver().delete(entry.uri, null, null) > 0;
+            }
+        } catch (Exception exception) {
+            android.util.Log.e("WatchReminderPhone", "Could not delete backup", exception);
+        }
+        if (deleted) clearLastBackupIfMatching(context, entry);
+        return deleted;
+    }
+
+    static int deleteAll(Context context) {
+        int deleted = 0;
+        for (BackupEntry entry : new ArrayList<>(listBackups(context))) {
+            if (delete(context, entry)) deleted++;
+        }
+        return deleted;
+    }
+
+    private static void clearLastBackupIfMatching(Context context, BackupEntry entry) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String savedUri = prefs.getString(KEY_LAST_URI, "");
+        String savedFile = prefs.getString(KEY_LAST_FILE, "");
+        if (entry.uri.toString().equals(savedUri) || entry.name.equals(savedFile)) {
+            prefs.edit().remove(KEY_LAST_FILE).remove(KEY_LAST_URI).remove(KEY_LAST_TIME).apply();
+        }
+    }
+
     static boolean hasLastBackup(Context context) {
         if (!context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_LAST_URI, "")

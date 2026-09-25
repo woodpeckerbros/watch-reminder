@@ -14,6 +14,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
@@ -108,6 +109,28 @@ class LogStorage {
             }
             return output.toString("UTF-8");
         }
+    }
+
+    static boolean delete(Context context, LogEntry entry) {
+        if (entry == null || entry.uri == null) return false;
+        try {
+            if ("file".equals(entry.uri.getScheme())) {
+                String path = entry.uri.getPath();
+                return path != null && new File(path).delete();
+            }
+            return context.getContentResolver().delete(entry.uri, null, null) > 0;
+        } catch (Exception exception) {
+            android.util.Log.e("WatchReminderPhone", "Could not delete log", exception);
+            return false;
+        }
+    }
+
+    static int deleteAll(Context context) {
+        int deleted = 0;
+        for (LogEntry entry : new ArrayList<>(listLogs(context))) {
+            if (delete(context, entry)) deleted++;
+        }
+        return deleted;
     }
 
     private static void notifySaved(Context context, String fileName) {

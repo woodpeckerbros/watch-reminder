@@ -954,18 +954,26 @@ public class PhoneMainActivity extends Activity {
             for (BackupStorage.BackupEntry backup : backups) {
                 TextView info = text(backupInfoText(backup), 14, MUTED);
                 section.addView(info);
-                LinearLayout buttons = row();
+                LinearLayout primaryButtons = row();
                 Button load = button("טעינה לעריכה", SOFT, TEXT);
                 load.setOnClickListener(v -> loadBackup(backup));
                 Button send = button("שלח לשעון", ACCENT);
                 send.setOnClickListener(v -> sendRestore(backup));
+                primaryButtons.addView(load);
+                primaryButtons.addView(send);
+                section.addView(primaryButtons);
+                LinearLayout fileButtons = row();
                 Button share = button("שיתוף", SOFT, TEXT);
                 share.setOnClickListener(v -> shareBackup(backup));
-                buttons.addView(load);
-                buttons.addView(send);
-                buttons.addView(share);
-                section.addView(buttons);
+                Button delete = button("מחיקה", SOFT, TEXT);
+                delete.setOnClickListener(v -> confirmDeleteBackup(backup));
+                fileButtons.addView(share);
+                fileButtons.addView(delete);
+                section.addView(fileButtons);
             }
+            Button deleteAll = button("מחיקת כל הגיבויים", SOFT, TEXT);
+            deleteAll.setOnClickListener(v -> confirmDeleteAllBackups());
+            section.addView(deleteAll, wideParams());
         }
         Button pick = button("בחר קובץ גיבוי", SOFT, TEXT);
         pick.setOnClickListener(v -> pickBackupFile());
@@ -987,10 +995,16 @@ public class PhoneMainActivity extends Activity {
                 share.setOnClickListener(v -> shareLog(log));
                 Button copy = button("העתקה", SOFT, TEXT);
                 copy.setOnClickListener(v -> copyLog(log));
+                Button delete = button("מחיקה", SOFT, TEXT);
+                delete.setOnClickListener(v -> confirmDeleteLog(log));
                 buttons.addView(share);
                 buttons.addView(copy);
+                buttons.addView(delete);
                 section.addView(buttons);
             }
+            Button deleteAll = button("מחיקת כל הלוגים", SOFT, TEXT);
+            deleteAll.setOnClickListener(v -> confirmDeleteAllLogs());
+            section.addView(deleteAll, wideParams());
         }
         Button pick = button("בחר קובץ לוג", SOFT, TEXT);
         pick.setOnClickListener(v -> pickLogFile());
@@ -1749,6 +1763,34 @@ public class PhoneMainActivity extends Activity {
         }
     }
 
+    private void confirmDeleteBackup(BackupStorage.BackupEntry backup) {
+        new AlertDialog.Builder(this)
+                .setTitle(t("מחיקת גיבוי"))
+                .setMessage(backup.name + "\n\n" + t("אי אפשר לבטל את המחיקה."))
+                .setPositiveButton(t("מחיקה"), (dialog, which) -> {
+                    boolean deleted = BackupStorage.delete(this, backup);
+                    Toast.makeText(this, t(deleted ? "הגיבוי נמחק" : "לא הצלחתי למחוק את הגיבוי"), Toast.LENGTH_LONG).show();
+                    showSettings();
+                })
+                .setNegativeButton(t("ביטול"), null)
+                .show();
+    }
+
+    private void confirmDeleteAllBackups() {
+        new AlertDialog.Builder(this)
+                .setTitle(t("מחיקת כל הגיבויים"))
+                .setMessage(t("למחוק את כל הגיבויים?") + "\n\n" + t("אי אפשר לבטל את המחיקה."))
+                .setPositiveButton(t("מחיקה"), (dialog, which) -> {
+                    int before = BackupStorage.listBackups(this).size();
+                    int deleted = BackupStorage.deleteAll(this);
+                    boolean complete = deleted == before && BackupStorage.listBackups(this).isEmpty();
+                    Toast.makeText(this, t(complete ? "כל הגיבויים נמחקו" : "לא הצלחתי למחוק את כל הגיבויים"), Toast.LENGTH_LONG).show();
+                    showSettings();
+                })
+                .setNegativeButton(t("ביטול"), null)
+                .show();
+    }
+
     private void shareLog(LogStorage.LogEntry log) {
         Intent intent = new Intent(Intent.ACTION_SEND)
                 .setType(LogStorage.MIME_TYPE)
@@ -1760,6 +1802,34 @@ public class PhoneMainActivity extends Activity {
         } catch (Exception exception) {
             Toast.makeText(this, t("אין אפליקציה זמינה לשיתוף"), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void confirmDeleteLog(LogStorage.LogEntry log) {
+        new AlertDialog.Builder(this)
+                .setTitle(t("מחיקת לוג"))
+                .setMessage(log.name + "\n\n" + t("אי אפשר לבטל את המחיקה."))
+                .setPositiveButton(t("מחיקה"), (dialog, which) -> {
+                    boolean deleted = LogStorage.delete(this, log);
+                    Toast.makeText(this, t(deleted ? "הלוג נמחק" : "לא הצלחתי למחוק את הלוג"), Toast.LENGTH_LONG).show();
+                    showSettings();
+                })
+                .setNegativeButton(t("ביטול"), null)
+                .show();
+    }
+
+    private void confirmDeleteAllLogs() {
+        new AlertDialog.Builder(this)
+                .setTitle(t("מחיקת כל הלוגים"))
+                .setMessage(t("למחוק את כל הלוגים?") + "\n\n" + t("אי אפשר לבטל את המחיקה."))
+                .setPositiveButton(t("מחיקה"), (dialog, which) -> {
+                    int before = LogStorage.listLogs(this).size();
+                    int deleted = LogStorage.deleteAll(this);
+                    boolean complete = deleted == before && LogStorage.listLogs(this).isEmpty();
+                    Toast.makeText(this, t(complete ? "כל הלוגים נמחקו" : "לא הצלחתי למחוק את כל הלוגים"), Toast.LENGTH_LONG).show();
+                    showSettings();
+                })
+                .setNegativeButton(t("ביטול"), null)
+                .show();
     }
 
     private void copyLog(LogStorage.LogEntry log) {

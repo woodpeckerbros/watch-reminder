@@ -115,6 +115,17 @@ final class PhoneUiText {
         put("בחר קובץ גיבוי", "Choose backup file");
         put("לוגים מהשעון", "Watch logs"); put("אין לוגים זמינים", "No logs available");
         put("העתקה", "Copy"); put("בחר קובץ לוג", "Choose log file");
+        put("מחיקת גיבוי", "Delete backup"); put("מחיקת לוג", "Delete log");
+        put("מחיקת כל הגיבויים", "Delete all backups"); put("מחיקת כל הלוגים", "Delete all logs");
+        put("למחוק את הגיבוי הזה?", "Delete this backup?"); put("למחוק את הלוג הזה?", "Delete this log?");
+        put("למחוק את כל הגיבויים?", "Delete all backups?"); put("למחוק את כל הלוגים?", "Delete all logs?");
+        put("אי אפשר לבטל את המחיקה.", "This cannot be undone.");
+        put("הגיבוי נמחק", "Backup deleted"); put("הלוג נמחק", "Log deleted");
+        put("כל הגיבויים נמחקו", "All backups deleted"); put("כל הלוגים נמחקו", "All logs deleted");
+        put("לא הצלחתי למחוק את הגיבוי", "Could not delete the backup");
+        put("לא הצלחתי למחוק את הלוג", "Could not delete the log");
+        put("לא הצלחתי למחוק את כל הגיבויים", "Could not delete all backups");
+        put("לא הצלחתי למחוק את כל הלוגים", "Could not delete all logs");
         put("לא הצלחתי לפתוח בוחר קבצים", "Could not open the file picker");
         put("מבקש סנכרון מהשעון...", "Requesting sync from watch…");
         put("נשלחה בקשה. הנתונים יופיעו כשהשעון ישלח.", "Request sent. Data will appear when the watch responds.");

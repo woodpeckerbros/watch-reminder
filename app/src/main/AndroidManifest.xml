@@ -345,6 +345,9 @@
         <receiver
             android:name=".reminder.AutoSnoozeReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".reminder.ReminderAlertDismissedReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".reminder.DeferredWearRetryReceiver"
