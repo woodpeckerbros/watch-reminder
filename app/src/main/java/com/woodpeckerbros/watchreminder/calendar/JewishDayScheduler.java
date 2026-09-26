@@ -32,8 +32,6 @@ public class JewishDayScheduler {
     private static final String DELIVERY_PREFS = "jewish_day_delivery";
     private static final String KEY_LAST_DELIVERED = "last_delivered";
     private static final long HOUR_MILLIS = 60 * 60_000L;
-    /** An ערב-חג notice is useful only around the start of the Hebrew day. */
-    private static final long EREV_DELIVERY_GRACE_MILLIS = HOUR_MILLIS;
 
     private JewishDayScheduler() {
     }
@@ -106,7 +104,7 @@ public class JewishDayScheduler {
             // The evening before is the start of the Hebrew day.  It is "tomorrow" in
             // civil-date language, even though its Jewish date is already ערב החג.
             return new Event(KIND_TOMORROW, info.label, triggerAt, targetDay.getTimeInMillis(),
-                    triggerAt + EREV_DELIVERY_GRACE_MILLIS);
+                    endOfDayExclusive(targetDay));
         }
         return new Event(KIND_TOMORROW, info.label,
                 ReminderScheduler.floorToMinute(dayBeforeReminderAt(tzeis)), targetDay.getTimeInMillis());
@@ -178,10 +176,17 @@ public class JewishDayScheduler {
         if (expiresAt > 0L) {
             return now > expiresAt;
         }
-        // `today_erev` was used by builds that scheduled the alert at 10:00 on the
-        // holiday eve. Do not let one of those stale PendingIntents alert late at night.
-        return KIND_TODAY_EREV.equals(kind) && triggerAt > 0L
-                && now > triggerAt + EREV_DELIVERY_GRACE_MILLIS;
+        return false;
+    }
+
+    private static long endOfDayExclusive(Calendar day) {
+        Calendar nextMidnight = (Calendar) day.clone();
+        nextMidnight.add(Calendar.DAY_OF_YEAR, 1);
+        nextMidnight.set(Calendar.HOUR_OF_DAY, 0);
+        nextMidnight.set(Calendar.MINUTE, 0);
+        nextMidnight.set(Calendar.SECOND, 0);
+        nextMidnight.set(Calendar.MILLISECOND, 0);
+        return nextMidnight.getTimeInMillis();
     }
 
     /** Rebuilds the event label using the language selected at delivery time. */

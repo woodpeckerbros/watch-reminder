@@ -97,10 +97,10 @@ public final class WaterReminderScheduler {
         if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
             return Math.min(remaining, settings.waterAmountMl());
         }
-        // A daily goal is a steady plan, not a catch-up mechanism. Recalculating based
-        // on the remaining time made a later reminder ask for more even after a user
-        // had followed the preceding suggestion.
-        return dailyTargetAmountForReminderMl(target, consumed, remindersPerDay(settings));
+        // Rebalance the remaining goal across the alerts that can still be delivered today.
+        // A missed glass therefore changes each later request gradually, instead of leaving
+        // an unrealistic amount for the final alert.
+        return amountForRemaining(remaining, remainingReminderSlots(settings, triggerAt));
     }
 
     public static int dailyTargetPortionMl(int targetMl, int remindersPerDay) {
@@ -136,7 +136,39 @@ public final class WaterReminderScheduler {
         if (remainingMl <= 0 || remainingSlots <= 0) {
             return 0;
         }
-        return roundUpToTen((int) Math.ceil(remainingMl / (double) remainingSlots));
+        // Keep the distribution even to the nearest millilitre. Re-evaluating after every
+        // drink keeps any unavoidable rounding difference to at most one millilitre.
+        return (int) Math.ceil(remainingMl / (double) remainingSlots);
+    }
+
+    static int remainingReminderSlots(ReminderSettings settings, long triggerAt) {
+        Calendar trigger = Calendar.getInstance();
+        trigger.setTimeInMillis(triggerAt);
+        int triggerMinute = trigger.get(Calendar.HOUR_OF_DAY) * 60 + trigger.get(Calendar.MINUTE);
+        return remainingReminderSlots(
+                settings.waterStartHour() * 60 + settings.waterStartMinute(),
+                settings.waterEndHour() * 60 + settings.waterEndMinute(),
+                settings.waterIntervalMinutes(),
+                triggerMinute);
+    }
+
+    /** Counts this alert plus the regular alert slots still available before the window ends. */
+    public static int remainingReminderSlots(int startMinute, int endMinute, int intervalMinutes,
+                                             int triggerMinute) {
+        if (endMinute <= startMinute || intervalMinutes <= 0) {
+            return 0;
+        }
+        if (triggerMinute < startMinute) {
+            return remindersPerDay(startMinute, endMinute, intervalMinutes);
+        }
+        if (triggerMinute > endMinute) {
+            return 1;
+        }
+        int nextRegularSlot = startMinute
+                + ((triggerMinute - startMinute) / intervalMinutes + 1) * intervalMinutes;
+        int laterSlots = nextRegularSlot > endMinute ? 0
+                : ((endMinute - nextRegularSlot) / intervalMinutes) + 1;
+        return 1 + laterSlots;
     }
 
     static long nextTriggerAt(ReminderSettings settings, long now, boolean tomorrowOnly) {
@@ -172,10 +204,6 @@ public final class WaterReminderScheduler {
         }
         start.add(Calendar.DAY_OF_YEAR, 1);
         return start.getTimeInMillis();
-    }
-
-    private static int roundUpToTen(int value) {
-        return Math.max(10, ((value + 9) / 10) * 10);
     }
 
     private static PendingIntent pendingIntent(Context context, long triggerAt) {

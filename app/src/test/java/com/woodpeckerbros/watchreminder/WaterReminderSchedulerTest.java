@@ -31,22 +31,26 @@ public class WaterReminderSchedulerTest {
     @Test
     public void dailyTargetSplitsEvenlyAndRoundsUpToTenMl() {
         assertEquals(250, WaterReminderScheduler.amountForRemaining(2000, 8));
-        assertEquals(270, WaterReminderScheduler.amountForRemaining(1850, 7));
+        assertEquals(265, WaterReminderScheduler.amountForRemaining(1850, 7));
     }
 
     @Test
-    public void dailyGoalUsesAStablePortionRatherThanCatchUpAmounts() {
-        int portion = WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 0, 8);
-        assertEquals(250, portion);
-        // After recording the requested 250 ml, the next request remains 250 ml,
-        // instead of being increased because an earlier time slot has passed.
-        assertEquals(portion, WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 250, 8));
+    public void remainingSlotsIncludeThisAlertAndOnlyFutureRegularAlerts() {
+        // 08:00–22:00 every two hours; at 10:00, 10/12/14/16/18/20/22 remain.
+        assertEquals(7, WaterReminderScheduler.remainingReminderSlots(
+                8 * 60, 22 * 60, 120, 10 * 60));
+        // A 10:15 snooze replaces the 10:00 slot; the next regular one is still 12:00.
+        assertEquals(7, WaterReminderScheduler.remainingReminderSlots(
+                8 * 60, 22 * 60, 120, 10 * 60 + 15));
     }
 
     @Test
-    public void lastDailyPortionCanOnlyShrinkToTheRemainingGoal() {
-        assertEquals(250, WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 1_750, 8));
-        assertEquals(120, WaterReminderScheduler.dailyTargetAmountForReminderMl(2000, 1_880, 8));
+    public void missedWaterIsRebalancedAcrossEveryRemainingAlert() {
+        // After three missed 200 ml opportunities, 2,000 ml is spread over the four
+        // remaining alerts, rather than leaving the whole gap to the final one.
+        assertEquals(500, WaterReminderScheduler.amountForRemaining(2000, 4));
+        // Recording water immediately lowers the next equal-share request.
+        assertEquals(200, WaterReminderScheduler.amountForRemaining(1400, 7));
     }
 
     @Test

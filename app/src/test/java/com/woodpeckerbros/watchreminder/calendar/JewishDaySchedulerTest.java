@@ -16,16 +16,16 @@ public class JewishDaySchedulerTest {
         assertEquals(1_000_020_000L, JewishDayScheduler.erevHolidayReminderAt(tzeis));
     }
 
-    @Test public void legacyMorningErevAlarmIsRejectedWhenDeliveredLate() {
+    @Test public void legacyMorningErevAlarmIsNotRejectedBeforeItsMidnightExpiryIsProvided() {
         long tenInTheMorning = 1_000_000_000L;
-        assertEquals(true, JewishDayScheduler.isExpiredDelivery(
+        assertEquals(false, JewishDayScheduler.isExpiredDelivery(
                 JewishDayScheduler.KIND_TODAY_EREV,
                 tenInTheMorning, 0L, tenInTheMorning + 61L * 60_000L));
     }
 
-    @Test public void erevHolidayAlarmHasOnlyItsConfiguredEveningGracePeriod() {
+    @Test public void erevHolidayAlarmIsRejectedOnlyAfterMidnightExpiry() {
         long tzeis = 1_000_000_000L;
-        long expiresAt = tzeis + 60L * 60_000L;
+        long expiresAt = tzeis + 5L * 60L * 60_000L;
         assertEquals(false, JewishDayScheduler.isExpiredDelivery(
                 JewishDayScheduler.KIND_TOMORROW, tzeis, expiresAt, expiresAt));
         assertEquals(true, JewishDayScheduler.isExpiredDelivery(

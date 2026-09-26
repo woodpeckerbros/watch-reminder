@@ -34,6 +34,19 @@ public class JewishDayReceiver extends BroadcastReceiver {
                 : intent.getLongExtra(JewishDayScheduler.EXTRA_EXPIRES_AT, 0L);
         long eventDay = intent == null ? 0L
                 : intent.getLongExtra(JewishDayScheduler.EXTRA_EVENT_DAY, 0L);
+        // Builds before the midnight expiry extra used `today_erev`. Keep those pending
+        // alarms useful through their civil day, but never let one cross into the next day.
+        if (expiresAt <= 0L && JewishDayScheduler.KIND_TODAY_EREV.equals(kind) && eventDay > 0L) {
+            java.util.Calendar midnight = java.util.Calendar.getInstance(
+                    java.util.TimeZone.getTimeZone(new com.woodpeckerbros.watchreminder.zmanim.ZmanimSettings(context).timeZoneId()));
+            midnight.setTimeInMillis(eventDay);
+            midnight.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            midnight.set(java.util.Calendar.MINUTE, 0);
+            midnight.set(java.util.Calendar.SECOND, 0);
+            midnight.set(java.util.Calendar.MILLISECOND, 0);
+            midnight.add(java.util.Calendar.DAY_OF_YEAR, 1);
+            expiresAt = midnight.getTimeInMillis();
+        }
         if (JewishDayScheduler.isExpiredDelivery(kind, triggerAt, expiresAt, System.currentTimeMillis())) {
             AppLog.d(context, "jewish day receiver skipped stale kind=" + kind
                     + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
