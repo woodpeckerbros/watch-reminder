@@ -28,8 +28,18 @@ public class JewishDayReceiver extends BroadcastReceiver {
         }
         String kind = intent == null ? "" : intent.getStringExtra(JewishDayScheduler.EXTRA_KIND);
         String label = intent == null ? "" : intent.getStringExtra(JewishDayScheduler.EXTRA_LABEL);
+        long triggerAt = intent == null ? 0L
+                : intent.getLongExtra(JewishDayScheduler.EXTRA_TRIGGER_AT, 0L);
+        long expiresAt = intent == null ? 0L
+                : intent.getLongExtra(JewishDayScheduler.EXTRA_EXPIRES_AT, 0L);
         long eventDay = intent == null ? 0L
                 : intent.getLongExtra(JewishDayScheduler.EXTRA_EVENT_DAY, 0L);
+        if (JewishDayScheduler.isExpiredDelivery(kind, triggerAt, expiresAt, System.currentTimeMillis())) {
+            AppLog.d(context, "jewish day receiver skipped stale kind=" + kind
+                    + " trigger=" + NextReminderCalculator.formatDateTime(triggerAt));
+            JewishDayScheduler.schedule(context);
+            return;
+        }
         if (eventDay > 0L) {
             String localized = JewishDayScheduler.localizedLabelForDay(context, eventDay);
             if (!localized.isEmpty()) label = localized;

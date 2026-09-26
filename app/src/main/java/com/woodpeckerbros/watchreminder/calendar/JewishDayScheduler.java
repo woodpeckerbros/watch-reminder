@@ -24,6 +24,7 @@ public class JewishDayScheduler {
     static final String EXTRA_LABEL = "jewish_day_label";
     static final String EXTRA_TRIGGER_AT = "jewish_day_trigger_at";
     static final String EXTRA_EVENT_DAY = "jewish_day_event_day";
+    static final String EXTRA_EXPIRES_AT = "jewish_day_expires_at";
     public static final String KIND_TODAY_EREV = "today_erev";
     static final String KIND_TOMORROW = "tomorrow";
     static final String KIND_TODAY = "today";
@@ -31,6 +32,8 @@ public class JewishDayScheduler {
     private static final String DELIVERY_PREFS = "jewish_day_delivery";
     private static final String KEY_LAST_DELIVERED = "last_delivered";
     private static final long HOUR_MILLIS = 60 * 60_000L;
+    /** An ערב-חג notice is useful only around the start of the Hebrew day. */
+    private static final long EREV_DELIVERY_GRACE_MILLIS = HOUR_MILLIS;
 
     private JewishDayScheduler() {
     }
@@ -88,16 +91,6 @@ public class JewishDayScheduler {
         if (info == null) {
             return null;
         }
-        if (info.erev) {
-            Calendar trigger = (Calendar) targetDay.clone();
-            trigger.set(Calendar.HOUR_OF_DAY, 10);
-            trigger.set(Calendar.MINUTE, 0);
-            trigger.set(Calendar.SECOND, 0);
-            trigger.set(Calendar.MILLISECOND, 0);
-            return new Event(KIND_TODAY_EREV, info.label,
-                    ReminderScheduler.floorToMinute(trigger.getTimeInMillis()), targetDay.getTimeInMillis());
-        }
-
         Calendar previousDay = (Calendar) targetDay.clone();
         previousDay.add(Calendar.DAY_OF_YEAR, -1);
         long tzeis = ZmanimHelper.timeForKey(context, ZmanimHelper.KEY_TZAIS, previousDay.getTimeInMillis());
@@ -108,12 +101,24 @@ public class JewishDayScheduler {
             previousDay.set(Calendar.MILLISECOND, 0);
             tzeis = previousDay.getTimeInMillis() + 3 * HOUR_MILLIS;
         }
+        if (info.erev) {
+            long triggerAt = erevHolidayReminderAt(tzeis);
+            // The evening before is the start of the Hebrew day.  It is "tomorrow" in
+            // civil-date language, even though its Jewish date is already ערב החג.
+            return new Event(KIND_TOMORROW, info.label, triggerAt, targetDay.getTimeInMillis(),
+                    triggerAt + EREV_DELIVERY_GRACE_MILLIS);
+        }
         return new Event(KIND_TOMORROW, info.label,
                 ReminderScheduler.floorToMinute(dayBeforeReminderAt(tzeis)), targetDay.getTimeInMillis());
     }
 
     static long dayBeforeReminderAt(long tzeisAt) {
         return tzeisAt - 3 * HOUR_MILLIS;
+    }
+
+    /** ערב חג starts at tzeis of the preceding civil date, not at a daytime fallback hour. */
+    static long erevHolidayReminderAt(long tzeisAt) {
+        return ReminderScheduler.floorToMinute(tzeisAt);
     }
 
     /**
@@ -140,7 +145,8 @@ public class JewishDayScheduler {
         Event event = eventForDay(context, timeZone, today,
                 JewishCalendarHelper.calendar(context, today));
         long now = System.currentTimeMillis();
-        if (event == null || event.triggerAt > now || !isStillRelevant(context, today, now)) {
+        if (event == null || event.triggerAt > now || event.isExpiredAt(now)
+                || !isStillRelevant(context, today, now)) {
             return false;
         }
         String deliveryKey = deliveryKey(today.getTimeInMillis(), event.kind, event.label);
@@ -166,6 +172,16 @@ public class JewishDayScheduler {
 
     static void markDelivered(Context context, long eventDay, String kind, String label) {
         markDelivered(context, deliveryKey(eventDay, kind, label));
+    }
+
+    static boolean isExpiredDelivery(String kind, long triggerAt, long expiresAt, long now) {
+        if (expiresAt > 0L) {
+            return now > expiresAt;
+        }
+        // `today_erev` was used by builds that scheduled the alert at 10:00 on the
+        // holiday eve. Do not let one of those stale PendingIntents alert late at night.
+        return KIND_TODAY_EREV.equals(kind) && triggerAt > 0L
+                && now > triggerAt + EREV_DELIVERY_GRACE_MILLIS;
     }
 
     /** Rebuilds the event label using the language selected at delivery time. */
@@ -233,7 +249,8 @@ public class JewishDayScheduler {
                 .putExtra(EXTRA_KIND, event.kind)
                 .putExtra(EXTRA_LABEL, event.label)
                 .putExtra(EXTRA_TRIGGER_AT, event.triggerAt)
-                .putExtra(EXTRA_EVENT_DAY, event.eventDay);
+                .putExtra(EXTRA_EVENT_DAY, event.eventDay)
+                .putExtra(EXTRA_EXPIRES_AT, event.expiresAt);
         return PendingIntent.getBroadcast(
                 context,
                 REQUEST_KEY.hashCode(),
@@ -260,16 +277,26 @@ public class JewishDayScheduler {
         public final String label;
         public final long triggerAt;
         final long eventDay;
+        final long expiresAt;
 
         Event(String kind, String label, long triggerAt) {
-            this(kind, label, triggerAt, triggerAt);
+            this(kind, label, triggerAt, triggerAt, 0L);
         }
 
         Event(String kind, String label, long triggerAt, long eventDay) {
+            this(kind, label, triggerAt, eventDay, 0L);
+        }
+
+        Event(String kind, String label, long triggerAt, long eventDay, long expiresAt) {
             this.kind = kind;
             this.label = label == null ? "" : label;
             this.triggerAt = triggerAt;
             this.eventDay = eventDay;
+            this.expiresAt = expiresAt;
+        }
+
+        boolean isExpiredAt(long now) {
+            return isExpiredDelivery(kind, triggerAt, expiresAt, now);
         }
     }
 

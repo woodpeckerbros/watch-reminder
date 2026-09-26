@@ -4912,8 +4912,16 @@ public class MainActivity extends Activity {
                 store.delete(reminder);
             }
             mainHandler.post(() -> {
-                if (!isFinishing() && "list".equals(currentScreen)) {
+                if (isFinishing()) {
+                    return;
+                }
+                // The next-reminder complication opens `all_reminders`, not the home list.
+                // Rebuild either reminder list once the background completion has committed,
+                // so its next reminder and the action buttons change immediately.
+                if ("list".equals(currentScreen)) {
                     showList();
+                } else if ("all_reminders".equals(currentScreen)) {
+                    showAllReminders();
                 }
             });
         });
