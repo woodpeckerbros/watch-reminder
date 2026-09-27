@@ -223,6 +223,12 @@ public class JewishDayScheduler {
         if (jewishCalendar.isBeHaB()) {
             return null;
         }
+        // Chol Hamoed is useful in the day view, but it is not an occasion for a
+        // Jewish-day alert.  Keep the check on the calendar index rather than on
+        // the localized label, so it applies in every app language.
+        if (isCholHamoedIndex(jewishCalendar.getYomTovIndex())) {
+            return null;
+        }
         HebrewDateFormatter formatter = JewishCalendarHelper.formatter(context);
         int index = jewishCalendar.getYomTovIndex();
         if (index != -1 && index != JewishCalendar.BEHAB) {
@@ -239,6 +245,11 @@ public class JewishDayScheduler {
             return new EventInfo(UiText.t(context, "יום כיפור קטן"), false);
         }
         return null;
+    }
+
+    static boolean isCholHamoedIndex(int index) {
+        return index == JewishCalendar.CHOL_HAMOED_PESACH
+                || index == JewishCalendar.CHOL_HAMOED_SUCCOS;
     }
 
     private static boolean isErevIndex(int index) {

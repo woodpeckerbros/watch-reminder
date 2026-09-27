@@ -1,6 +1,10 @@
 package com.woodpeckerbros.watchreminder.calendar;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar;
 
 import org.junit.Test;
 
@@ -30,5 +34,12 @@ public class JewishDaySchedulerTest {
                 JewishDayScheduler.KIND_TOMORROW, tzeis, expiresAt, expiresAt));
         assertEquals(true, JewishDayScheduler.isExpiredDelivery(
                 JewishDayScheduler.KIND_TOMORROW, tzeis, expiresAt, expiresAt + 1L));
+    }
+
+    @Test public void cholHamoedNeverProducesAJewishDayAlert() {
+        assertTrue(JewishDayScheduler.isCholHamoedIndex(JewishCalendar.CHOL_HAMOED_PESACH));
+        assertTrue(JewishDayScheduler.isCholHamoedIndex(JewishCalendar.CHOL_HAMOED_SUCCOS));
+        assertFalse(JewishDayScheduler.isCholHamoedIndex(JewishCalendar.SUCCOS));
+        assertFalse(JewishDayScheduler.isCholHamoedIndex(JewishCalendar.EREV_SUCCOS));
     }
 }
