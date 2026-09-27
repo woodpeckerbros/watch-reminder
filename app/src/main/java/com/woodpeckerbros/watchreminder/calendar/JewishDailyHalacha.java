@@ -61,4 +61,14 @@ public final class JewishDailyHalacha {
                 || index == JewishCalendar.SHEMINI_ATZERES
                 || index == JewishCalendar.SIMCHAS_TORAH;
     }
+
+    /**
+     * The calendar library deliberately returns no weekly parsha whenever Yom Tov is Shabbat.
+     * In Israel, however, Shemini Atzeret is Simchat Torah and Vezos Habracha is read that day.
+     */
+    public static JewishCalendar.Parsha yomTovShabbatParsha(int index, boolean inIsrael) {
+        return inIsrael && index == JewishCalendar.SHEMINI_ATZERES
+                ? JewishCalendar.Parsha.VZOS_HABERACHA
+                : JewishCalendar.Parsha.NONE;
+    }
 }
