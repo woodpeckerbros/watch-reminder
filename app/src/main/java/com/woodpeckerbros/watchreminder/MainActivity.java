@@ -7957,19 +7957,14 @@ public class MainActivity extends Activity {
         JewishCalendar jewishCalendar = JewishCalendarHelper.calendar(this, shabbos);
         HebrewDateFormatter formatter = JewishCalendarHelper.formatter(this);
         JewishCalendar.Parsha parsha = jewishCalendar.getParshah();
-        JewishCalendar.Parsha yomTovParsha = JewishDailyHalacha.yomTovShabbatParsha(
-                jewishCalendar.getYomTovIndex(), JewishCalendarHelper.isInIsrael(this));
-        if (parsha != JewishCalendar.Parsha.NONE || yomTovParsha != JewishCalendar.Parsha.NONE) {
-            String parshaLabel = parsha != JewishCalendar.Parsha.NONE
-                    ? formatter.formatParsha(jewishCalendar)
-                    : (AppLanguage.isEnglish(this) ? "Vezos Habracha" : "וזאת הברכה");
-            timesCard.addView(zmanimTimeRow("פרשת השבוע", parshaLabel));
+        if (parsha != JewishCalendar.Parsha.NONE) {
+            timesCard.addView(zmanimTimeRow("פרשת השבוע", formatter.formatParsha(jewishCalendar)));
         }
         JewishCalendar.Parsha special = jewishCalendar.getSpecialShabbos();
         if (special != JewishCalendar.Parsha.NONE) {
             timesCard.addView(zmanimTimeRow("שבת מיוחדת", formatter.formatSpecialParsha(jewishCalendar)));
         }
-        if (parsha == JewishCalendar.Parsha.NONE && yomTovParsha == JewishCalendar.Parsha.NONE) {
+        if (parsha == JewishCalendar.Parsha.NONE) {
             int yomTovIndex = jewishCalendar.getYomTovIndex();
             if (yomTovIndex != -1) {
                 timesCard.addView(zmanimTimeRow(getString(R.string.shabbat_holiday_label),

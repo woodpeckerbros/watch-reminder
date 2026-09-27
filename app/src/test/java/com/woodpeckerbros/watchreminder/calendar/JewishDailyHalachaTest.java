@@ -9,8 +9,6 @@ import com.kosherjava.zmanim.hebrewcalendar.JewishDate;
 
 import org.junit.Test;
 
-import java.util.Calendar;
-
 public class JewishDailyHalachaTest {
     @Test public void nissanAndRoshChodeshOmitTachanun() {
         assertTrue(JewishDailyHalacha.omitsTachanun(new JewishCalendar(5787, JewishDate.NISSAN, 8)));
@@ -51,18 +49,4 @@ public class JewishDailyHalachaTest {
         assertFalse(JewishDailyHalacha.isMajorYomTov(JewishCalendar.CHOL_HAMOED_SUCCOS));
     }
 
-    @Test public void displaysVezosHabrachaForIsraeliSheminiAtzeresOnShabbat() {
-        JewishCalendar sheminiAtzeres5787 = new JewishCalendar(5787, JewishDate.TISHREI, 22);
-        sheminiAtzeres5787.setInIsrael(true);
-        assertEquals(Calendar.SATURDAY, sheminiAtzeres5787.getDayOfWeek());
-        assertEquals(2026, sheminiAtzeres5787.getGregorianYear());
-        assertEquals(Calendar.OCTOBER, sheminiAtzeres5787.getGregorianMonth());
-        assertEquals(3, sheminiAtzeres5787.getGregorianDayOfMonth());
-        assertEquals(JewishCalendar.Parsha.VZOS_HABERACHA,
-                JewishDailyHalacha.yomTovShabbatParsha(sheminiAtzeres5787.getYomTovIndex(), true));
-        assertEquals(JewishCalendar.Parsha.NONE,
-                JewishDailyHalacha.yomTovShabbatParsha(JewishCalendar.SHEMINI_ATZERES, false));
-        assertEquals(JewishCalendar.Parsha.NONE,
-                JewishDailyHalacha.yomTovShabbatParsha(JewishCalendar.SUCCOS, true));
-    }
 }
