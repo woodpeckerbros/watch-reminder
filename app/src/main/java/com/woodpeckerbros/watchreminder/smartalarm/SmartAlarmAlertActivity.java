@@ -217,6 +217,8 @@ public final class SmartAlarmAlertActivity extends Activity {
             stopFeedback();
             AppLog.d(this, "SmartAlarm wake check escalation dismissed finally id=" + alarmId);
             close();
+            SmartAlarmAttentionStore.releaseAfterTerminalAction(this, alarmId,
+                    "WAKE_CHECK_ESCALATION_DISMISS");
             return;
         }
         // Cancel all receivers for this occurrence before changing its state.  In particular,
@@ -229,6 +231,7 @@ public final class SmartAlarmAlertActivity extends Activity {
         stopFeedback();
         if (settings.wakeCheckEnabled()) {
             SmartAlarmWakeCheckReceiver.schedule(this, alarmId, targetAt, settings.wakeCheckDelayMinutes());
+            SmartAlarmAttentionStore.retainForWakeCheck(this, alarmId, targetAt);
             AppLog.d(this, "SmartAlarm dismissed; wake check retained id=" + alarmId);
         } else {
             SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
@@ -236,6 +239,9 @@ public final class SmartAlarmAlertActivity extends Activity {
         }
         SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId, targetAt);
         close();
+        if (!settings.wakeCheckEnabled()) {
+            SmartAlarmAttentionStore.releaseAfterTerminalAction(this, alarmId, "DISMISS");
+        }
     }
 
     private boolean requiresWakeTask(String method) {

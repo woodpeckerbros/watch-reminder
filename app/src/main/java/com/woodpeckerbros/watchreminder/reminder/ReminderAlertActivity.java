@@ -1,6 +1,7 @@
 package com.woodpeckerbros.watchreminder.reminder;
 
 import com.woodpeckerbros.watchreminder.*;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmAttentionStore;
 import com.woodpeckerbros.watchreminder.DepthButtonDrawable;
 import com.woodpeckerbros.watchreminder.OrnateBellView;
 
@@ -77,6 +78,13 @@ public class ReminderAlertActivity extends Activity {
         final String alertReminderName = reminderName;
         String occurrenceId = getIntent().getStringExtra(ReminderScheduler.EXTRA_OCCURRENCE_ID);
         activeOccurrenceId = occurrenceId;
+        if (SmartAlarmAttentionStore.ownsInteractiveAttention(this)) {
+            AppLog.d(this, "normal alert activity suppressed for SmartAlarm priority occurrence=" + occurrenceId);
+            ReminderReceiver.deferInteractiveAlertForSmartAlarm(this);
+            actionClosed = true;
+            finishAndRemoveTask();
+            return;
+        }
         String reminderId = getIntent().getStringExtra(ReminderScheduler.EXTRA_REMINDER_ID);
         Reminder reminder = reminderId == null ? null : new ReminderStore(this).find(reminderId);
         String reminderDescription = reminder == null ? "" : reminder.description;
@@ -288,6 +296,25 @@ public class ReminderAlertActivity extends Activity {
                 AppLog.d(activity, "alert close after notification dismissal occurrence=" + occurrenceId);
                 activity.handler.removeCallbacksAndMessages(null);
                 activity.closeAfterAction();
+            }
+        });
+        return true;
+    }
+
+    /** Closes only the UI/feedback; the occurrence was already moved back into the queue. */
+    public static boolean closeForSmartAlarmPriority(String occurrenceId) {
+        ReminderAlertActivity activity = activeActivity == null ? null : activeActivity.get();
+        if (activity == null || activity.actionClosed || occurrenceId == null
+                || !occurrenceId.equals(activity.activeOccurrenceId)) {
+            return false;
+        }
+        activity.handler.post(() -> {
+            if (!activity.actionClosed && occurrenceId.equals(activity.activeOccurrenceId)) {
+                AppLog.d(activity, "normal alert activity preempted by SmartAlarm occurrence=" + occurrenceId);
+                activity.actionClosed = true;
+                activity.handler.removeCallbacksAndMessages(null);
+                activity.stopVibration();
+                activity.finishAndRemoveTask();
             }
         });
         return true;

@@ -19,6 +19,8 @@ public final class SmartAlarmAutoSnoozeReceiver extends BroadcastReceiver {
             SmartAlarmActions.cancelNotification(context, alarmId);
             SmartAlarmAlertActivity.closeAutoSnoozed(alarmId, targetAt);
             SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
+            SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId,
+                    "WAKE_CHECK_ESCALATION_STOPPED");
             AppLog.w(context, "SmartAlarm unanswered wake check escalation stopped id=" + alarmId);
             return;
         }
@@ -43,6 +45,8 @@ public final class SmartAlarmAutoSnoozeReceiver extends BroadcastReceiver {
             AppLog.w(context, "SmartAlarm unanswered; snoozes exhausted id=" + alarmId);
             state.dismiss(targetAt);
             SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId, targetAt);
+            SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId,
+                    "SNOOZES_EXHAUSTED");
         }
     }
 }

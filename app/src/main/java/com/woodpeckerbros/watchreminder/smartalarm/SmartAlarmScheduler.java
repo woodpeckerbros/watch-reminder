@@ -208,6 +208,7 @@ public final class SmartAlarmScheduler {
         long targetAt = System.currentTimeMillis() + minutes * 60_000L;
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         state.beginSnooze(targetAt, state.snoozeUsed() + 1);
+        SmartAlarmAttentionStore.advanceToSnooze(context, alarmId, targetAt);
         SmartAlarmBootStore.arm(context, alarmId, targetAt, 0L, 0L, false);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));

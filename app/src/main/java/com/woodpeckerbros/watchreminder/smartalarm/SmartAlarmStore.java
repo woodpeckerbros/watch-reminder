@@ -168,6 +168,7 @@ public final class SmartAlarmStore {
     }
 
     public static void delete(Context context, int id) {
+        SmartAlarmAttentionStore.releaseAfterTerminalAction(context, id, "ALARM_DELETED");
         SmartAlarmBootStore.disarm(context, id, 0L);
         context.getApplicationContext().getSharedPreferences(prefsName(id), Context.MODE_PRIVATE).edit().clear().apply();
         SharedPreferences registry = context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);

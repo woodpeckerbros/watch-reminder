@@ -22,6 +22,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
     private static final String PENDING_PREFIX = "pending_";
 
     static void schedule(Context context, int alarmId, long targetAt, int minutes) {
+        SmartAlarmAttentionStore.retainForWakeCheck(context, alarmId, targetAt);
         cancel(context, alarmId);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager == null) return;
@@ -54,6 +55,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
         SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
         state(context).edit().remove(PENDING_PREFIX + alarmId).apply();
+        SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId, "IM_AWAKE");
     }
 
     /** A lightweight state bit for the FGS delivery-obligation calculation. */

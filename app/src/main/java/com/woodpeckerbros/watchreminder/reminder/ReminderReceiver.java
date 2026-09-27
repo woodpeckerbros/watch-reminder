@@ -3,6 +3,7 @@ package com.woodpeckerbros.watchreminder.reminder;
 import com.woodpeckerbros.watchreminder.*;
 import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 import com.woodpeckerbros.watchreminder.entitlement.EntitlementEnforcer;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmAttentionStore;
 
 import com.woodpeckerbros.watchreminder.calendar.*;
 
@@ -193,6 +194,11 @@ public class ReminderReceiver extends BroadcastReceiver {
                 day,
                 isSnooze
         );
+        if (SmartAlarmAttentionStore.ownsInteractiveAttention(context)) {
+            new ReminderAlertQueueStore(context).enqueueDeferred(alert);
+            AppLog.w(context, "fire deferred for SmartAlarm priority occurrence=" + occurrenceId);
+            return;
+        }
         if (deferred) {
             new ReminderAlertQueueStore(context).enqueueDeferred(alert);
             AppLog.w(context, "fire queued deferred occurrence=" + occurrenceId);
@@ -208,6 +214,10 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     public static void dispatchNextQueued(Context context) {
+        if (SmartAlarmAttentionStore.ownsInteractiveAttention(context)) {
+            AppLog.d(context, "dispatchNextQueued held by SmartAlarm priority");
+            return;
+        }
         if (WearStateGate.shouldDeferKnown(context)) {
             AppLog.d(context, "dispatchNextQueued deferred by wear state");
             DeferredWearStateService.start(context);
@@ -228,6 +238,11 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     public static void showNotification(Context context, String occurrenceId, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze) {
+        if (SmartAlarmAttentionStore.ownsInteractiveAttention(context)) {
+            deferInteractiveAlertForSmartAlarm(context);
+            AppLog.d(context, "showNotification held by SmartAlarm priority occurrence=" + occurrenceId);
+            return;
+        }
         createChannel(context);
         AppLog.d(context, "showNotification occurrence=" + occurrenceId + " name=" + reminderName + " at=" + NextReminderCalculator.formatDateTime(scheduledAt));
         ReminderAlertQueueStore.QueuedAlert activeAlert = new ReminderAlertQueueStore(context).getActiveAlert(occurrenceId);
@@ -287,6 +302,26 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
         manager.notify(occurrenceId.hashCode(), builder.build());
         AppLog.d(context, "showNotification notified occurrence=" + occurrenceId + " notificationId=" + occurrenceId.hashCode());
+    }
+
+    /** Preempts a normal full-screen alert without changing its fired/snoozed event state. */
+    public static void deferInteractiveAlertForSmartAlarm(Context context) {
+        ReminderAlertQueueStore.QueuedAlert activeAlert = new ReminderAlertQueueStore(context)
+                .deferActiveForSmartAlarm();
+        if (activeAlert == null) {
+            return;
+        }
+        for (String occurrenceId : activeAlert.occurrenceIds) {
+            ReminderScheduler.cancelAutoSnooze(context, occurrenceId,
+                    activeAlert.reminderId, activeAlert.reminderName);
+        }
+        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.cancel(activeAlert.occurrenceId.hashCode());
+        }
+        ReminderAlertActivity.closeForSmartAlarmPriority(activeAlert.occurrenceId);
+        AppLog.w(context, "normal alert deferred for SmartAlarm priority occurrence="
+                + activeAlert.occurrenceId);
     }
 
     private static void createChannel(Context context) {

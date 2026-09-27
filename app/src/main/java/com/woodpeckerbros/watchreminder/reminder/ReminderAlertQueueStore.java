@@ -76,6 +76,19 @@ public class ReminderAlertQueueStore {
         }
     }
 
+    /** Moves the current normal alert back to the durable queue for Smart Alarm priority. */
+    public QueuedAlert deferActiveForSmartAlarm() {
+        synchronized (QUEUE_LOCK) {
+            QueuedAlert activeAlert = getActiveAlert();
+            if (activeAlert == null) {
+                return null;
+            }
+            enqueue(activeAlert);
+            prefs.edit().remove(KEY_ACTIVE).remove(KEY_ACTIVE_ALERT).remove(KEY_ACTIVE_AT).commit();
+            return activeAlert;
+        }
+    }
+
     public boolean hasDeferredAlerts() {
         synchronized (QUEUE_LOCK) {
             return !getQueue().isEmpty();

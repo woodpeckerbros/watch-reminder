@@ -89,6 +89,8 @@ public final class SmartAlarmActions extends BroadcastReceiver {
             SmartAlarmScheduler.cancelAutoSnooze(context, alarmId);
             SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
             cancelNotification(context, alarmId);
+            SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId,
+                    "WAKE_CHECK_NOTIFICATION_DISMISS");
             AppLog.d(context, "SmartAlarm notification wake check escalation dismissed id=" + alarmId);
             return;
         }
@@ -112,10 +114,15 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         if (new SmartAlarmStore(context, alarmId).wakeCheckEnabled()) {
             SmartAlarmWakeCheckReceiver.schedule(context, alarmId, targetAt,
                     new SmartAlarmStore(context, alarmId).wakeCheckDelayMinutes());
+            SmartAlarmAttentionStore.retainForWakeCheck(context, alarmId, targetAt);
         } else {
             SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
         }
         SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId, targetAt);
+        if (!new SmartAlarmStore(context, alarmId).wakeCheckEnabled()) {
+            SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId,
+                    "NOTIFICATION_DISMISS");
+        }
         AppLog.d(context, "SmartAlarm notification dismiss id=" + alarmId);
     }
 

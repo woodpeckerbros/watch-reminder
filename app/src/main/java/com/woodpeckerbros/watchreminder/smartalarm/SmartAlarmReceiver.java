@@ -79,6 +79,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         boolean wakeCheckEscalation = "wake_check_escalation".equals(reason);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return false;
+        SmartAlarmAttentionStore.claimRinging(context, alarmId, targetAt);
         SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
         // OnePlus Wear OS does not present a full-screen notification that it considers entirely
         // silent.  Keep sound under the ringing service/activity, but give this transport channel
