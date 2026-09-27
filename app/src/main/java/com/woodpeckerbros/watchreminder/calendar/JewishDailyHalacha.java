@@ -62,4 +62,11 @@ public final class JewishDailyHalacha {
                 || index == JewishCalendar.SIMCHAS_TORAH;
     }
 
+    /** In Israel, Shemini Atzeres is Simchat Torah and Vezos Habracha is read. */
+    public static JewishCalendar.Parsha yomTovShabbatParsha(int index, boolean inIsrael) {
+        return inIsrael && index == JewishCalendar.SHEMINI_ATZERES
+                ? JewishCalendar.Parsha.VZOS_HABERACHA
+                : JewishCalendar.Parsha.NONE;
+    }
+
 }
