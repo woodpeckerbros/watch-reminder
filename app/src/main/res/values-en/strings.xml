@@ -48,6 +48,9 @@
     <string name="water_alert_progress">Today: %1$d of %2$d ml</string>
     <string name="water_alert_fixed_interval">Next reminder follows the %1$d-minute interval</string>
     <string name="water_drank">I drank</string>
+    <string name="water_drank_selected_amount">I drank %1$d ml</string>
+    <string name="water_decrease_amount">Decrease by 50 ml</string>
+    <string name="water_increase_amount">Increase by 50 ml</string>
     <string name="water_skip">Skip</string>
     <string name="water_snooze">Remind me in 15 minutes</string>
     <string name="water_icon_description">Water drop</string>

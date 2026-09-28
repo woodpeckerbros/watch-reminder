@@ -30,6 +30,7 @@ public final class WaterReminderAlertActivity extends Activity {
     private boolean closed;
     private long triggerAt;
     private int amountMl;
+    private int selectedAmountMl = 200;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -82,12 +83,45 @@ public final class WaterReminderAlertActivity extends Activity {
         actions.setGravity(Gravity.CENTER);
         Button skip = button(getString(R.string.water_skip), COLOR_SURFACE);
         Button drank = button(getString(R.string.water_drank), COLOR_DRANK);
+        LinearLayout customAmount = new LinearLayout(this);
+        customAmount.setOrientation(LinearLayout.HORIZONTAL);
+        customAmount.setGravity(Gravity.CENTER_VERTICAL);
+        Button decrease = button("−", COLOR_SURFACE);
+        Button drankSelected = button(getString(R.string.water_drank_selected_amount, selectedAmountMl), COLOR_DRANK);
+        Button increase = button("+", COLOR_SURFACE);
+        decrease.setContentDescription(getString(R.string.water_decrease_amount));
+        increase.setContentDescription(getString(R.string.water_increase_amount));
+        decrease.setTextSize(20);
+        increase.setTextSize(20);
+        customAmount.addView(decrease, new LinearLayout.LayoutParams(dp(36), dp(38)));
+        LinearLayout.LayoutParams selectedParams = new LinearLayout.LayoutParams(0, dp(38), 1f);
+        selectedParams.setMargins(dp(3), 0, dp(3), 0);
+        customAmount.addView(drankSelected, selectedParams);
+        customAmount.addView(increase, new LinearLayout.LayoutParams(dp(36), dp(38)));
+        LinearLayout.LayoutParams customAmountParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        customAmountParams.setMargins(dp(3), dp(2), dp(3), dp(2));
+        customAmount.setLayoutParams(customAmountParams);
         Button snooze = button(getString(R.string.water_snooze), COLOR_SURFACE);
-        skip.setOnClickListener(v -> close(false));
-        drank.setOnClickListener(v -> close(true));
+        skip.setOnClickListener(v -> close(0));
+        drank.setOnClickListener(v -> close(amountMl));
+        drankSelected.setOnClickListener(v -> close(selectedAmountMl));
+        decrease.setOnClickListener(v -> {
+            selectedAmountMl = Math.max(50, selectedAmountMl - 50);
+            drankSelected.setText(getString(R.string.water_drank_selected_amount, selectedAmountMl));
+            decrease.setEnabled(selectedAmountMl > 50);
+            increase.setEnabled(selectedAmountMl < 1000);
+        });
+        increase.setOnClickListener(v -> {
+            selectedAmountMl = Math.min(1000, selectedAmountMl + 50);
+            drankSelected.setText(getString(R.string.water_drank_selected_amount, selectedAmountMl));
+            decrease.setEnabled(selectedAmountMl > 50);
+            increase.setEnabled(selectedAmountMl < 1000);
+        });
         snooze.setOnClickListener(v -> snooze());
         actions.addView(skip);
         actions.addView(drank);
+        actions.addView(customAmount);
         actions.addView(snooze);
         LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -128,14 +162,14 @@ public final class WaterReminderAlertActivity extends Activity {
         return super.dispatchTouchEvent(event);
     }
 
-    private void close(boolean drank) {
+    private void close(int consumedMl) {
         if (closed) {
             return;
         }
         closed = true;
         handler.removeCallbacksAndMessages(null);
         stopFeedback();
-        new WaterReminderStore(this).markHandled(triggerAt, amountMl, drank);
+        new WaterReminderStore(this).markHandled(triggerAt, consumedMl);
         WaterReminderReceiver.cancelNotification(this);
         WaterReminderScheduler.schedule(this);
         ComplicationRefresh.requestWater(this);

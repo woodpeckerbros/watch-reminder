@@ -30,12 +30,10 @@ public final class WaterReminderStore {
         return triggerAt > 0L && triggerAt <= prefs.getLong(KEY_LAST_HANDLED_TRIGGER, 0L);
     }
 
-    public void markHandled(long triggerAt, int amountMl, boolean drank) {
+    public void markHandled(long triggerAt, int consumedMl) {
         ensureToday();
         int consumed = Math.max(0, prefs.getInt(KEY_CONSUMED_ML, 0));
-        if (drank) {
-            consumed += Math.max(0, amountMl);
-        }
+        consumed += Math.max(0, consumedMl);
         prefs.edit()
                 .putInt(KEY_CONSUMED_ML, consumed)
                 .putLong(KEY_LAST_HANDLED_TRIGGER, triggerAt)

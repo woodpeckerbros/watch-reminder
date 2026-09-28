@@ -48,6 +48,9 @@
     <string name="water_alert_progress">היום: %1$d מתוך %2$d מ״ל</string>
     <string name="water_alert_fixed_interval">התזכורת הבאה לפי מרווח של %1$d דקות</string>
     <string name="water_drank">שתיתי</string>
+    <string name="water_drank_selected_amount">שתיתי %1$d מ״ל</string>
+    <string name="water_decrease_amount">הפחת 50 מ״ל</string>
+    <string name="water_increase_amount">הוסף 50 מ״ל</string>
     <string name="water_skip">דלג</string>
     <string name="water_snooze">הזכר לי בעוד 15 דקות</string>
     <string name="water_icon_description">טיפת מים</string>
