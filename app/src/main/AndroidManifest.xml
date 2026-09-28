@@ -158,7 +158,7 @@
                 android:value="SHORT_TEXT,LONG_TEXT" />
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
-                android:value="0" />
+                android:value="86400" />
             <meta-data
                 android:name="android.support.wearable.complications.PROVIDER_CONFIG_ACTION"
                 android:value="com.woodpeckerbros.watchreminder.CONFIGURE_JEWISH_MODE_COMPLICATION" />
