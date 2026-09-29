@@ -495,7 +495,9 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             session.evaluationCount++;
             session.detector.setSelfStimulus(SelfStimulusTracker.snapshot());
             SmartWakeDetector.Decision decision = session.detector.evaluate(now);
-            AppLog.d(this, "SmartWake summary id=" + session.alarmId + " " + decision.summary(now));
+            String compactSummary = "id=" + session.alarmId + " " + decision.summary(now);
+            AppLog.appendSmartWakeSummary(this, compactSummary);
+            AppLog.d(this, "SmartWake summary " + compactSummary);
             AppLog.d(this, "SmartWake score id=" + session.alarmId + "\n" + decision.telemetry());
             long runtimeMinutes = Math.max(1L, (now - serviceCreatedAt + 59_999L) / 60_000L);
             AppLog.d(this, "SMART_WAKE_RUNTIME_COUNTERS session_id="

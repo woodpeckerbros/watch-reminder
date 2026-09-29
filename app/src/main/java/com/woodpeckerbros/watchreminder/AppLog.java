@@ -26,8 +26,11 @@ public class AppLog {
     private static final String TAG = "WatchReminder";
     private static final String PREFS_NAME = "app_logs";
     private static final String DIRECT_BOOT_PREFS_NAME = "app_logs_direct_boot";
+    private static final String SMART_WAKE_SUMMARY_PREFS_NAME = "smart_wake_summary_logs";
     private static final String KEY_TEXT = "text";
+    private static final String KEY_SMART_WAKE_SUMMARIES = "summaries";
     private static final int MAX_CHARS = 160_000;
+    private static final int MAX_SMART_WAKE_SUMMARY_CHARS = 120_000;
     private static final ExecutorService LOG_WRITER = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "wr-log-writer");
         thread.setDaemon(true);
@@ -66,6 +69,8 @@ public class AppLog {
         builder.append(ReminderMonitoringService.diagnosticSummary(context));
         builder.append('\n').append("Smart Alarm state:\n")
                 .append(SmartAlarmScheduler.diagnosticSummary(context));
+        builder.append('\n').append("Smart Wake summaries:\n")
+                .append(smartWakeSummaries(context));
         builder.append('\n').append("Logs:\n");
         builder.append(text(context));
         builder.append('\n').append("Computed reminder state:\n");
@@ -111,6 +116,30 @@ public class AppLog {
                 .remove(KEY_TEXT)
                 .apply();
         directBootPreferences(context).edit().remove(KEY_TEXT).apply();
+        smartWakePreferences(context).edit().remove(KEY_SMART_WAKE_SUMMARIES).apply();
+        context.getApplicationContext().createDeviceProtectedStorageContext()
+                .getSharedPreferences(SMART_WAKE_SUMMARY_PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().remove(KEY_SMART_WAKE_SUMMARIES).apply();
+    }
+
+    /** Persists the compact per-evaluation Smart Wake record separately from verbose telemetry. */
+    public static void appendSmartWakeSummary(Context context, String summary) {
+        if (summary == null || summary.trim().isEmpty()) return;
+        Context appContext = context.getApplicationContext();
+        int generation = clearGeneration;
+        LOG_WRITER.execute(() -> appendSmartWakeSummaryNow(appContext, generation, summary));
+    }
+
+    public static String smartWakeSummaries(Context context) {
+        flushPendingWrites();
+        Context appContext = context.getApplicationContext();
+        SharedPreferences prefs = smartWakePreferences(appContext);
+        String text = prefs.getString(KEY_SMART_WAKE_SUMMARIES, "");
+        if (!isUserUnlocked(appContext)) return text;
+        String directText = appContext.createDeviceProtectedStorageContext()
+                .getSharedPreferences(SMART_WAKE_SUMMARY_PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_SMART_WAKE_SUMMARIES, "");
+        return text + directText;
     }
 
     private static void append(Context context, String level, String message) {
@@ -147,6 +176,42 @@ public class AppLog {
             }
         } catch (Exception ignored) {
         }
+    }
+
+    private static void appendSmartWakeSummaryNow(Context context, int generation, String summary) {
+        try {
+            if (generation != clearGeneration) return;
+            String line = summary.trim() + "\n";
+            boolean userUnlocked = isUserUnlocked(context);
+            SharedPreferences prefs = userUnlocked
+                    ? smartWakePreferences(context)
+                    : context.createDeviceProtectedStorageContext()
+                    .getSharedPreferences(SMART_WAKE_SUMMARY_PREFS_NAME, Context.MODE_PRIVATE);
+            String directText = userUnlocked
+                    ? context.createDeviceProtectedStorageContext()
+                    .getSharedPreferences(SMART_WAKE_SUMMARY_PREFS_NAME, Context.MODE_PRIVATE)
+                    .getString(KEY_SMART_WAKE_SUMMARIES, "") : "";
+            String next = prefs.getString(KEY_SMART_WAKE_SUMMARIES, "") + directText + line;
+            if (next.length() > MAX_SMART_WAKE_SUMMARY_CHARS) {
+                next = next.substring(next.length() - MAX_SMART_WAKE_SUMMARY_CHARS);
+            }
+            if (userUnlocked) {
+                prefs.edit().putString(KEY_SMART_WAKE_SUMMARIES, next).commit();
+                if (!directText.isEmpty()) {
+                    context.createDeviceProtectedStorageContext()
+                            .getSharedPreferences(SMART_WAKE_SUMMARY_PREFS_NAME, Context.MODE_PRIVATE)
+                            .edit().remove(KEY_SMART_WAKE_SUMMARIES).commit();
+                }
+            } else {
+                prefs.edit().putString(KEY_SMART_WAKE_SUMMARIES, next).commit();
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static SharedPreferences smartWakePreferences(Context context) {
+        return context.getApplicationContext()
+                .getSharedPreferences(SMART_WAKE_SUMMARY_PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     private static SharedPreferences directBootPreferences(Context context) {
