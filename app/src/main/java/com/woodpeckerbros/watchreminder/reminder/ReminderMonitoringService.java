@@ -31,7 +31,7 @@ public final class ReminderMonitoringService extends Service {
     static final long HEALTH_CHECK_INTERVAL_MS = 60 * 60_000L;
     private static final long DEFERRED_INITIAL_HEALTH_CHECK_MS = 30_000L;
     private static final String CHANNEL_ID = "reminder_monitoring";
-    private static final int NOTIFICATION_ID = 2002;
+    static final int NOTIFICATION_ID = 2002;
     private static final String EXTRA_DEFER_INITIAL_HEALTH_CHECK = "defer_initial_health_check";
     private static final String EXTRA_REFRESH_NOTIFICATION = "refresh_notification";
     private static final String EXTRA_DIRECT_BOOT = "direct_boot";

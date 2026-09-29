@@ -23,11 +23,13 @@ import android.os.Looper;
 
 public class DeferredWearStateService extends Service {
     private static final String CHANNEL_ID = "deferred_wear_state";
-    private static final int NOTIFICATION_ID = 2002;
+    static final int NOTIFICATION_ID = 2003;
     private static final long MAX_MONITORING_MS = 5 * 60_000L;
 
     private SensorManager sensorManager;
     private Sensor offBodySensor;
+    private boolean onBodyAvailable;
+    private boolean waitingForegroundStarted;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable timeout = () -> {
         AppLog.d(this, "DeferredWearStateService bounded monitoring timeout");
@@ -52,6 +54,12 @@ public class DeferredWearStateService extends Service {
             }
             AppLog.d(DeferredWearStateService.this, "DeferredWearStateService onBody=" + onBody);
             if (onBody) {
+                onBodyAvailable = true;
+                removeWaitingForeground("ON_BODY");
+                // Re-publish the long-running monitoring notification. This also replaces the
+                // old shared-ID waiting notification left by versions before this service had
+                // its own notification ID.
+                ReminderMonitoringService.refreshNotification(DeferredWearStateService.this);
                 DeferredWearRetryReceiver.cancel(DeferredWearStateService.this);
                 DeferredReminderDispatcher.run(DeferredWearStateService.this);
                 CalendarReminderCatchUp.dispatchWhenAwake(DeferredWearStateService.this);
@@ -93,6 +101,7 @@ public class DeferredWearStateService extends Service {
         } else {
             startForeground(NOTIFICATION_ID, notification);
         }
+        waitingForegroundStarted = true;
         registerOffBodySensor();
         handler.removeCallbacks(timeout);
         handler.postDelayed(timeout, MAX_MONITORING_MS);
@@ -100,6 +109,12 @@ public class DeferredWearStateService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (onBodyAvailable) {
+            AppLog.d(this, "DeferredWearStateService start ignored after onBody transition");
+            removeWaitingForeground("ON_BODY_START");
+            stopSelfResult(startId);
+            return START_NOT_STICKY;
+        }
         registerOffBodySensor();
         return START_NOT_STICKY;
     }
@@ -110,6 +125,7 @@ public class DeferredWearStateService extends Service {
             sensorManager.unregisterListener(listener);
         }
         handler.removeCallbacks(timeout);
+        removeWaitingForeground("DESTROY");
         if (new ReminderAlertQueueStore(this).hasDeferredAlerts()) {
             DeferredWearRetryReceiver.schedule(this);
         } else {
@@ -148,5 +164,18 @@ public class DeferredWearStateService extends Service {
         );
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         manager.createNotificationChannel(channel);
+    }
+
+    private void removeWaitingForeground(String reason) {
+        if (!waitingForegroundStarted) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
+        waitingForegroundStarted = false;
+        AppLog.d(this, "DeferredWearStateService waiting notification removed reason=" + reason);
     }
 }
