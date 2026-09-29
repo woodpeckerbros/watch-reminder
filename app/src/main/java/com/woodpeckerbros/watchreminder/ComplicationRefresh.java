@@ -3,6 +3,7 @@ package com.woodpeckerbros.watchreminder;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import com.woodpeckerbros.watchreminder.zmanim.*;
+import com.woodpeckerbros.watchreminder.calendar.DafYomiComplicationService;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -33,6 +34,7 @@ public class ComplicationRefresh {
     private static final int FASTING = 1 << 1;
     private static final int STATIC_AND_DATE = 1 << 2;
     private static final int WATER = 1 << 3;
+    private static final int DAF_YOMI = 1 << 4;
     private static final Handler HANDLER = new Handler(Looper.getMainLooper());
     private static boolean pending;
     private static int pendingTargets;
@@ -57,7 +59,7 @@ public class ComplicationRefresh {
     }
 
     public static synchronized void requestAll(Context context) {
-        request(context, NEXT_REMINDER | FASTING | STATIC_AND_DATE | WATER);
+        request(context, NEXT_REMINDER | FASTING | STATIC_AND_DATE | WATER | DAF_YOMI);
     }
 
     /**
@@ -84,7 +86,7 @@ public class ComplicationRefresh {
         Context applicationContext = context.getApplicationContext();
         HANDLER.postDelayed(
                 () -> requestNow(applicationContext,
-                        NEXT_REMINDER | FASTING | STATIC_AND_DATE | WATER),
+                        NEXT_REMINDER | FASTING | STATIC_AND_DATE | WATER | DAF_YOMI),
                 CONFIGURATION_REFRESH_MS
         );
     }
@@ -128,6 +130,9 @@ public class ComplicationRefresh {
             }
             if ((targets & WATER) != 0) {
                 update(context, WaterReminderComplicationService.class);
+            }
+            if ((targets & DAF_YOMI) != 0) {
+                update(context, DafYomiComplicationService.class);
             }
         } catch (Exception ignored) {
         }

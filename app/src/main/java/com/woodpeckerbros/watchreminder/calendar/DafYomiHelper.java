@@ -28,12 +28,21 @@ public class DafYomiHelper {
     }
 
     public static String bavliLabel(Context context, long dateMillis) {
+        return bavliMasechtaLabel(context, dateMillis) + " " + bavliDafLabel(context, dateMillis);
+    }
+
+    public static String bavliMasechtaLabel(Context context, long dateMillis) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(dateMillis);
         Daf daf = YomiCalculator.getDafYomiBavli(JewishCalendarHelper.calendar(context, calendar));
-        String masechta = AppLanguage.isEnglish(context) ? daf.getMasechtaTransliterated() : daf.getMasechta();
-        String page = AppLanguage.isEnglish(context) ? String.valueOf(daf.getDaf()) : dafLabel(daf.getDaf());
-        return masechta + " " + page;
+        return AppLanguage.isEnglish(context) ? daf.getMasechtaTransliterated() : daf.getMasechta();
+    }
+
+    public static String bavliDafLabel(Context context, long dateMillis) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(dateMillis);
+        Daf daf = YomiCalculator.getDafYomiBavli(JewishCalendarHelper.calendar(context, calendar));
+        return AppLanguage.isEnglish(context) ? String.valueOf(daf.getDaf()) : "דף " + dafLabel(daf.getDaf());
     }
 
     public static String yerushalmiLabel(Context context, long dateMillis) {

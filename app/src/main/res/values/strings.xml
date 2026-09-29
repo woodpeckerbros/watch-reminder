@@ -6,6 +6,7 @@
     <string name="complication_next_reminder">התזכורת הקרובה</string>
     <string name="complication_blessing_reminder">תזכורת לברכה</string>
     <string name="complication_zmanim">זמני היום</string>
+    <string name="complication_daf_yomi">דף היומי</string>
     <string name="complication_hebrew_date">תאריך עברי</string>
     <string name="complication_intermittent_fasting">צום לסירוגין</string>
     <string name="complication_water_reminder">שתיית מים</string>

@@ -103,6 +103,7 @@ public class MainActivity extends Activity {
     public static final String EXTRA_OPEN_BLESSING_REMINDER = "open_blessing_reminder";
     public static final String EXTRA_OPEN_PENDING_RESTORE = "open_pending_restore";
     public static final String EXTRA_OPEN_ZMANIM_DAY = "open_zmanim_day";
+    public static final String EXTRA_OPEN_DAF_YOMI = "open_daf_yomi";
     public static final String EXTRA_OPEN_FASTING_SETTINGS = "open_fasting_settings";
     public static final String EXTRA_OPEN_WATER_SETTINGS = "open_water_settings";
     /** Marks a MainActivity launch whose root is the watch face complication, not the app UI. */
@@ -225,6 +226,7 @@ public class MainActivity extends Activity {
     private boolean pendingBlessingReminder;
     private boolean pendingRestoreFromPhone;
     private boolean pendingZmanimDay;
+    private boolean pendingDafYomi;
     private boolean pendingFastingSettings;
     private boolean pendingWaterSettings;
     private EntitlementManager entitlementManager;
@@ -313,6 +315,7 @@ public class MainActivity extends Activity {
             openPendingBlessingReminder();
             openPendingRestoreFromPhone();
             openPendingZmanimDay();
+            openPendingDafYomi();
             openPendingFastingSettings();
             openPendingWaterSettings();
         }, 260L);
@@ -608,6 +611,7 @@ public class MainActivity extends Activity {
         openPendingBlessingReminder();
         openPendingRestoreFromPhone();
         openPendingZmanimDay();
+        openPendingDafYomi();
         openPendingFastingSettings();
         openPendingWaterSettings();
     }
@@ -6748,6 +6752,9 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra(EXTRA_OPEN_ZMANIM_DAY, false)) {
             pendingZmanimDay = true;
         }
+        if (intent.getBooleanExtra(EXTRA_OPEN_DAF_YOMI, false)) {
+            pendingDafYomi = true;
+        }
         if (intent.getBooleanExtra(EXTRA_OPEN_FASTING_SETTINGS, false)) {
             pendingFastingSettings = true;
         }
@@ -6773,6 +6780,17 @@ public class MainActivity extends Activity {
             if (new ReminderSettings(this).jewishMode()) {
                 zmanimBackToSettings = false;
                 showZmanimDay(System.currentTimeMillis());
+            } else {
+                startActivity(JewishModeComplicationConfigActivity.createIntent(this));
+            }
+        }
+    }
+
+    private void openPendingDafYomi() {
+        if (pendingDafYomi) {
+            pendingDafYomi = false;
+            if (new ReminderSettings(this).jewishMode()) {
+                showDafYomiSettings();
             } else {
                 startActivity(JewishModeComplicationConfigActivity.createIntent(this));
             }
