@@ -19,6 +19,7 @@ public class DafYomiStore {
     private static final String PREFS_NAME = "daf_yomi_state";
     private static final String KEY_START_DAY = "start_day";
     private static final String KEY_ANSWERED_DAYS = "answered_days";
+    private static final String KEY_LEARNED_MARKED_ON = "learned_marked_on";
     private static final String KEY_MISSED = "missed";
     private static final String KEY_RETRY_UNTIL = "retry_until";
 
@@ -64,13 +65,20 @@ public class DafYomiStore {
         return items;
     }
 
-    public List<DafYomiHelper.Item> recentlyLearnedItems(Context context, int daysBack) {
+    /**
+     * A learned mark may only be corrected on the civil day on which it was made.
+     * This is intentionally based on the marking date, rather than the date of the daf:
+     * a previously missed daf that is completed today can still be corrected today.
+     */
+    public List<DafYomiHelper.Item> learnedItemsMarkedToday(Context context) {
         long today = epochDay(System.currentTimeMillis());
         List<Long> answered = answeredDays();
         List<Long> missed = missedDays();
+        JSONObject markedOn = learnedMarkedOnJson();
         ArrayList<DafYomiHelper.Item> items = new ArrayList<>();
-        for (long day = today; day >= today - Math.max(0, daysBack); day--) {
-            if (answered.contains(day) && !missed.contains(day)) {
+        for (long day : answered) {
+            if (!missed.contains(day)
+                    && markedOn.optLong(String.valueOf(day), Long.MIN_VALUE) == today) {
                 items.add(DafYomiHelper.itemForEpochDay(context, day));
             }
         }
@@ -108,6 +116,7 @@ public class DafYomiStore {
         prefs.edit()
                 .putLong(KEY_START_DAY, epochDay(System.currentTimeMillis()))
                 .putString(KEY_ANSWERED_DAYS, "[]")
+                .remove(KEY_LEARNED_MARKED_ON)
                 .putString(KEY_MISSED, safe.toString())
                 .remove(KEY_RETRY_UNTIL)
                 .commit();
@@ -128,12 +137,16 @@ public class DafYomiStore {
     public void markLearned(List<DafYomiHelper.Item> items) {
         JSONArray answered = answeredDaysJson();
         JSONArray missed = missedJson();
+        JSONObject markedOn = learnedMarkedOnJson();
+        long markedToday = epochDay(System.currentTimeMillis());
         for (DafYomiHelper.Item item : items) {
             putUnique(answered, item.epochDay);
             removeMissed(missed, item.epochDay);
+            putMarkedOn(markedOn, item.epochDay, markedToday);
         }
         prefs.edit()
                 .putString(KEY_ANSWERED_DAYS, answered.toString())
+                .putString(KEY_LEARNED_MARKED_ON, markedOn.toString())
                 .putString(KEY_MISSED, missed.toString())
                 .remove(KEY_RETRY_UNTIL)
                 .apply();
@@ -148,8 +161,10 @@ public class DafYomiStore {
     public void markMissed(List<DafYomiHelper.Item> items) {
         JSONArray missed = missedJson();
         JSONArray answered = answeredDaysJson();
+        JSONObject markedOn = learnedMarkedOnJson();
         for (DafYomiHelper.Item item : items) {
             putUnique(answered, item.epochDay);
+            markedOn.remove(String.valueOf(item.epochDay));
             if (!hasMissed(missed, item.epochDay)) {
                 JSONObject object = new JSONObject();
                 try {
@@ -164,6 +179,7 @@ public class DafYomiStore {
         }
         prefs.edit()
                 .putString(KEY_ANSWERED_DAYS, answered.toString())
+                .putString(KEY_LEARNED_MARKED_ON, markedOn.toString())
                 .putString(KEY_MISSED, missed.toString())
                 .remove(KEY_RETRY_UNTIL)
                 .apply();
@@ -178,10 +194,13 @@ public class DafYomiStore {
     public void markMissedLearned(long epochDay) {
         JSONArray answered = answeredDaysJson();
         JSONArray missed = missedJson();
+        JSONObject markedOn = learnedMarkedOnJson();
         putUnique(answered, epochDay);
         removeMissed(missed, epochDay);
+        putMarkedOn(markedOn, epochDay, epochDay(System.currentTimeMillis()));
         prefs.edit()
                 .putString(KEY_ANSWERED_DAYS, answered.toString())
+                .putString(KEY_LEARNED_MARKED_ON, markedOn.toString())
                 .putString(KEY_MISSED, missed.toString())
                 .remove(KEY_RETRY_UNTIL)
                 .apply();
@@ -222,6 +241,21 @@ public class DafYomiStore {
             return new JSONArray(prefs.getString(KEY_MISSED, "[]"));
         } catch (Exception ignored) {
             return new JSONArray();
+        }
+    }
+
+    private JSONObject learnedMarkedOnJson() {
+        try {
+            return new JSONObject(prefs.getString(KEY_LEARNED_MARKED_ON, "{}"));
+        } catch (Exception ignored) {
+            return new JSONObject();
+        }
+    }
+
+    private void putMarkedOn(JSONObject markedOn, long dafDay, long markedDay) {
+        try {
+            markedOn.put(String.valueOf(dafDay), markedDay);
+        } catch (Exception ignored) {
         }
     }
 

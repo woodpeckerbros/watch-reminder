@@ -761,6 +761,11 @@ public class MainActivity extends Activity {
             jewishActions.addView(blessingButton);
             content.addView(jewishActions);
         }
+        if (new ReminderSettings(this).dafYomiEnabled()) {
+            Button dafYomiButton = pillButton("דף היומי", COLOR_SURFACE_2);
+            dafYomiButton.setOnClickListener(v -> showDafYomiSettings());
+            content.addView(dafYomiButton, matchParams());
+        }
         if (new ReminderSettings(this).intermittentFastingEnabled()) {
             Button fastingButton = pillButton("צום לסירוגין", COLOR_SURFACE_2);
             fastingButton.setOnClickListener(v -> showFastingSettings());
@@ -3529,6 +3534,19 @@ public class MainActivity extends Activity {
         LinearLayout content = baseContent();
         addTitle(content, "דף היומי", "בדיקה יומית ורשימת דפים להשלמה");
 
+        long todayMillis = System.currentTimeMillis();
+        LinearLayout todayDafCard = card();
+        TextView todayDafTitle = text("הדף היומי של היום", 12, COLOR_LUXURY_GOLD);
+        AppFont.bold(todayDafTitle);
+        todayDafCard.addView(todayDafTitle);
+        TextView bavliDaf = text("בבלי · " + DafYomiHelper.bavliLabel(this, todayMillis), 19, COLOR_TEXT);
+        AppFont.bold(bavliDaf);
+        bavliDaf.setPadding(0, dp(4), 0, dp(2));
+        todayDafCard.addView(bavliDaf);
+        TextView yerushalmiDaf = text("ירושלמי · " + DafYomiHelper.yerushalmiLabel(this, todayMillis), 12, COLOR_MUTED);
+        todayDafCard.addView(yerushalmiDaf);
+        content.addView(todayDafCard, cardParams());
+
         LinearLayout timeCard = card();
         Switch enabled = new Switch(this);
         setSwitchText(enabled, "תזכורת דף היומי פעילה");
@@ -3539,32 +3557,6 @@ public class MainActivity extends Activity {
         timeCard.addView(timePickerRow(hour, minute));
         content.addView(timeCard, cardParams());
 
-        LinearLayout correctionCard = card();
-        TextView correctionTitle = text("תיקון סימון", 15, COLOR_TEXT);
-        AppFont.bold(correctionTitle);
-        correctionCard.addView(correctionTitle);
-        TextView correctionHint = text("אם סימנת בטעות שלמדת, אפשר להחזיר דף לרשימת ההשלמות", 11, COLOR_MUTED);
-        correctionHint.setPadding(0, dp(3), 0, dp(5));
-        correctionCard.addView(correctionHint);
-        List<DafYomiHelper.Item> learnedRecent = dafStore.recentlyLearnedItems(this, 7);
-        if (learnedRecent.isEmpty()) {
-            correctionCard.addView(text("אין דפים שסומנו כלמדתי בימים האחרונים", 12, COLOR_MUTED));
-        } else {
-            for (DafYomiHelper.Item item : learnedRecent) {
-                TextView itemText = text(item.label, 14, COLOR_TEXT);
-                itemText.setPadding(0, dp(6), 0, dp(2));
-                correctionCard.addView(itemText);
-                Button undoLearned = pillButton("סמן כלא למדתי", COLOR_SURFACE_2);
-                undoLearned.setOnClickListener(v -> {
-                    new DafYomiStore(this).markMissed(item);
-                    Toast.makeText(this, UiText.t(this, "הדף הועבר להשלמה"), Toast.LENGTH_SHORT).show();
-                    showDafYomiSettings();
-                });
-                correctionCard.addView(undoLearned);
-            }
-        }
-        content.addView(correctionCard, cardParams());
-
         LinearLayout missedCard = card();
         TextView missedTitle = text("דפים להשלמה", 15, COLOR_TEXT);
         AppFont.bold(missedTitle);
@@ -3573,12 +3565,13 @@ public class MainActivity extends Activity {
         if (missed.isEmpty()) {
             missedCard.addView(text("אין דפים שמסומנים כלא למדתי", 12, COLOR_MUTED));
         } else {
-            Button markAllLearned = pillButton("סמן הכל כהושלם", COLOR_ACCENT_DARK);
+            Button markAllLearned = pillButton("✓ סמן את כל " + missed.size() + " הדפים כהושלמו", COLOR_EMERALD);
+            markAllLearned.setTextSize(15);
             markAllLearned.setOnClickListener(v -> {
                 new AlertDialog.Builder(this)
-                        .setTitle(UiText.t(this, "סימון כל הדפים כהושלמו"))
-                        .setMessage(UiText.t(this, "האם לסמן את כל הדפים שברשימת ההשלמה כנלמדו? פעולה זו תסיר את כולם מהרשימה."))
-                        .setPositiveButton(UiText.t(this, "המשך"), (dialog, which) -> {
+                        .setTitle(UiText.t(this, "לסמן " + missed.size() + " דפים כהושלמו?"))
+                        .setMessage(UiText.t(this, "פעולה זו תסמן את כל דפי ההשלמה כנלמדו ותסיר אותם מהרשימה."))
+                        .setPositiveButton(UiText.t(this, "כן, סמן הכל"), (dialog, which) -> {
                             new DafYomiStore(this).markLearned(missed);
                             showDafYomiSettings();
                         })
@@ -3599,6 +3592,32 @@ public class MainActivity extends Activity {
             }
         }
         content.addView(missedCard, cardParams());
+
+        LinearLayout correctionCard = card();
+        TextView correctionTitle = text("תיקון סימון", 15, COLOR_TEXT);
+        AppFont.bold(correctionTitle);
+        correctionCard.addView(correctionTitle);
+        TextView correctionHint = text("אפשר לתקן סימון רק ביום שבו הוא בוצע", 11, COLOR_MUTED);
+        correctionHint.setPadding(0, dp(3), 0, dp(5));
+        correctionCard.addView(correctionHint);
+        List<DafYomiHelper.Item> learnedToday = dafStore.learnedItemsMarkedToday(this);
+        if (learnedToday.isEmpty()) {
+            correctionCard.addView(text("אין היום דפים שאפשר לתקן את סימונם", 12, COLOR_MUTED));
+        } else {
+            for (DafYomiHelper.Item item : learnedToday) {
+                TextView itemText = text(item.label, 14, COLOR_TEXT);
+                itemText.setPadding(0, dp(6), 0, dp(2));
+                correctionCard.addView(itemText);
+                Button undoLearned = pillButton("סמן כלא למדתי", COLOR_SURFACE_2);
+                undoLearned.setOnClickListener(v -> {
+                    new DafYomiStore(this).markMissed(item);
+                    Toast.makeText(this, UiText.t(this, "הדף הועבר להשלמה"), Toast.LENGTH_SHORT).show();
+                    showDafYomiSettings();
+                });
+                correctionCard.addView(undoLearned);
+            }
+        }
+        content.addView(correctionCard, cardParams());
 
         LinearLayout actions = actionRow();
         Button save = pillButton("שמירה", COLOR_ACCENT_DARK);
