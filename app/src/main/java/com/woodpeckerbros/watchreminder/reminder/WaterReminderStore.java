@@ -13,6 +13,8 @@ public final class WaterReminderStore {
     private static final String KEY_DAY = "day";
     private static final String KEY_CONSUMED_ML = "consumed_ml";
     private static final String KEY_LAST_HANDLED_TRIGGER = "last_handled_trigger";
+    private static final String KEY_PENDING_AUTO_TRIGGER = "pending_auto_trigger";
+    private static final Object AUTO_TRIGGER_LOCK = new Object();
 
     private final SharedPreferences prefs;
 
@@ -38,6 +40,37 @@ public final class WaterReminderStore {
                 .putInt(KEY_CONSUMED_ML, consumed)
                 .putLong(KEY_LAST_HANDLED_TRIGGER, triggerAt)
                 .apply();
+        clearPendingAutoTrigger(triggerAt);
+    }
+
+    public void setPendingAutoTrigger(long triggerAt) {
+        ensureToday();
+        synchronized (AUTO_TRIGGER_LOCK) {
+            prefs.edit().putLong(KEY_PENDING_AUTO_TRIGGER, triggerAt).commit();
+        }
+    }
+
+    public boolean consumePendingAutoTrigger(long triggerAt) {
+        ensureToday();
+        synchronized (AUTO_TRIGGER_LOCK) {
+            if (triggerAt <= 0L || prefs.getLong(KEY_PENDING_AUTO_TRIGGER, 0L) != triggerAt
+                    || isHandled(triggerAt)) return false;
+            return prefs.edit().remove(KEY_PENDING_AUTO_TRIGGER).commit();
+        }
+    }
+
+    public void clearPendingAutoTrigger(long triggerAt) {
+        synchronized (AUTO_TRIGGER_LOCK) {
+            if (prefs.getLong(KEY_PENDING_AUTO_TRIGGER, 0L) == triggerAt) {
+                prefs.edit().remove(KEY_PENDING_AUTO_TRIGGER).commit();
+            }
+        }
+    }
+
+    public void clearPendingAutoTrigger() {
+        synchronized (AUTO_TRIGGER_LOCK) {
+            prefs.edit().remove(KEY_PENDING_AUTO_TRIGGER).commit();
+        }
     }
 
     /** Records water entered from the daily progress screen, independent of an alert. */
@@ -55,6 +88,7 @@ public final class WaterReminderStore {
                 .putString(KEY_DAY, todayKey())
                 .putInt(KEY_CONSUMED_ML, 0)
                 .remove(KEY_LAST_HANDLED_TRIGGER)
+                .remove(KEY_PENDING_AUTO_TRIGGER)
                 .apply();
     }
 

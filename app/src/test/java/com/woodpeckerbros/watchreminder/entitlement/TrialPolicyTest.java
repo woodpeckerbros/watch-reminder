@@ -3,6 +3,8 @@ package com.woodpeckerbros.watchreminder.entitlement;
 import com.android.billingclient.api.Purchase;
 
 import org.junit.Test;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -31,18 +33,47 @@ public class TrialPolicyTest {
     }
 
     @Test public void warnsExactlyOneDayBeforeExpiryOnlyWhileTrialIsActive() {
-        long warningAt = START + TrialPolicy.TRIAL_DURATION_MS
+        TimeZone zone = TimeZone.getTimeZone("UTC");
+        long trialStart = localExpiryAt(zone, 14, 0) - TrialPolicy.TRIAL_DURATION_MS;
+        long warningAt = trialStart + TrialPolicy.TRIAL_DURATION_MS
                 - TrialPolicy.EXPIRY_WARNING_BEFORE_MS;
         assertEquals(warningAt, TrialPolicy.expiryWarningAt(
-                TrialPolicy.evaluate(START, START, START, false)));
+                TrialPolicy.evaluate(trialStart, trialStart, trialStart, false), zone));
         assertFalse(TrialPolicy.inExpiryWarningWindow(
-                TrialPolicy.evaluate(START, START, warningAt - 1, false)));
+                TrialPolicy.evaluate(trialStart, trialStart, warningAt - 1, false), zone));
         assertTrue(TrialPolicy.inExpiryWarningWindow(
-                TrialPolicy.evaluate(START, START, warningAt, false)));
+                TrialPolicy.evaluate(trialStart, trialStart, warningAt, false), zone));
         assertFalse(TrialPolicy.inExpiryWarningWindow(
-                TrialPolicy.evaluate(START, START, START + TrialPolicy.TRIAL_DURATION_MS, false)));
+                TrialPolicy.evaluate(trialStart, trialStart, trialStart + TrialPolicy.TRIAL_DURATION_MS, false), zone));
         assertFalse(TrialPolicy.inExpiryWarningWindow(
-                TrialPolicy.evaluate(START, START, warningAt, true)));
+                TrialPolicy.evaluate(trialStart, trialStart, warningAt, true), zone));
+    }
+
+    @Test public void overnightExpiryWarnsDuringLocalDaytime() {
+        TimeZone zone = TimeZone.getTimeZone("Asia/Jerusalem");
+        assertLocalWarning(zone, 2, 0, 14, 0, 1);
+        assertLocalWarning(zone, 7, 0, 18, 0, 1);
+        assertLocalWarning(zone, 21, 0, 9, 0, 0);
+    }
+
+    private static void assertLocalWarning(TimeZone zone, int expiryHour, int expiryMinute,
+                                           int warningHour, int warningMinute, int daysBefore) {
+        long expiryAt = localExpiryAt(zone, expiryHour, expiryMinute);
+        long trialStart = expiryAt - TrialPolicy.TRIAL_DURATION_MS;
+        Calendar expected = Calendar.getInstance(zone);
+        expected.setTimeInMillis(expiryAt);
+        expected.add(Calendar.DAY_OF_YEAR, -daysBefore);
+        expected.set(Calendar.HOUR_OF_DAY, warningHour);
+        expected.set(Calendar.MINUTE, warningMinute);
+        assertEquals(expected.getTimeInMillis(), TrialPolicy.expiryWarningAt(
+                TrialPolicy.evaluate(trialStart, trialStart, trialStart, false), zone));
+    }
+
+    private static long localExpiryAt(TimeZone zone, int hour, int minute) {
+        Calendar expiry = Calendar.getInstance(zone);
+        expiry.clear();
+        expiry.set(2026, Calendar.NOVEMBER, 20, hour, minute, 0);
+        return expiry.getTimeInMillis();
     }
 
     @Test public void clockRollbackCannotExtendTrial() {

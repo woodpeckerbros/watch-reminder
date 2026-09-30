@@ -19,7 +19,12 @@ import com.woodpeckerbros.watchreminder.MainActivity;
 import com.woodpeckerbros.watchreminder.R;
 import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
 
-/** One quiet, actionable notice 24 hours before the trial stops delivering alarms. */
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+
+/** One quiet, actionable daytime notice before the trial stops delivering alarms. */
 public final class TrialExpiryWarningReceiver extends BroadcastReceiver {
     private static final String PREFS = "trial_expiry_warning";
     private static final String KEY_NOTIFIED_START = "notified_trial_start";
@@ -71,9 +76,7 @@ public final class TrialExpiryWarningReceiver extends BroadcastReceiver {
         boolean english = AppLanguage.isEnglish(context);
         String title = english ? "Your Zmanio trial ends soon"
                 : "תקופת הניסיון של Zmanio מסתיימת בקרוב";
-        String message = english
-                ? "In less than 24 hours, reminders and Smart Alarm will stop. Unlock Zmanio with a one-time purchase to keep them running."
-                : "בתוך פחות מ־24 שעות התזכורות והשעון המעורר החכם יפסיקו לפעול. רכישה חד־פעמית תאפשר לך להמשיך לקבל אותן בזמן.";
+        String message = warningMessage(context, trial);
         String action = english ? "View access" : "פתיחת רישיון";
         NotificationChannel channel = new NotificationChannel(CHANNEL,
                 english ? "Trial ending" : "סיום תקופת הניסיון", NotificationManager.IMPORTANCE_DEFAULT);
@@ -92,6 +95,24 @@ public final class TrialExpiryWarningReceiver extends BroadcastReceiver {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putLong(KEY_NOTIFIED_START, trial.trialStartedAt).commit();
         AppLog.d(context, "Trial expiry warning shown trialStart=" + trial.trialStartedAt);
+    }
+
+    public static String warningMessage(Context context, TrialPolicy.Snapshot trial) {
+        boolean english = AppLanguage.isEnglish(context);
+        long expiryAt = trial.trialStartedAt + TrialPolicy.TRIAL_DURATION_MS;
+        Calendar today = Calendar.getInstance();
+        today.setTimeInMillis(trial.effectiveNow);
+        Calendar expiry = Calendar.getInstance();
+        expiry.setTimeInMillis(expiryAt);
+        boolean tomorrow = today.get(Calendar.YEAR) != expiry.get(Calendar.YEAR)
+                || today.get(Calendar.DAY_OF_YEAR) != expiry.get(Calendar.DAY_OF_YEAR);
+        String time = new SimpleDateFormat("HH:mm", Locale.US).format(new Date(expiryAt));
+        if (english) {
+            return "Your trial ends " + (tomorrow ? "tomorrow" : "today") + " at " + time
+                    + ". Reminders and alarms will then stop. A one-time purchase keeps them running.";
+        }
+        return "תקופת הניסיון תסתיים " + (tomorrow ? "מחר" : "היום") + " ב־" + time
+                + ". לאחר מכן התזכורות והשעונים המעוררים יפסיקו לפעול. רכישה חד־פעמית תשאיר אותם פעילים.";
     }
 
     private static boolean alreadyNotified(Context context, long trialStart) {

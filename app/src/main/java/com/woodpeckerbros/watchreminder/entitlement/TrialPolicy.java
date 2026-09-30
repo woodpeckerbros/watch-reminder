@@ -1,5 +1,8 @@
 package com.woodpeckerbros.watchreminder.entitlement;
 
+import java.util.Calendar;
+import java.util.TimeZone;
+
 /** Stateless 14-day trial calculation, deliberately independent of Android storage. */
 public final class TrialPolicy {
     public static final long TRIAL_DURATION_MS = 14L * 24L * 60L * 60L * 1000L;
@@ -8,12 +11,43 @@ public final class TrialPolicy {
     private TrialPolicy() { }
 
     public static long expiryWarningAt(Snapshot trial) {
-        return trial.trialStartedAt + TRIAL_DURATION_MS - EXPIRY_WARNING_BEFORE_MS;
+        return expiryWarningAt(trial, TimeZone.getDefault());
+    }
+
+    static long expiryWarningAt(Snapshot trial, TimeZone zone) {
+        long expiryAt = trial.trialStartedAt + TRIAL_DURATION_MS;
+        Calendar expiry = Calendar.getInstance(zone);
+        expiry.setTimeInMillis(expiryAt);
+        int expiryHour = expiry.get(Calendar.HOUR_OF_DAY);
+        if (expiryHour >= 9 && expiryHour < 19) {
+            return expiryAt - EXPIRY_WARNING_BEFORE_MS;
+        }
+        // A warning at night is easily missed. For an evening/overnight expiry, warn
+        // roughly 12 hours ahead, constrained to the watch's local daytime (09:00–18:00).
+        Calendar warning = Calendar.getInstance(zone);
+        warning.setTimeInMillis(expiryAt - 12L * 60L * 60L * 1000L);
+        int warningHour = warning.get(Calendar.HOUR_OF_DAY);
+        if (warningHour < 9) {
+            warning.set(Calendar.HOUR_OF_DAY, 9);
+            warning.set(Calendar.MINUTE, 0);
+            warning.set(Calendar.SECOND, 0);
+            warning.set(Calendar.MILLISECOND, 0);
+        } else if (warningHour >= 18) {
+            warning.set(Calendar.HOUR_OF_DAY, 18);
+            warning.set(Calendar.MINUTE, 0);
+            warning.set(Calendar.SECOND, 0);
+            warning.set(Calendar.MILLISECOND, 0);
+        }
+        return warning.getTimeInMillis();
     }
 
     public static boolean inExpiryWarningWindow(Snapshot trial) {
+        return inExpiryWarningWindow(trial, TimeZone.getDefault());
+    }
+
+    static boolean inExpiryWarningWindow(Snapshot trial, TimeZone zone) {
         return !trial.lifetimePurchased && trial.featureAccessGranted
-                && trial.remainingMillis <= EXPIRY_WARNING_BEFORE_MS;
+                && trial.effectiveNow >= expiryWarningAt(trial, zone);
     }
 
     public static Snapshot evaluate(long storedStartAt, long highestSeenWallTime,

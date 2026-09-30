@@ -85,7 +85,8 @@ public final class WaterReminderAlertActivity extends Activity {
         Button drank = button(getString(R.string.water_drank), COLOR_DRANK);
         LinearLayout customAmount = new LinearLayout(this);
         customAmount.setOrientation(LinearLayout.HORIZONTAL);
-        customAmount.setGravity(Gravity.CENTER_VERTICAL);
+        customAmount.setGravity(Gravity.CENTER);
+        customAmount.setLayoutDirection(android.view.View.LAYOUT_DIRECTION_LTR);
         Button decrease = button("−", COLOR_SURFACE);
         Button drankSelected = button(getString(R.string.water_drank_selected_amount, selectedAmountMl), COLOR_DRANK);
         Button increase = button("+", COLOR_SURFACE);
@@ -93,11 +94,26 @@ public final class WaterReminderAlertActivity extends Activity {
         increase.setContentDescription(getString(R.string.water_increase_amount));
         decrease.setTextSize(20);
         increase.setTextSize(20);
-        customAmount.addView(decrease, new LinearLayout.LayoutParams(dp(36), dp(38)));
+        for (Button adjust : new Button[]{decrease, increase}) {
+            adjust.setMinHeight(0);
+            adjust.setMinimumHeight(0);
+            adjust.setIncludeFontPadding(false);
+            adjust.setPadding(0, 0, 0, 0);
+            adjust.setGravity(Gravity.CENTER);
+        }
+        drankSelected.setMinHeight(0);
+        drankSelected.setMinimumHeight(0);
+        drankSelected.setIncludeFontPadding(false);
+        drankSelected.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams decreaseParams = new LinearLayout.LayoutParams(dp(38), dp(38));
+        decreaseParams.setMargins(dp(2), 0, dp(2), 0);
+        customAmount.addView(decrease, decreaseParams);
         LinearLayout.LayoutParams selectedParams = new LinearLayout.LayoutParams(0, dp(38), 1f);
-        selectedParams.setMargins(dp(3), 0, dp(3), 0);
+        selectedParams.setMargins(dp(2), 0, dp(2), 0);
         customAmount.addView(drankSelected, selectedParams);
-        customAmount.addView(increase, new LinearLayout.LayoutParams(dp(36), dp(38)));
+        LinearLayout.LayoutParams increaseParams = new LinearLayout.LayoutParams(dp(38), dp(38));
+        increaseParams.setMargins(dp(2), 0, dp(2), 0);
+        customAmount.addView(increase, increaseParams);
         LinearLayout.LayoutParams customAmountParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         customAmountParams.setMargins(dp(3), dp(2), dp(3), dp(2));
@@ -158,6 +174,10 @@ public final class WaterReminderAlertActivity extends Activity {
         if (!closed && autoCloseRunnable != null) {
             handler.removeCallbacks(autoCloseRunnable);
             handler.postDelayed(autoCloseRunnable, new ReminderSettings(this).autoSnoozeDelayMs());
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                    || event.getActionMasked() == MotionEvent.ACTION_UP) {
+                WaterReminderScheduler.scheduleAutoSnooze(this, triggerAt);
+            }
         }
         return super.dispatchTouchEvent(event);
     }
@@ -170,6 +190,7 @@ public final class WaterReminderAlertActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         stopFeedback();
         new WaterReminderStore(this).markHandled(triggerAt, consumedMl);
+        WaterReminderScheduler.cancelAutoSnooze(this);
         WaterReminderReceiver.cancelNotification(this);
         WaterReminderScheduler.schedule(this);
         ComplicationRefresh.requestWater(this);
@@ -182,6 +203,8 @@ public final class WaterReminderAlertActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         stopFeedback();
         WaterReminderReceiver.cancelNotification(this);
+        new WaterReminderStore(this).clearPendingAutoTrigger(triggerAt);
+        WaterReminderScheduler.cancelAutoSnooze(this);
         WaterReminderScheduler.scheduleSnooze(this, 15);
         finish();
     }
@@ -189,6 +212,8 @@ public final class WaterReminderAlertActivity extends Activity {
     private void scheduleAutoClose(ReminderSettings settings) {
         autoCloseRunnable = () -> {
             if (!closed) {
+                closed = true;
+                WaterReminderReceiver.autoSnoozeIfPending(this, triggerAt);
                 stopFeedback();
                 finish();
             }

@@ -10,6 +10,7 @@ import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 import com.woodpeckerbros.watchreminder.entitlement.EntitlementManager;
 import com.woodpeckerbros.watchreminder.entitlement.EntitlementStatus;
 import com.woodpeckerbros.watchreminder.entitlement.TrialPolicy;
+import com.woodpeckerbros.watchreminder.entitlement.TrialExpiryWarningReceiver;
 
 import android.Manifest;
 import android.app.Activity;
@@ -821,9 +822,7 @@ public class MainActivity extends Activity {
             AppFont.bold(heading);
             heading.setGravity(Gravity.CENTER);
             warning.addView(heading, matchParams());
-            TextView detail = text(entitlementText(
-                    "בעוד פחות מ־24 שעות התזכורות והשעון המעורר החכם יפסיקו לפעול. אפשר להמשיך להשתמש ב־Zmanio ברכישה חד־פעמית.",
-                    "In less than 24 hours, reminders and Smart Alarm will stop. Keep using Zmanio with a one-time purchase."),
+            TextView detail = text(TrialExpiryWarningReceiver.warningMessage(this, trial),
                     12, COLOR_TEXT);
             detail.setGravity(Gravity.CENTER);
             detail.setPadding(dp(4), dp(6), dp(4), dp(7));

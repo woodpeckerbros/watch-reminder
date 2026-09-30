@@ -13,15 +13,23 @@ import java.util.Calendar;
 public final class WaterReminderScheduler {
     static final String EXTRA_TRIGGER_AT = "water_trigger_at";
     private static final int REQUEST_CODE = "water_reminder".hashCode();
+    private static final int AUTO_SNOOZE_REQUEST_CODE = "water_auto_snooze".hashCode();
+    static final String ACTION_AUTO_SNOOZE = "com.woodpeckerbros.watchreminder.WATER_AUTO_SNOOZE";
+    static final int AUTO_RETRY_MINUTES = 5;
 
     private WaterReminderScheduler() {
     }
 
     public static void schedule(Context context) {
-        if (!EntitlementAccess.isFeatureAccessGranted(context)) { cancel(context); return; }
-        cancel(context);
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            cancel(context);
+            return;
+        }
+        cancelPeriodic(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.waterRemindersEnabled()) {
+            cancelAutoSnooze(context);
+            new WaterReminderStore(context).clearPendingAutoTrigger();
             AppLog.d(context, "water schedule skipped disabled");
             return;
         }
@@ -39,10 +47,30 @@ public final class WaterReminderScheduler {
     }
 
     public static void cancel(Context context) {
+        cancelPeriodic(context);
+        cancelAutoSnooze(context);
+        new WaterReminderStore(context).clearPendingAutoTrigger();
+    }
+
+    private static void cancelPeriodic(Context context) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) {
             manager.cancel(pendingIntent(context, 0L));
         }
+    }
+
+    static void scheduleAutoSnooze(Context context, long triggerAt) {
+        new WaterReminderStore(context).setPendingAutoTrigger(triggerAt);
+        long timeoutAt = System.currentTimeMillis() + new ReminderSettings(context).autoSnoozeDelayMs();
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        setBest(context, manager, timeoutAt, autoSnoozeIntent(context, triggerAt));
+        AppLog.d(context, "water auto-snooze timeout=" + NextReminderCalculator.formatDateTime(timeoutAt)
+                + " original=" + triggerAt);
+    }
+
+    static void cancelAutoSnooze(Context context) {
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (manager != null) manager.cancel(autoSnoozeIntent(context, 0L));
     }
 
     public static void scheduleSnooze(Context context, int minutes) {
@@ -59,7 +87,7 @@ public final class WaterReminderScheduler {
                 System.currentTimeMillis() + Math.max(1, minutes) * 60_000L);
         long triggerAt = QuietTimeHelper.adjust(context, requestedAt);
         // A snooze replaces the normal periodic alarm, never competes with it.
-        cancel(context);
+        cancelPeriodic(context);
         scheduleAt(context, triggerAt);
         AppLog.d(context, "water snooze minutes=" + Math.max(1, minutes)
                 + " requested_at=" + NextReminderCalculator.formatDateTime(requestedAt)
@@ -210,6 +238,14 @@ public final class WaterReminderScheduler {
         Intent intent = new Intent(context, WaterReminderReceiver.class)
                 .putExtra(EXTRA_TRIGGER_AT, triggerAt);
         return PendingIntent.getBroadcast(context, REQUEST_CODE, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static PendingIntent autoSnoozeIntent(Context context, long triggerAt) {
+        Intent intent = new Intent(context, WaterReminderReceiver.class)
+                .setAction(ACTION_AUTO_SNOOZE)
+                .putExtra(EXTRA_TRIGGER_AT, triggerAt);
+        return PendingIntent.getBroadcast(context, AUTO_SNOOZE_REQUEST_CODE, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

@@ -28,6 +28,11 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
         }
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.waterRemindersEnabled()) {
+            WaterReminderScheduler.cancel(context);
+            return;
+        }
+        if (intent != null && WaterReminderScheduler.ACTION_AUTO_SNOOZE.equals(intent.getAction())) {
+            autoSnoozeIfPending(context, intent.getLongExtra(WaterReminderScheduler.EXTRA_TRIGGER_AT, 0L));
             return;
         }
         long triggerAt = intent == null ? 0L : intent.getLongExtra(WaterReminderScheduler.EXTRA_TRIGGER_AT, 0L);
@@ -54,8 +59,19 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
         }
         int consumedMl = store.consumedTodayMl();
         ComplicationRefresh.requestWater(context);
-        showNotification(context, triggerAt, amountMl, consumedMl, settings.waterDailyTargetMl());
         WaterReminderScheduler.schedule(context);
+        WaterReminderScheduler.scheduleAutoSnooze(context, triggerAt);
+        showNotification(context, triggerAt, amountMl, consumedMl, settings.waterDailyTargetMl());
+    }
+
+    static void autoSnoozeIfPending(Context context, long triggerAt) {
+        WaterReminderStore store = new WaterReminderStore(context);
+        if (!store.consumePendingAutoTrigger(triggerAt)) return;
+        WaterReminderScheduler.cancelAutoSnooze(context);
+        cancelNotification(context);
+        WaterReminderScheduler.scheduleSnooze(context, WaterReminderScheduler.AUTO_RETRY_MINUTES);
+        AppLog.d(context, "water auto-snooze original=" + triggerAt
+                + " retry_minutes=" + WaterReminderScheduler.AUTO_RETRY_MINUTES);
     }
 
     public static void cancelNotification(Context context) {
