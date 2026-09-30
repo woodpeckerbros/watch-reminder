@@ -24,6 +24,7 @@ public final class SmartWakeDetector {
     public static final int IMMEDIATE_WAKE_THRESHOLD = 42;
     public static final int TREND_INTERESTING_THRESHOLD = 12;
     public static final int TREND_CANDIDATE_THRESHOLD = 20;
+    private static final int EARLY_MULTI_SENSOR_CANDIDATE_THRESHOLD = 18;
     public static final int CANDIDATE_CONFIRMATION_THRESHOLD = 12;
     public static final long CANDIDATE_MEMORY_MS = 150_000L;
     private static final long MIN_CANDIDATE_CONFIRMATION_MS = 20_000L;
@@ -258,6 +259,10 @@ public final class SmartWakeDetector {
                 && score >= TREND_CANDIDATE_THRESHOLD;
         boolean moderateCandidate = baselineReady && evidenceGroups >= 2
                 && (score >= CONFIRMED_WAKE_THRESHOLD || trendCandidate);
+        // Preserve a small, two-source hint as candidate context. It never wakes by itself:
+        // the next evaluation must still meet the full threshold with fresh HR and movement.
+        boolean earlyMultiSensorCandidate = baselineReady && cardiovascularCurrentEvidence
+                && movementEvidence && score >= EARLY_MULTI_SENSOR_CANDIDATE_THRESHOLD;
         // A very strong single sample is still only a candidate. The old one-evaluation wake path
         // was vulnerable to a turn-over plus transient HR spike and defeated temporal confirmation.
         boolean immediateCandidate = baselineReady && cardiovascularCurrentEvidence && movementEvidence
@@ -316,7 +321,7 @@ public final class SmartWakeDetector {
                 candidateWeakEvaluations = 0;
                 candidateConfirmationStatus = "WAITING_FOR_FRESH_CONFIRMATION";
             }
-        } else if (!candidateExpired && moderateCandidate) {
+        } else if (!candidateExpired && (moderateCandidate || earlyMultiSensorCandidate)) {
             beginCandidate(now, score, evidenceGroups);
             candidateAge = 0L;
             loggedCandidateOriginScore = candidateOriginScore;
@@ -379,7 +384,8 @@ public final class SmartWakeDetector {
                 ? "NO_DATA" : movementEvidence ? "MEASURED_ACTIVITY" : "MEASURED_QUIET";
         lastEvaluationAt = now;
 
-        return new Decision(shouldWake, score, baselineReady, moderateCandidate, immediateCandidate,
+        return new Decision(shouldWake, score, baselineReady,
+                moderateCandidate || earlyMultiSensorCandidate, immediateCandidate,
                 candidateActive, candidateConfirmed, candidateAge, evidenceGroups, recentHr, baselineHr,
                 hrAboveBaseline, hrvAboveBaseline, recentAccel, baselineAccel, recentGyro, baselineGyro,
                 steps90Seconds, steps60Seconds, userActivity,

@@ -30,6 +30,21 @@ public class TrialPolicyTest {
                 .featureAccessGranted);
     }
 
+    @Test public void warnsExactlyOneDayBeforeExpiryOnlyWhileTrialIsActive() {
+        long warningAt = START + TrialPolicy.TRIAL_DURATION_MS
+                - TrialPolicy.EXPIRY_WARNING_BEFORE_MS;
+        assertEquals(warningAt, TrialPolicy.expiryWarningAt(
+                TrialPolicy.evaluate(START, START, START, false)));
+        assertFalse(TrialPolicy.inExpiryWarningWindow(
+                TrialPolicy.evaluate(START, START, warningAt - 1, false)));
+        assertTrue(TrialPolicy.inExpiryWarningWindow(
+                TrialPolicy.evaluate(START, START, warningAt, false)));
+        assertFalse(TrialPolicy.inExpiryWarningWindow(
+                TrialPolicy.evaluate(START, START, START + TrialPolicy.TRIAL_DURATION_MS, false)));
+        assertFalse(TrialPolicy.inExpiryWarningWindow(
+                TrialPolicy.evaluate(START, START, warningAt, true)));
+    }
+
     @Test public void clockRollbackCannotExtendTrial() {
         long afterExpiry = START + TrialPolicy.TRIAL_DURATION_MS + 60_000L;
         TrialPolicy.Snapshot snapshot = TrialPolicy.evaluate(START, afterExpiry, START + 60_000L, false);

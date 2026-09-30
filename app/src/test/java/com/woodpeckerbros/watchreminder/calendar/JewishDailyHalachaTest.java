@@ -51,6 +51,21 @@ public class JewishDailyHalachaTest {
         assertFalse(JewishDailyHalacha.isMajorYomTov(JewishCalendar.CHOL_HAMOED_SUCCOS));
     }
 
+    @Test public void cholHamoedOrdinalFollowsIsraelAndDiasporaCalendars() {
+        JewishCalendar israelPesach = new JewishCalendar(5787, JewishDate.NISSAN, 20);
+        israelPesach.setInIsrael(true);
+        assertEquals(5, JewishDailyHalacha.cholHamoedDay(israelPesach));
+        JewishCalendar diasporaPesach = new JewishCalendar(5787, JewishDate.NISSAN, 20);
+        diasporaPesach.setInIsrael(false);
+        assertEquals(4, JewishDailyHalacha.cholHamoedDay(diasporaPesach));
+        JewishCalendar israelHoshanaRabba = new JewishCalendar(5787, JewishDate.TISHREI, 21);
+        israelHoshanaRabba.setInIsrael(true);
+        assertEquals(6, JewishDailyHalacha.cholHamoedDay(israelHoshanaRabba));
+        JewishCalendar diasporaHoshanaRabba = new JewishCalendar(5787, JewishDate.TISHREI, 21);
+        diasporaHoshanaRabba.setInIsrael(false);
+        assertEquals(5, JewishDailyHalacha.cholHamoedDay(diasporaHoshanaRabba));
+    }
+
     @Test public void displaysVezosHabrachaForIsraeliSheminiAtzeresOnShabbat() {
         JewishCalendar sheminiAtzeres5787 = new JewishCalendar(5787, JewishDate.TISHREI, 22);
         sheminiAtzeres5787.setInIsrael(true);

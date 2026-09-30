@@ -57,12 +57,14 @@ public final class EntitlementManager {
 
     public void start() {
         if (!store.snapshot().featureAccessGranted) EntitlementEnforcer.apply(context);
+        TrialExpiryWarningReceiver.schedule(context);
         ensureClient();
         onForeground();
     }
 
     /** Call from Activity.onResume: refreshes ownership even when the callback was missed. */
     public void onForeground() {
+        TrialExpiryWarningReceiver.schedule(context);
         ensureClient();
         if (billingClient.isReady()) {
             queryProductDetails();
@@ -241,6 +243,7 @@ public final class EntitlementManager {
         if (purchased || authoritativeQuery) store.setLifetimePurchased(
                 PurchaseEntitlementPolicy.lifetimeAfterPurchaseQuery(
                         store.snapshot().lifetimePurchased, authoritativeQuery, purchased));
+        TrialExpiryWarningReceiver.schedule(context);
         boolean nowGranted = store.snapshot().featureAccessGranted;
         if (PurchaseEntitlementPolicy.shouldResumeReminderDelivery(wasGranted, nowGranted)
                 || (wasGranted && !nowGranted) || purchased) EntitlementEnforcer.apply(context);

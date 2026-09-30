@@ -62,6 +62,17 @@ public final class JewishDailyHalacha {
                 || index == JewishCalendar.SIMCHAS_TORAH;
     }
 
+    /** The ordinal within Chol Hamoed, including Hoshana Rabba for Sukkot. */
+    public static int cholHamoedDay(JewishCalendar day) {
+        int index = day.getYomTovIndex();
+        boolean pesach = index == JewishCalendar.CHOL_HAMOED_PESACH;
+        boolean sukkot = index == JewishCalendar.CHOL_HAMOED_SUCCOS
+                || index == JewishCalendar.HOSHANA_RABBA;
+        if (!pesach && !sukkot) return 0;
+        int firstDay = day.getInIsrael() ? 16 : 17;
+        return day.getJewishDayOfMonth() - firstDay + 1;
+    }
+
     /** In Israel, Shemini Atzeres is Simchat Torah and Vezos Habracha is read. */
     public static JewishCalendar.Parsha yomTovShabbatParsha(int index, boolean inIsrael) {
         return inIsrael && index == JewishCalendar.SHEMINI_ATZERES

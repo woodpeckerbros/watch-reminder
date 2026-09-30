@@ -46,6 +46,7 @@ import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.provider.Settings;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -104,6 +105,7 @@ public class MainActivity extends Activity {
     public static final String EXTRA_OPEN_PENDING_RESTORE = "open_pending_restore";
     public static final String EXTRA_OPEN_ZMANIM_DAY = "open_zmanim_day";
     public static final String EXTRA_OPEN_DAF_YOMI = "open_daf_yomi";
+    public static final String EXTRA_OPEN_ENTITLEMENT = "open_entitlement";
     public static final String EXTRA_OPEN_FASTING_SETTINGS = "open_fasting_settings";
     public static final String EXTRA_OPEN_WATER_SETTINGS = "open_water_settings";
     /** Marks a MainActivity launch whose root is the watch face complication, not the app UI. */
@@ -227,6 +229,7 @@ public class MainActivity extends Activity {
     private boolean pendingRestoreFromPhone;
     private boolean pendingZmanimDay;
     private boolean pendingDafYomi;
+    private boolean pendingEntitlement;
     private boolean pendingFastingSettings;
     private boolean pendingWaterSettings;
     private EntitlementManager entitlementManager;
@@ -316,6 +319,7 @@ public class MainActivity extends Activity {
             openPendingRestoreFromPhone();
             openPendingZmanimDay();
             openPendingDafYomi();
+            openPendingEntitlement();
             openPendingFastingSettings();
             openPendingWaterSettings();
         }, 260L);
@@ -612,6 +616,7 @@ public class MainActivity extends Activity {
         openPendingRestoreFromPhone();
         openPendingZmanimDay();
         openPendingDafYomi();
+        openPendingEntitlement();
         openPendingFastingSettings();
         openPendingWaterSettings();
     }
@@ -808,6 +813,27 @@ public class MainActivity extends Activity {
         if (entitlementManager == null) return;
         TrialPolicy.Snapshot trial = entitlementManager.trial();
         if (trial.lifetimePurchased) return;
+        if (TrialPolicy.inExpiryWarningWindow(trial)) {
+            LinearLayout warning = card();
+            warning.setBackground(rounded(COLOR_SURFACE_2, dp(15), COLOR_LUXURY_GOLD));
+            TextView heading = text(entitlementText(
+                    "תקופת הניסיון מסתיימת בקרוב", "Your trial ends soon"), 14, COLOR_LUXURY_GOLD);
+            AppFont.bold(heading);
+            heading.setGravity(Gravity.CENTER);
+            warning.addView(heading, matchParams());
+            TextView detail = text(entitlementText(
+                    "בעוד פחות מ־24 שעות התזכורות והשעון המעורר החכם יפסיקו לפעול. אפשר להמשיך להשתמש ב־Zmanio ברכישה חד־פעמית.",
+                    "In less than 24 hours, reminders and Smart Alarm will stop. Keep using Zmanio with a one-time purchase."),
+                    12, COLOR_TEXT);
+            detail.setGravity(Gravity.CENTER);
+            detail.setPadding(dp(4), dp(6), dp(4), dp(7));
+            warning.addView(detail, matchParams());
+            Button access = pillButton(entitlementText("פתיחת רישיון", "View access"), COLOR_ACCENT_DARK);
+            access.setOnClickListener(v -> showEntitlementScreen());
+            warning.addView(access, matchParams());
+            content.addView(warning, cardParams());
+            return;
+        }
         long days = Math.max(1L, (trial.remainingMillis + 86_399_999L) / 86_400_000L);
         TextView remaining = text(entitlementText(
                 "תקופת ניסיון · נותרו " + days + " ימים",
@@ -3759,7 +3785,9 @@ public class MainActivity extends Activity {
         addTachanunNotice(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
         addCurrentJewishHolidayRows(timesCard, dayMillis);
+        addCholHamoedRow(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
+        addErevShabbatRow(timesCard, dayMillis);
         addZmanimParshaRows(timesCard, dayMillis);
 
         long nearestZmanTime = nearestDisplayedZmanTime(dayMillis);
@@ -6755,6 +6783,9 @@ public class MainActivity extends Activity {
         if (intent.getBooleanExtra(EXTRA_OPEN_DAF_YOMI, false)) {
             pendingDafYomi = true;
         }
+        if (intent.getBooleanExtra(EXTRA_OPEN_ENTITLEMENT, false)) {
+            pendingEntitlement = true;
+        }
         if (intent.getBooleanExtra(EXTRA_OPEN_FASTING_SETTINGS, false)) {
             pendingFastingSettings = true;
         }
@@ -6794,6 +6825,13 @@ public class MainActivity extends Activity {
             } else {
                 startActivity(JewishModeComplicationConfigActivity.createIntent(this));
             }
+        }
+    }
+
+    private void openPendingEntitlement() {
+        if (pendingEntitlement) {
+            pendingEntitlement = false;
+            showEntitlementScreen();
         }
     }
 
@@ -8057,18 +8095,16 @@ public class MainActivity extends Activity {
         JewishCalendar tomorrowCalendar = JewishCalendarHelper.calendar(this, tomorrow);
         JewishFastInfo tomorrowFast = JewishFastInfo.forDay(this, tomorrow.getTimeInMillis());
         int index = calendar.getYomTovIndex();
-        boolean erevHoliday = JewishDailyHalacha.isErevMajorHoliday(index);
+        boolean erevHoliday = JewishDailyHalacha.isErevMajorHoliday(index)
+                || (!calendar.isYomTovAssurBemelacha()
+                    && tomorrowCalendar.isYomTovAssurBemelacha());
         if (!erevHoliday && tomorrowFast == null) return;
 
         String label = erevHoliday
                 ? JewishCalendarHelper.formatter(this).formatYomTov(tomorrowCalendar)
                 : tomorrowFast.label;
         boolean english = AppLanguage.isEnglish(this);
-        TextView title = text((english ? "Eve of " : "ערב ") + label, 14, COLOR_WARNING);
-        AppFont.bold(title);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(5), 0, dp(2));
-        timesCard.addView(title, matchParams());
+        addJewishDayStatus(timesCard, (english ? "Eve of " : "ערב ") + label);
         if (tomorrowFast != null) {
             timesCard.addView(zmanimTimeRow(english ? "Fast begins" : "תחילת הצום", tomorrowFast.startsAt));
             timesCard.addView(zmanimTimeRow(english ? "Fast ends" : "צאת הצום", tomorrowFast.endsAt));
@@ -8098,11 +8134,7 @@ public class MainActivity extends Activity {
 
         boolean english = AppLanguage.isEnglish(this);
         String label = JewishCalendarHelper.formatter(this).formatYomTov(calendar);
-        TextView title = text((english ? "Holiday: " : "חג: ") + label, 14, COLOR_WARNING);
-        AppFont.bold(title);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(5), 0, dp(2));
-        timesCard.addView(title, matchParams());
+        addJewishDayStatus(timesCard, (english ? "Holiday: " : "חג: ") + label);
 
         Calendar previousDay = (Calendar) zmanimCalendar(dayMillis).clone();
         previousDay.add(Calendar.DAY_OF_YEAR, -1);
@@ -8124,6 +8156,34 @@ public class MainActivity extends Activity {
         timesCard.addView(zmanimTimeRow(english ? "Holiday ends" : "צאת החג", exit));
         timesCard.addView(zmanimTimeRow(english ? "Holiday ends (Rabbeinu Tam)" : "צאת החג לפי ר״ת",
                 rabbeinuTam));
+    }
+
+    private void addCholHamoedRow(LinearLayout timesCard, long dayMillis) {
+        JewishCalendar day = JewishCalendarHelper.calendar(this, zmanimCalendar(dayMillis));
+        int ordinal = JewishDailyHalacha.cholHamoedDay(day);
+        if (ordinal <= 0) return;
+        boolean pesach = day.getYomTovIndex() == JewishCalendar.CHOL_HAMOED_PESACH;
+        String[] hebrewOrdinals = {"", "א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳"};
+        String status = AppLanguage.isEnglish(this)
+                ? "Chol Hamoed " + (pesach ? "Pesach" : "Sukkot") + " · day " + ordinal
+                : hebrewOrdinals[ordinal] + " דחול המועד " + (pesach ? "פסח" : "סוכות");
+        addJewishDayStatus(timesCard, status);
+    }
+
+    private void addErevShabbatRow(LinearLayout timesCard, long dayMillis) {
+        if (zmanimCalendar(dayMillis).get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY) {
+            addJewishDayStatus(timesCard, AppLanguage.isEnglish(this) ? "Erev Shabbat" : "ערב שבת");
+        }
+    }
+
+    private void addJewishDayStatus(LinearLayout timesCard, String status) {
+        TextView title = text(status, 14, COLOR_WARNING);
+        AppFont.bold(title);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(dp(7), dp(5), dp(7), dp(2));
+        title.setMaxLines(2);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        timesCard.addView(title, matchParams());
     }
 
     private void addTachanunNotice(LinearLayout timesCard, long dayMillis) {

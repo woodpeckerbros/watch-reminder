@@ -473,6 +473,10 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     private final Runnable evaluateRunnable = new Runnable() {
         @Override public void run() {
+            // Schedule from the start of this evaluation. Detailed telemetry and sensor callbacks
+            // can take many seconds on the watch; adding that time after every 30-second delay
+            // made the observed interval roughly 50–70 seconds in the 30 September log.
+            handler.postDelayed(this, 30_000L);
             try {
                 evaluateSessions(System.currentTimeMillis(), false);
             } catch (RuntimeException error) {
@@ -482,7 +486,10 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                     removeSession(session.alarmId, "DETECTOR_EXCEPTION");
                 }
             }
-            if (sessions.isEmpty()) stopSelf(); else handler.postDelayed(this, 30_000L);
+            if (sessions.isEmpty()) {
+                handler.removeCallbacks(this);
+                stopSelf();
+            }
         }
     };
 

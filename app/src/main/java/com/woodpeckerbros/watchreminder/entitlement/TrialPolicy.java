@@ -3,8 +3,18 @@ package com.woodpeckerbros.watchreminder.entitlement;
 /** Stateless 14-day trial calculation, deliberately independent of Android storage. */
 public final class TrialPolicy {
     public static final long TRIAL_DURATION_MS = 14L * 24L * 60L * 60L * 1000L;
+    public static final long EXPIRY_WARNING_BEFORE_MS = 24L * 60L * 60L * 1000L;
 
     private TrialPolicy() { }
+
+    public static long expiryWarningAt(Snapshot trial) {
+        return trial.trialStartedAt + TRIAL_DURATION_MS - EXPIRY_WARNING_BEFORE_MS;
+    }
+
+    public static boolean inExpiryWarningWindow(Snapshot trial) {
+        return !trial.lifetimePurchased && trial.featureAccessGranted
+                && trial.remainingMillis <= EXPIRY_WARNING_BEFORE_MS;
+    }
 
     public static Snapshot evaluate(long storedStartAt, long highestSeenWallTime,
                                     long currentWallTime, boolean lifetimePurchased) {

@@ -76,6 +76,28 @@ public class SmartWakeDetectorTest {
         assertTrue(confirmation.shouldWake);
     }
 
+    @Test public void earlyTwoSensorHintWaitsForFreshStrongConfirmation() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(64, 610_000L);
+        detector.addHeartRate(65, 630_000L);
+        detector.addHeartRate(66, 650_000L);
+        for (int i = 0; i < 60; i++) {
+            detector.addGyroscopeMotion(1.8, 615_000L + i * 500L);
+        }
+        SmartWakeDetector.Decision hint = detector.evaluate(675_000L);
+        assertTrue("score=" + hint.score, hint.score >= 18
+                && hint.score < SmartWakeDetector.CONFIRMED_WAKE_THRESHOLD);
+        assertEquals(2, hint.evidenceGroups);
+        assertTrue(hint.candidateActive);
+        assertFalse(hint.shouldWake);
+
+        addGentleWakeChange(detector, 680_000L, true);
+        SmartWakeDetector.Decision confirmation = detector.evaluate(745_000L);
+        assertTrue(confirmation.candidateConfirmed);
+        assertTrue(confirmation.shouldWake);
+    }
+
     @Test public void candidateDoesNotDoubleCountOriginalCardioWhenOnlyFreshMovementArrives() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);

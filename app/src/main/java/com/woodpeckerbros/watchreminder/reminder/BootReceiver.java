@@ -5,6 +5,7 @@ import com.woodpeckerbros.watchreminder.*;
 import com.woodpeckerbros.watchreminder.calendar.*;
 
 import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
+import com.woodpeckerbros.watchreminder.entitlement.TrialExpiryWarningReceiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -38,6 +39,7 @@ public class BootReceiver extends BroadcastReceiver {
         // on a two-core watch. Keep boot/time recovery immediate, but defer post-update repair
         // to a one-off job; MainActivity performs the same repair after its first frame.
         if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            TrialExpiryWarningReceiver.schedule(context);
             // The deferred job intentionally avoids heavy database reconciliation during an APK
             // update, but a future Smart Alarm must not spend that gap unprotected on OnePlus.
             // ensureRunning() is idempotent and starts only the lightweight FGS anchor.
@@ -60,6 +62,7 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     static void recover(Context context, boolean mayStartMonitoringService) {
+        TrialExpiryWarningReceiver.schedule(context);
         AlarmScheduleMigration.clearLegacyAlarmsOnce(context);
         new ReminderSettings(context).applyPowerSaveDefaultOnce();
         long now = System.currentTimeMillis();
