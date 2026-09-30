@@ -30,7 +30,7 @@ public class AppLog {
     private static final String KEY_TEXT = "text";
     private static final String KEY_SMART_WAKE_SUMMARIES = "summaries";
     private static final int MAX_CHARS = 160_000;
-    private static final int MAX_SMART_WAKE_SUMMARY_CHARS = 120_000;
+    private static final int MAX_SMART_WAKE_SUMMARY_CHARS = 240_000;
     private static final ExecutorService LOG_WRITER = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "wr-log-writer");
         thread.setDaemon(true);

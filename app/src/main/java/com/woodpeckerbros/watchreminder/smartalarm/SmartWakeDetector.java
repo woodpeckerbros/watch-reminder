@@ -65,6 +65,7 @@ public final class SmartWakeDetector {
     private int candidateOriginScore = -1;
     private int candidateOriginGroups = -1;
     private int candidateWeakEvaluations;
+    private long lastCandidateWeakCountAt = Long.MIN_VALUE;
     private long lastEvaluationAt = Long.MIN_VALUE;
     // A rolling baseline describes stable sleep only. Once an interesting change begins, retain
     // the pre-change baseline until the detector has observed measured quiet again.
@@ -246,15 +247,18 @@ public final class SmartWakeDetector {
         int cardiovascularPoints = Math.max(hrRisePoints, hrTrendPoints);
         int score = cardiovascularPoints + accelPoints + gyroPoints + combinedMotionPoints + transitionPoints;
         long latestMovementEvidenceAt = latestMovementEvidenceAt(recentStart, now);
-        int freshEvaluationMask = lastEvaluationAt == Long.MIN_VALUE ? 0
-                : ((cardiovascularCurrentEvidence && recentHrQuality.latestAt > lastEvaluationAt
+        boolean hrNew = recentHrQuality.latestAt > lastEvaluationAt;
+        boolean movementNew = latestMovementEvidenceAt > lastEvaluationAt;
+        boolean stepNew = latestUntaintedStepAt(now - CLEARLY_AWAKE_WINDOW_MS) > lastEvaluationAt;
+        int freshEvaluationMask = ((cardiovascularCurrentEvidence && hrNew
                     ? EVIDENCE_CARDIOVASCULAR : 0)
-                | (movementEvidence && latestMovementEvidenceAt > lastEvaluationAt
+                | (movementEvidence && movementNew
                     ? EVIDENCE_MOVEMENT : 0)
                 | (activityStateEvidence && awakeTransitionAt > lastEvaluationAt
                     ? EVIDENCE_ACTIVITY_STATE : 0));
         WakeabilityTrend trend = updateWakeabilityTrend(now, score, evidenceMask,
-                recentHrQuality.latestAt, latestMovementEvidenceAt, baselineReady);
+                recentHrQuality.latestAt, latestMovementEvidenceAt, awakeTransitionAt,
+                baselineReady);
         boolean trendCandidate = trend.rising && evidenceGroups >= 2
                 && score >= TREND_CANDIDATE_THRESHOLD;
         boolean moderateCandidate = baselineReady && evidenceGroups >= 2
@@ -309,7 +313,12 @@ public final class SmartWakeDetector {
             } else if (score < CANDIDATE_CONFIRMATION_THRESHOLD || evidenceGroups == 0) {
                 // Give one quiet evaluation room for batching jitter, then let an isolated event
                 // decay naturally. This context still never contributes wake evidence.
-                candidateWeakEvaluations++;
+                // Preserve the old one-weak-frame-per-30s decay despite faster evaluations.
+                if (lastCandidateWeakCountAt == Long.MIN_VALUE
+                        || now - lastCandidateWeakCountAt >= 30_000L) {
+                    candidateWeakEvaluations++;
+                    lastCandidateWeakCountAt = now;
+                }
                 if (candidateWeakEvaluations >= 2) {
                     clearCandidate();
                     candidateWeakened = true;
@@ -319,6 +328,7 @@ public final class SmartWakeDetector {
                 }
             } else {
                 candidateWeakEvaluations = 0;
+                lastCandidateWeakCountAt = Long.MIN_VALUE;
                 candidateConfirmationStatus = "WAITING_FOR_FRESH_CONFIRMATION";
             }
         } else if (!candidateExpired && (moderateCandidate || earlyMultiSensorCandidate)) {
@@ -400,7 +410,8 @@ public final class SmartWakeDetector {
                 userActivityEpisodeId, duplicateUserActivityEpisodeCallback, movementClusters, microMovementCount,
                 timeSinceLastMovementMs, movementDataStatus, selfStimulus,
                 stepEvidenceTainted, movementEvidenceTainted, cardioEvidenceTainted,
-                clearlyAwakeBlockedReason);
+                clearlyAwakeBlockedReason, hrNew, movementNew, stepNew,
+                freshEvaluationMask != 0 || stepNew, trend.samples, trend.recentSamples);
     }
 
     private void beginCandidate(long now, int score, int groups) {
@@ -408,6 +419,7 @@ public final class SmartWakeDetector {
         candidateOriginScore = score;
         candidateOriginGroups = groups;
         candidateWeakEvaluations = 0;
+        lastCandidateWeakCountAt = Long.MIN_VALUE;
     }
 
     private void clearCandidate() {
@@ -415,6 +427,7 @@ public final class SmartWakeDetector {
         candidateOriginScore = -1;
         candidateOriginGroups = -1;
         candidateWeakEvaluations = 0;
+        lastCandidateWeakCountAt = Long.MIN_VALUE;
     }
 
     private boolean hasFreshMovementEvidence(long since, long now, MotionStats baselineAccel,
@@ -436,6 +449,12 @@ public final class SmartWakeDetector {
     private long latestMovementEvidenceAt(long start, long end) {
         long latest = latestAbove(accelerometer, start, end, .35);
         return Math.max(latest, latestAbove(gyroscope, start, end, .55));
+    }
+
+    private long latestUntaintedStepAt(long start) {
+        long latest = Long.MIN_VALUE;
+        for (TimedStep step : steps) if (!step.tainted && step.at >= start) latest = Math.max(latest, step.at);
+        return latest;
     }
 
     private static long latestAbove(Deque<TimedValue> values, long start, long end, double threshold) {
@@ -478,9 +497,18 @@ public final class SmartWakeDetector {
 
     private WakeabilityTrend updateWakeabilityTrend(long now, int score, int evidenceMask,
                                                       long latestHrAt, long latestMovementAt,
+                                                      long latestActivityAt,
                                                       boolean baselineReady) {
-        wakeabilityFrames.addLast(new WakeabilityFrame(now, score, evidenceMask,
-                latestHrAt, latestMovementAt));
+        WakeabilityFrame previous = wakeabilityFrames.peekLast();
+        boolean newRelevantSource = evidenceMask != 0 && (previous == null
+                || ((evidenceMask & EVIDENCE_CARDIOVASCULAR) != 0 && latestHrAt > previous.latestHrAt)
+                || ((evidenceMask & EVIDENCE_MOVEMENT) != 0 && latestMovementAt > previous.latestMovementAt)
+                || ((evidenceMask & EVIDENCE_ACTIVITY_STATE) != 0
+                    && latestActivityAt > previous.latestActivityAt));
+        if (newRelevantSource) {
+            wakeabilityFrames.addLast(new WakeabilityFrame(now, score, evidenceMask,
+                    latestHrAt, latestMovementAt, latestActivityAt));
+        }
         while (!wakeabilityFrames.isEmpty()
                 && wakeabilityFrames.peekFirst().at < now - WAKEABILITY_TREND_WINDOW_MS) {
             wakeabilityFrames.removeFirst();
@@ -548,8 +576,8 @@ public final class SmartWakeDetector {
                 interesting, cardioUpdates, movementUpdates, delta, Integer.bitCount(unionMask),
                 TEMPORAL_CONFIRMATION_WINDOW_MS, recentInteresting, recentCardioUpdates,
                 recentMovementUpdates, recentDelta, temporallyConfirmed);
-        return new WakeabilityTrend(rising, delta, interesting, cardioUpdates, movementUpdates,
-                temporallyConfirmed, label, evidence);
+        return new WakeabilityTrend(rising, delta, interesting, recentInteresting,
+                cardioUpdates, movementUpdates, temporallyConfirmed, label, evidence);
     }
 
     private static boolean isSystemNonAsleep(UserActivity activity) {
@@ -808,11 +836,13 @@ public final class SmartWakeDetector {
         TimedStep(long at, boolean tainted) { this.at = at; this.tainted = tainted; }
     }
     private static final class WakeabilityFrame {
-        final long at, latestHrAt, latestMovementAt;
+        final long at, latestHrAt, latestMovementAt, latestActivityAt;
         final int score, evidenceMask;
-        WakeabilityFrame(long at, int score, int evidenceMask, long latestHrAt, long latestMovementAt) {
+        WakeabilityFrame(long at, int score, int evidenceMask, long latestHrAt,
+                         long latestMovementAt, long latestActivityAt) {
             this.at = at; this.score = score; this.evidenceMask = evidenceMask;
             this.latestHrAt = latestHrAt; this.latestMovementAt = latestMovementAt;
+            this.latestActivityAt = latestActivityAt;
         }
     }
     private static final class HeartRateDynamics {
@@ -833,11 +863,13 @@ public final class SmartWakeDetector {
     }
     private static final class WakeabilityTrend {
         final boolean rising, temporallyConfirmed;
-        final int scoreDelta, samples, cardioUpdates, movementUpdates;
+        final int scoreDelta, samples, recentSamples, cardioUpdates, movementUpdates;
         final String label, evidence;
-        WakeabilityTrend(boolean rising, int scoreDelta, int samples, int cardioUpdates,
+        WakeabilityTrend(boolean rising, int scoreDelta, int samples, int recentSamples,
+                         int cardioUpdates,
                          int movementUpdates, boolean temporallyConfirmed, String label, String evidence) {
             this.rising = rising; this.scoreDelta = scoreDelta; this.samples = samples;
+            this.recentSamples = recentSamples;
             this.cardioUpdates = cardioUpdates; this.movementUpdates = movementUpdates;
             this.temporallyConfirmed = temporallyConfirmed;
             this.label = label; this.evidence = evidence;
@@ -947,6 +979,9 @@ public final class SmartWakeDetector {
         public final int movementClusterCount, microMovementCount;
         public final long timeSinceLastMovementMs;
         public final boolean selfStimulusActive, stepEvidenceTainted, movementEvidenceTainted, cardioEvidenceTainted;
+        public final boolean hrNew, movementNew, stepNew, freshEvidenceChanged;
+        public final int interestingFrameCount, recentInterestingFrameCount;
+        public final int temporalCardioUpdates, temporalMovementUpdates;
         public final String selfStimulusSource, selfStimulusType, clearlyAwakeBlockedReason;
         public final long selfStimulusStartedAt, selfStimulusEndedAt;
         public final double heartRateMean, heartRateVariability, heartRateBaseline, hrvBaseline, hrAboveBaseline, hrvAboveBaseline;
@@ -978,7 +1013,9 @@ public final class SmartWakeDetector {
                  int movementClusterCount, int microMovementCount, long timeSinceLastMovementMs,
                  String movementDataStatus, SelfStimulusContamination.Snapshot selfStimulus,
                  boolean stepEvidenceTainted, boolean movementEvidenceTainted, boolean cardioEvidenceTainted,
-                 String clearlyAwakeBlockedReason) {
+                 String clearlyAwakeBlockedReason, boolean hrNew, boolean movementNew,
+                 boolean stepNew, boolean freshEvidenceChanged, int interestingFrameCount,
+                 int recentInterestingFrameCount) {
             this.shouldWake = shouldWake; this.score = score; this.baselineReady = baselineReady; this.candidate = candidate;
             this.immediateCandidate = immediateCandidate; this.candidateActive = candidateActive;
             this.candidateConfirmed = candidateConfirmed; this.candidateAgeMs = candidateAgeMs;
@@ -1048,6 +1085,14 @@ public final class SmartWakeDetector {
             this.movementEvidenceTainted = movementEvidenceTainted;
             this.cardioEvidenceTainted = cardioEvidenceTainted;
             this.clearlyAwakeBlockedReason = clearlyAwakeBlockedReason;
+            this.hrNew = hrNew;
+            this.movementNew = movementNew;
+            this.stepNew = stepNew;
+            this.freshEvidenceChanged = freshEvidenceChanged;
+            this.interestingFrameCount = interestingFrameCount;
+            this.recentInterestingFrameCount = recentInterestingFrameCount;
+            this.temporalCardioUpdates = wakeabilityTrend.cardioUpdates;
+            this.temporalMovementUpdates = wakeabilityTrend.movementUpdates;
         }
 
         private long ageAt(long evaluatedAt, long timestamp) { return timestamp == Long.MIN_VALUE ? -1L : Math.max(0L, evaluatedAt - timestamp); }

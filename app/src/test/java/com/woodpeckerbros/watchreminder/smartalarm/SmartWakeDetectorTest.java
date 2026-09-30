@@ -7,6 +7,99 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SmartWakeDetectorTest {
+    @Test public void repeatedFiveSecondEvaluationsOfIdenticalEvidenceNeverConfirm() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        SmartWakeDetector.Decision first = detector.evaluate(675_000L);
+        assertTrue(first.candidateActive);
+        assertEquals(1, first.interestingFrameCount);
+        for (long at = 680_000L; at <= 715_000L; at += 5_000L) {
+            SmartWakeDetector.Decision repeated = detector.evaluate(at);
+            assertFalse(repeated.hrNew);
+            assertFalse(repeated.movementNew);
+            assertFalse(repeated.stepNew);
+            assertFalse(repeated.freshEvidenceChanged);
+            assertEquals(0, repeated.freshEvidenceGroups);
+            assertEquals(1, repeated.interestingFrameCount);
+            assertFalse(repeated.candidateConfirmed);
+            assertFalse(repeated.shouldWake);
+        }
+    }
+
+    @Test public void eachNewRelevantSourceUpdatesOnlyItsOwnTemporalCounter() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        SmartWakeDetector.Decision first = detector.evaluate(675_000L);
+        int cardio = first.temporalCardioUpdates;
+        int movement = first.temporalMovementUpdates;
+
+        detector.addHeartRate(66, 680_000L);
+        SmartWakeDetector.Decision heartRateOnly = detector.evaluate(685_000L);
+        assertTrue(heartRateOnly.hrNew);
+        assertFalse(heartRateOnly.movementNew);
+        assertEquals(cardio + 1, heartRateOnly.temporalCardioUpdates);
+        assertEquals(movement, heartRateOnly.temporalMovementUpdates);
+
+        addActiveAccelBucket(detector, 690_000L);
+        SmartWakeDetector.Decision movementOnly = detector.evaluate(695_000L);
+        assertFalse(movementOnly.hrNew);
+        assertTrue(movementOnly.movementNew);
+        assertEquals(heartRateOnly.temporalCardioUpdates, movementOnly.temporalCardioUpdates);
+        assertEquals(heartRateOnly.temporalMovementUpdates + 1,
+                movementOnly.temporalMovementUpdates);
+    }
+
+    @Test public void newHeartRateAndMovementCanBothUpdateWithoutChangingFreshnessWindows() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        SmartWakeDetector.Decision first = detector.evaluate(675_000L);
+        detector.addHeartRate(66, 680_000L);
+        addActiveAccelBucket(detector, 680_000L);
+        SmartWakeDetector.Decision updated = detector.evaluate(685_000L);
+        assertTrue(updated.hrNew);
+        assertTrue(updated.movementNew);
+        assertTrue(updated.freshEvidenceChanged);
+        assertEquals(first.temporalCardioUpdates + 1, updated.temporalCardioUpdates);
+        assertEquals(first.temporalMovementUpdates + 1, updated.temporalMovementUpdates);
+        assertEquals(75_000L, SmartWakeDetector.RECENT_WINDOW_MS);
+        assertEquals(75_000L, SmartWakeDetector.TEMPORAL_GROUP_FRESHNESS_MS);
+    }
+
+    @Test public void seventyFiveSecondFreshnessAndOneHundredFiftySecondTrendStillExpire() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        assertEquals(1, detector.evaluate(675_000L).recentInterestingFrameCount);
+
+        SmartWakeDetector.Decision stale = detector.evaluate(726_000L);
+        assertEquals(0, stale.evidenceGroups);
+        assertFalse(stale.freshEvidenceChanged);
+        assertFalse(stale.shouldWake);
+
+        assertEquals(1, detector.evaluate(825_000L).recentInterestingFrameCount);
+        SmartWakeDetector.Decision outsideTrend = detector.evaluate(826_000L);
+        assertEquals(0, outsideTrend.recentInterestingFrameCount);
+        assertFalse(outsideTrend.shouldWake);
+    }
+
+    @Test public void fasterEvaluationsDoNotAccelerateCandidateWeakDecay() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addGentleWakeChange(detector, 610_000L, true);
+        assertTrue(detector.evaluate(675_000L).candidateActive);
+        assertTrue(detector.evaluate(755_000L).candidateActive);
+        for (long at = 760_000L; at < 785_000L; at += 5_000L) {
+            assertTrue(detector.evaluate(at).candidateActive);
+        }
+        SmartWakeDetector.Decision decayed = detector.evaluate(785_000L);
+        assertFalse(decayed.candidateActive);
+        assertEquals("EVIDENCE_DECAYED", decayed.candidateConfirmationStatus);
+        assertFalse(decayed.shouldWake);
+    }
+
     @Test public void asleepIsNeutralContextNotNegativeEvidence() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000);

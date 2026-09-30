@@ -72,6 +72,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private long accelerometerSampleCount, gyroscopeSampleCount, stepSampleCount;
     private long serviceStartCommandCount;
     private long serviceCreatedAt;
+    private long evaluationIntervalMs = SmartWakeEvaluationCadence.Mode.NORMAL.intervalMs;
+    private SmartWakeEvaluationCadence.Mode evaluationMode = SmartWakeEvaluationCadence.Mode.NORMAL;
 
     private final MeasureCallback heartRateCallback = new MeasureCallback() {
         @Override public void onAvailabilityChanged(DeltaDataType<?, ?> type, Availability availability) {
@@ -258,11 +260,11 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         MonitorSession existing = sessions.get(alarmId);
         if (existing != null && SmartWakeRuntimePolicy.isSameSession(
                 existing.alarmId, existing.targetAt, alarmId, targetAt)) {
-            // Recovery can redeliver the same monitor intent. Its evaluator is already running;
-            // restarting its 30-second timer here creates blind spots in the wake window.
+            // Recovery can redeliver the same monitor intent. Retain the one evaluator loop.
             if (windowStartCheckpoint) {
                 enableActiveWindowSampling();
                 evaluateSessions(System.currentTimeMillis(), true);
+                scheduleNextEvaluation(evaluationIntervalMs);
             }
             else AppLog.d(this, "SmartWake monitoring continued id=" + alarmId + " target=" + targetAt
                     + " evaluationSchedule=retained");
@@ -301,7 +303,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 registerMotion(now >= wakeWindowStartAt);
                 registerHeartRate(directBootEligible);
             }
-            handler.removeCallbacks(evaluateRunnable); handler.postDelayed(evaluateRunnable, 30_000L);
+            if (firstSession) scheduleNextEvaluation(SmartWakeEvaluationCadence.Mode.NORMAL.intervalMs);
             AppLog.d(this, "SMART_WAKE_SESSION_START session_id=" + sessionId(alarmId, targetAt)
                     + " occurrence_id=" + sessionId(alarmId, targetAt)
                     + " monitoring_start=" + now + " earliest_wake=" + wakeWindowStartAt
@@ -314,6 +316,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 AppLog.w(this, "SmartWake baseline checkpoint started monitor at window boundary id=" + alarmId
                         + "; baseline cannot be valid yet (monitor start was delayed)");
                 evaluateSessions(now, true);
+                scheduleNextEvaluation(evaluationIntervalMs);
             }
         } catch (RuntimeException error) {
             AppLog.e(this, "SmartWake session start failed id=" + alarmId
@@ -473,10 +476,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     private final Runnable evaluateRunnable = new Runnable() {
         @Override public void run() {
-            // Schedule from the start of this evaluation. Detailed telemetry and sensor callbacks
-            // can take many seconds on the watch; adding that time after every 30-second delay
-            // made the observed interval roughly 50–70 seconds in the 30 September log.
-            handler.postDelayed(this, 30_000L);
+            long startedAt = SystemClock.elapsedRealtime();
+            SmartWakeEvaluationCadence.Mode targetMode = evaluationMode;
             try {
                 evaluateSessions(System.currentTimeMillis(), false);
             } catch (RuntimeException error) {
@@ -486,14 +487,32 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                     removeSession(session.alarmId, "DETECTOR_EXCEPTION");
                 }
             }
-            if (sessions.isEmpty()) {
+            if (!SmartWakeEvaluationCadence.shouldSchedule(sessions.size())) {
                 handler.removeCallbacks(this);
                 stopSelf();
+            } else {
+                long durationMs = SystemClock.elapsedRealtime() - startedAt;
+                for (MonitorSession session : sessions.values()) {
+                    session.cadenceStats.record(startedAt, durationMs, targetMode);
+                }
+                // Measured from the evaluation's start so logging/processing does not add to
+                // the requested interval. The main looper serializes evaluations and sensors.
+                scheduleNextEvaluation(SmartWakeEvaluationCadence.nextDelayMs(
+                        evaluationIntervalMs, durationMs));
             }
         }
     };
 
+    private void scheduleNextEvaluation(long delayMs) {
+        handler.removeCallbacks(evaluateRunnable);
+        if (SmartWakeEvaluationCadence.shouldSchedule(sessions.size())) {
+            handler.postDelayed(evaluateRunnable, delayMs);
+        }
+    }
+
     private void evaluateSessions(long now, boolean windowStartCheckpoint) {
+        long nextIntervalMs = SmartWakeEvaluationCadence.Mode.NORMAL.intervalMs;
+        SmartWakeEvaluationCadence.Mode nextMode = SmartWakeEvaluationCadence.Mode.NORMAL;
         for (MonitorSession session : new ArrayList<>(sessions.values())) {
             if (now >= session.targetAt) {
                 removeSession(session.alarmId, "FINAL_DEADLINE_REACHED");
@@ -502,20 +521,52 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             session.evaluationCount++;
             session.detector.setSelfStimulus(SelfStimulusTracker.snapshot());
             SmartWakeDetector.Decision decision = session.detector.evaluate(now);
-            String compactSummary = "id=" + session.alarmId + " " + decision.summary(now);
+            SmartWakeEvaluationCadence.Mode mode = SmartWakeEvaluationCadence.forDecision(decision);
+            if (mode.intervalMs < nextIntervalMs) {
+                nextIntervalMs = mode.intervalMs;
+                nextMode = mode;
+            }
+            if (mode == SmartWakeEvaluationCadence.Mode.CANDIDATE) session.candidateEvaluations++;
+            else if (mode == SmartWakeEvaluationCadence.Mode.WATCHING) session.watchingEvaluations++;
+            else session.normalEvaluations++;
+            String cadenceTelemetry = " EVALUATION_MODE=" + mode
+                    + " EVALUATION_CADENCE_MS=" + mode.intervalMs
+                    + " evaluation_interval_ms=" + mode.intervalMs
+                    + " EVALUATION_COUNT=" + session.evaluationCount
+                    + " HR_NEW=" + decision.hrNew
+                    + " MOVEMENT_NEW=" + decision.movementNew
+                    + " STEP_NEW=" + decision.stepNew
+                    + " fresh_evidence_changed=" + decision.freshEvidenceChanged
+                    + " interesting_frames=" + decision.interestingFrameCount
+                    + " candidate_active=" + decision.candidateActive
+                    + " wakeability_state=" + decision.wakeabilityState;
+            String compactSummary = "id=" + session.alarmId + " timestamp=" + now
+                    + " → WAKE_SCORE=" + decision.score
+                    + " → groups=" + decision.evidenceGroups
+                    + " → candidate=" + decision.candidateActive
+                    + " → clearly_awake=" + decision.clearlyAwake
+                    + " → decision=" + (decision.shouldWake ? "WAKE" : "CONTINUE")
+                    + cadenceTelemetry;
             AppLog.appendSmartWakeSummary(this, compactSummary);
-            AppLog.d(this, "SmartWake summary " + compactSummary);
-            AppLog.d(this, "SmartWake score id=" + session.alarmId + "\n" + decision.telemetry());
-            long runtimeMinutes = Math.max(1L, (now - serviceCreatedAt + 59_999L) / 60_000L);
-            AppLog.d(this, "SMART_WAKE_RUNTIME_COUNTERS session_id="
-                    + sessionId(session.alarmId, session.targetAt)
-                    + " evaluation_count=" + session.evaluationCount
-                    + " accel_sample_count=" + accelerometerSampleCount
-                    + " accel_callbacks_per_minute=" + (accelerometerSampleCount / runtimeMinutes)
-                    + " gyro_sample_count=" + gyroscopeSampleCount
-                    + " gyro_callbacks_per_minute=" + (gyroscopeSampleCount / runtimeMinutes)
-                    + " step_sample_count=" + stepSampleCount
-                    + " service_command_count=" + serviceStartCommandCount);
+            if (session.lastDetailedTelemetryAt == Long.MIN_VALUE
+                    || now - session.lastDetailedTelemetryAt >= 30_000L || decision.shouldWake) {
+                session.lastDetailedTelemetryAt = now;
+                AppLog.d(this, "SmartWake score id=" + session.alarmId + cadenceTelemetry
+                        + "\n" + decision.telemetry());
+                long runtimeMinutes = Math.max(1L, (now - serviceCreatedAt + 59_999L) / 60_000L);
+                AppLog.d(this, "SMART_WAKE_RUNTIME_COUNTERS session_id="
+                        + sessionId(session.alarmId, session.targetAt)
+                        + " evaluation_count=" + session.evaluationCount
+                        + " normal_evaluations=" + session.normalEvaluations
+                        + " watching_evaluations=" + session.watchingEvaluations
+                        + " candidate_evaluations=" + session.candidateEvaluations
+                        + " accel_sample_count=" + accelerometerSampleCount
+                        + " accel_callbacks_per_minute=" + (accelerometerSampleCount / runtimeMinutes)
+                        + " gyro_sample_count=" + gyroscopeSampleCount
+                        + " gyro_callbacks_per_minute=" + (gyroscopeSampleCount / runtimeMinutes)
+                        + " step_sample_count=" + stepSampleCount
+                        + " service_command_count=" + serviceStartCommandCount);
+            }
             if (windowStartCheckpoint) {
                 if (decision.baselineReady) AppLog.d(this, "SmartWake baseline ready at window start id=" + session.alarmId);
                 else AppLog.w(this, "SmartWake baseline failure at window start id=" + session.alarmId
@@ -529,6 +580,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             } else if (decision.shouldWake) AppLog.d(this,
                     "SmartWake candidate held until wake window id=" + session.alarmId + " at=" + session.wakeWindowStartAt);
         }
+        evaluationIntervalMs = nextIntervalMs;
+        evaluationMode = nextMode;
     }
 
     @Override public void onSensorChanged(SensorEvent event) {
@@ -603,6 +656,9 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         final boolean directBootRecovery;
         final SmartWakeDetector detector;
         long evaluationCount;
+        long lastDetailedTelemetryAt = Long.MIN_VALUE;
+        long normalEvaluations, watchingEvaluations, candidateEvaluations;
+        final CadenceStats cadenceStats = new CadenceStats();
         MonitorSession(int alarmId, long targetAt, long wakeWindowStartAt,
                        long monitoringStartedAt, boolean directBootRecovery,
                        SmartWakeDetector detector) {
@@ -635,6 +691,13 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 + " earliest_wake=" + removed.wakeWindowStartAt
                 + " deadline=" + removed.targetAt
                 + " evaluation_count=" + removed.evaluationCount
+                + " normal_evaluations=" + removed.normalEvaluations
+                + " watching_evaluations=" + removed.watchingEvaluations
+                + " candidate_evaluations=" + removed.candidateEvaluations
+                + " NORMAL_EVALUATION_COUNT=" + removed.normalEvaluations
+                + " WATCHING_EVALUATION_COUNT=" + removed.watchingEvaluations
+                + " CANDIDATE_EVALUATION_COUNT=" + removed.candidateEvaluations
+                + " " + removed.cadenceStats.summary()
                 + " reason=" + reason);
         if (releaseWhenEmpty && SmartWakeRuntimePolicy.shouldReleaseResources(sessions.size())) {
             releaseMonitoringResources(reason);
@@ -674,6 +737,52 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     private static String sessionId(int alarmId, long targetAt) {
         return alarmId + ":" + targetAt;
+    }
+
+    /** Session-only timing, deliberately independent from the detector's evidence accounting. */
+    private static final class CadenceStats {
+        private long lastStartedAt = Long.MIN_VALUE;
+        private long minActualIntervalMs = Long.MAX_VALUE;
+        private long maxActualIntervalMs;
+        private long maxEvaluationDurationMs;
+        private long overrunCount;
+        private final IntervalStats normal = new IntervalStats();
+        private final IntervalStats watching = new IntervalStats();
+        private final IntervalStats candidate = new IntervalStats();
+
+        void record(long startedAt, long durationMs, SmartWakeEvaluationCadence.Mode targetMode) {
+            maxEvaluationDurationMs = Math.max(maxEvaluationDurationMs, durationMs);
+            if (durationMs > targetMode.intervalMs) overrunCount++;
+            if (lastStartedAt != Long.MIN_VALUE) {
+                long actualIntervalMs = Math.max(0L, startedAt - lastStartedAt);
+                minActualIntervalMs = Math.min(minActualIntervalMs, actualIntervalMs);
+                maxActualIntervalMs = Math.max(maxActualIntervalMs, actualIntervalMs);
+                intervalStats(targetMode).add(actualIntervalMs);
+            }
+            lastStartedAt = startedAt;
+        }
+
+        String summary() {
+            return "NORMAL_AVG_INTERVAL_MS=" + normal.average()
+                    + " WATCHING_AVG_INTERVAL_MS=" + watching.average()
+                    + " CANDIDATE_AVG_INTERVAL_MS=" + candidate.average()
+                    + " MIN_ACTUAL_INTERVAL_MS=" + (minActualIntervalMs == Long.MAX_VALUE ? -1L : minActualIntervalMs)
+                    + " MAX_ACTUAL_INTERVAL_MS=" + maxActualIntervalMs
+                    + " MAX_EVALUATION_DURATION_MS=" + maxEvaluationDurationMs
+                    + " EVALUATION_OVERRUN_COUNT=" + overrunCount;
+        }
+
+        private IntervalStats intervalStats(SmartWakeEvaluationCadence.Mode mode) {
+            if (mode == SmartWakeEvaluationCadence.Mode.CANDIDATE) return candidate;
+            if (mode == SmartWakeEvaluationCadence.Mode.WATCHING) return watching;
+            return normal;
+        }
+    }
+
+    private static final class IntervalStats {
+        long count, totalMs;
+        void add(long intervalMs) { count++; totalMs += intervalMs; }
+        long average() { return count == 0 ? -1L : totalMs / count; }
     }
 
     private boolean isUserUnlocked() {
