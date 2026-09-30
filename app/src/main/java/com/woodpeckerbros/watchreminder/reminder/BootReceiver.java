@@ -70,6 +70,7 @@ public class BootReceiver extends BroadcastReceiver {
         HealthStateRegistrar.register(context);
         ReminderAudit.run(context);
         new ReminderStore(context).rescheduleAll();
+        ReminderScheduler.restorePendingSnoozes(context);
         DafYomiScheduler.schedule(context);
         MoonBlessingScheduler.schedule(context);
         OmerScheduler.schedule(context);

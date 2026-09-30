@@ -2,6 +2,8 @@ package com.woodpeckerbros.watchreminder.entitlement;
 
 import android.content.Context;
 
+import com.woodpeckerbros.watchreminder.AppLog;
+import com.woodpeckerbros.watchreminder.ComplicationRefresh;
 import com.woodpeckerbros.watchreminder.calendar.DafYomiScheduler;
 import com.woodpeckerbros.watchreminder.calendar.JewishDayScheduler;
 import com.woodpeckerbros.watchreminder.calendar.MoonBlessingScheduler;
@@ -9,6 +11,7 @@ import com.woodpeckerbros.watchreminder.calendar.OmerScheduler;
 import com.woodpeckerbros.watchreminder.calendar.TekufaScheduler;
 import com.woodpeckerbros.watchreminder.reminder.IntermittentFastingScheduler;
 import com.woodpeckerbros.watchreminder.reminder.ReminderMonitoringService;
+import com.woodpeckerbros.watchreminder.reminder.ReminderReceiver;
 import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
 import com.woodpeckerbros.watchreminder.reminder.ReminderStore;
 import com.woodpeckerbros.watchreminder.reminder.WaterReminderScheduler;
@@ -22,6 +25,7 @@ public final class EntitlementEnforcer {
         Context appContext = context.getApplicationContext();
         if (EntitlementAccess.isFeatureAccessGranted(appContext)) {
             new ReminderStore(appContext).rescheduleAll();
+            int snoozesRestored = ReminderScheduler.restorePendingSnoozes(appContext);
             ReminderScheduler.scheduleWatchdog(appContext);
             // Billing ownership is re-queried on foreground. Preserve a dismissed early-wake
             // occurrence and any active snooze instead of rebuilding today's pre-deadline alarm.
@@ -34,6 +38,10 @@ public final class EntitlementEnforcer {
             IntermittentFastingScheduler.schedule(appContext);
             WaterReminderScheduler.schedule(appContext);
             ReminderMonitoringService.ensureRunning(appContext);
+            ComplicationRefresh.requestAll(appContext);
+            ReminderReceiver.dispatchNextQueued(appContext);
+            AppLog.d(appContext, "ENTITLEMENT_DELIVERIES_RESTORED snoozes=" + snoozesRestored
+                    + " features=regular,smart_alarm,daf_yomi,moon_blessing,omer,jewish_days,tekufa,fasting,water");
             return;
         }
         disableDeliveries(appContext);

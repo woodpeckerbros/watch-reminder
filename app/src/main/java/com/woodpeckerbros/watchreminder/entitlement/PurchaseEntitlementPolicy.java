@@ -19,4 +19,11 @@ public final class PurchaseEntitlementPolicy {
     public static boolean shouldResumeReminderDelivery(boolean wasGranted, boolean nowGranted) {
         return !wasGranted && nowGranted;
     }
+
+    /** A verified purchase also repairs schedules when the trial was still active. */
+    public static boolean shouldReconcileDeliveries(boolean wasGranted, boolean nowGranted,
+                                                    boolean verifiedPurchase) {
+        return shouldResumeReminderDelivery(wasGranted, nowGranted)
+                || (wasGranted && !nowGranted) || verifiedPurchase;
+    }
 }

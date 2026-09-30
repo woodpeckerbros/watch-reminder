@@ -245,8 +245,9 @@ public final class EntitlementManager {
                         store.snapshot().lifetimePurchased, authoritativeQuery, purchased));
         TrialExpiryWarningReceiver.schedule(context);
         boolean nowGranted = store.snapshot().featureAccessGranted;
-        if (PurchaseEntitlementPolicy.shouldResumeReminderDelivery(wasGranted, nowGranted)
-                || (wasGranted && !nowGranted) || purchased) EntitlementEnforcer.apply(context);
+        if (PurchaseEntitlementPolicy.shouldReconcileDeliveries(wasGranted, nowGranted, purchased)) {
+            EntitlementEnforcer.apply(context);
+        }
         billingMessage = "";
         notifyListeners();
         if (callback != null) {

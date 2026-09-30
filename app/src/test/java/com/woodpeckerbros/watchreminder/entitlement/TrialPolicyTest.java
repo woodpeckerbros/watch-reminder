@@ -104,4 +104,12 @@ public class TrialPolicyTest {
         assertTrue(PurchaseEntitlementPolicy.shouldResumeReminderDelivery(false, true));
         assertFalse(PurchaseEntitlementPolicy.shouldResumeReminderDelivery(true, true));
     }
+
+    @Test public void verifiedPurchaseReconcilesSchedulesEvenDuringActiveTrial() {
+        assertTrue(PurchaseEntitlementPolicy.shouldReconcileDeliveries(false, true, true));
+        assertTrue(PurchaseEntitlementPolicy.shouldReconcileDeliveries(true, true, true));
+        assertTrue(PurchaseEntitlementPolicy.shouldReconcileDeliveries(true, false, false));
+        assertFalse(PurchaseEntitlementPolicy.shouldReconcileDeliveries(true, true, false));
+        assertFalse(PurchaseEntitlementPolicy.shouldReconcileDeliveries(false, false, false));
+    }
 }

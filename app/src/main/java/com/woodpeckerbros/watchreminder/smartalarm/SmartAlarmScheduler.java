@@ -65,11 +65,16 @@ public final class SmartAlarmScheduler {
                     setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
                     scheduleHardStop(context, manager, alarmId, targetAt);
                     if (state.snoozeUsed() > 0) {
+                        SmartAlarmBootStore.arm(context, alarmId, targetAt, 0L, 0L, false);
                         AppLog.d(context, "SmartAlarm recovery preserved snooze id=" + alarmId
                                 + " target=" + targetAt + " used=" + state.snoozeUsed());
                     } else {
                         long wakeWindowStartAt = targetAt - store.windowMinutes() * 60_000L;
                         long monitorAt = monitorAt(context, wakeWindowStartAt);
+                        // Entitlement expiry disarms the device-protected shadow. Recreate it
+                        // along with AlarmManager entries so a restored purchase survives reboot.
+                        SmartAlarmBootStore.arm(context, alarmId, targetAt, monitorAt,
+                                wakeWindowStartAt, store.windowMinutes() > 0);
                         // Once the monitor alarm has fired, scheduling it again would immediately
                         // redeliver the same intent and interrupt the active detector.
                         if (now < monitorAt) {

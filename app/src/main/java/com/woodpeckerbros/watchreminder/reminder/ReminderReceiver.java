@@ -117,6 +117,12 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     private static void fire(Context context, String reminderId, String reminderName, long scheduledAt, long originalScheduledAt, int day, boolean isSnooze, boolean checkKnownWearState) {
+        // Boot/watchdog catch-up calls this method directly, bypassing dispatchIntent(). Keep
+        // expired-trial delivery blocked without deleting a user's pending snooze state.
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) {
+            AppLog.d(context, "fire blocked: entitlement expired id=" + reminderId);
+            return;
+        }
         Reminder reminder = new ReminderStore(context).find(reminderId);
         if (reminder == null || !reminder.enabled) {
             AppLog.w(context, "fire skipped missing/disabled id=" + reminderId);

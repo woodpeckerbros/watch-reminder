@@ -240,12 +240,47 @@ public class ReminderScheduler {
     }
 
     public static void cancelSnooze(Context context, String reminderId, String reminderName) {
+        cancelSnoozeAlarm(context, reminderId, reminderName);
+        new ReminderSnoozeStore(context).delete(reminderId);
+    }
+
+    private static void cancelSnoozeAlarm(Context context, String reminderId, String reminderName) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         alarmManager.cancel(snoozeIntent(context, reminderId, reminderName, 0));
         cancelLegacyBroadcast(context, alarmManager, (reminderId + ":snooze").hashCode(), ReminderReceiver.class);
         cancelLegacyActivity(context, alarmManager, (reminderId + ":snooze").hashCode());
         cancelDeferredRetry(context, reminderId);
-        new ReminderSnoozeStore(context).delete(reminderId);
+    }
+
+    /** Reinstalls future user-selected snoozes after entitlement or AlarmManager recovery. */
+    public static int restorePendingSnoozes(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return 0;
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager == null) return 0;
+        ReminderStore reminders = new ReminderStore(context);
+        ReminderSnoozeStore snoozes = new ReminderSnoozeStore(context);
+        long now = System.currentTimeMillis();
+        int restored = 0;
+        for (ReminderSnoozeStore.Snooze snooze : snoozes.getAll()) {
+            Reminder reminder = reminders.find(snooze.reminderId);
+            if (reminder == null || !reminder.enabled) continue;
+            if (!shouldRestoreSnooze(snooze.scheduledAt, now)) {
+                // A snooze whose due time passed while access was unavailable must not appear
+                // days late after the user purchases. The regular reminder remains enabled.
+                snoozes.delete(snooze.reminderId);
+                continue;
+            }
+            setBestAvailableAlarm(context, alarmManager, snooze.scheduledAt,
+                    snoozeIntent(context, snooze.reminderId, snooze.reminderName,
+                            snooze.scheduledAt, snooze.originalScheduledAt), false);
+            restored++;
+        }
+        AppLog.d(context, "restorePendingSnoozes count=" + restored);
+        return restored;
+    }
+
+    static boolean shouldRestoreSnooze(long scheduledAt, long now) {
+        return scheduledAt > now;
     }
 
     public static void scheduleWatchdog(Context context) {
@@ -327,11 +362,16 @@ public class ReminderScheduler {
     }
 
     /** Cancels all known user-reminder, snooze and watchdog deliveries without deleting data. */
-    public static void cancelAllForEntitlement(Context context) {
+    public static synchronized void cancelAllForEntitlement(Context context) {
         for (Reminder reminder : new ReminderStore(context).getAll()) {
             cancel(context, reminder);
-            cancelSnooze(context, reminder.id, reminder.name);
+            cancelSnoozeAlarm(context, reminder.id, reminder.name);
         }
+        // AlarmManager.cancel() can leave the PendingIntent token discoverable. Without clearing
+        // this process-local proof and the persisted nearest registration, a purchase in the same
+        // process could incorrectly treat the cancelled alarm as already scheduled.
+        cancelRecordedNearest(context, new ReminderMonitoringState(context));
+        nearestAlarmVerifiedInThisProcess = false;
         cancelWatchdog(context);
     }
 
