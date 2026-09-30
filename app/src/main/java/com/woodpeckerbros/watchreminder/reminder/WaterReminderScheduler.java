@@ -16,6 +16,7 @@ public final class WaterReminderScheduler {
     private static final int AUTO_SNOOZE_REQUEST_CODE = "water_auto_snooze".hashCode();
     static final String ACTION_AUTO_SNOOZE = "com.woodpeckerbros.watchreminder.WATER_AUTO_SNOOZE";
     static final int AUTO_RETRY_MINUTES = 5;
+    private static final long SNOOZE_RECOVERY_WINDOW_MS = 30 * 60_000L;
 
     private WaterReminderScheduler() {
     }
@@ -25,17 +26,28 @@ public final class WaterReminderScheduler {
             cancel(context);
             return;
         }
-        cancelPeriodic(context);
         ReminderSettings settings = new ReminderSettings(context);
         if (!settings.waterRemindersEnabled()) {
-            cancelAutoSnooze(context);
-            new WaterReminderStore(context).clearPendingAutoTrigger();
+            cancel(context);
             AppLog.d(context, "water schedule skipped disabled");
             return;
         }
+        cancelPeriodic(context);
         long now = System.currentTimeMillis();
-        boolean targetReached = new WaterReminderStore(context).consumedTodayMl()
+        WaterReminderStore store = new WaterReminderStore(context);
+        boolean targetReached = store.consumedTodayMl()
                 >= settings.waterDailyTargetMl();
+        long snoozeAt = store.pendingSnoozeAt();
+        if (snoozeAt > 0L) {
+            if (!targetReached && shouldRecoverSnooze(snoozeAt, now)) {
+                scheduleAt(context, snoozeAt);
+                AppLog.d(context, "water schedule preserved snooze_at="
+                        + NextReminderCalculator.formatDateTime(snoozeAt));
+                return;
+            }
+            store.clearPendingSnoozeAt(snoozeAt);
+            AppLog.d(context, "water schedule cleared stale_or_completed snooze_at=" + snoozeAt);
+        }
         long triggerAt = nextTriggerAt(settings, now, targetReached);
         triggerAt = QuietTimeHelper.adjust(context, triggerAt);
         if (triggerAt <= now) {
@@ -49,7 +61,9 @@ public final class WaterReminderScheduler {
     public static void cancel(Context context) {
         cancelPeriodic(context);
         cancelAutoSnooze(context);
-        new WaterReminderStore(context).clearPendingAutoTrigger();
+        WaterReminderStore store = new WaterReminderStore(context);
+        store.clearPendingAutoTrigger();
+        store.clearPendingSnoozeAt();
     }
 
     private static void cancelPeriodic(Context context) {
@@ -87,6 +101,7 @@ public final class WaterReminderScheduler {
                 System.currentTimeMillis() + Math.max(1, minutes) * 60_000L);
         long triggerAt = QuietTimeHelper.adjust(context, requestedAt);
         // A snooze replaces the normal periodic alarm, never competes with it.
+        new WaterReminderStore(context).setPendingSnoozeAt(triggerAt);
         cancelPeriodic(context);
         scheduleAt(context, triggerAt);
         AppLog.d(context, "water snooze minutes=" + Math.max(1, minutes)
@@ -98,6 +113,10 @@ public final class WaterReminderScheduler {
     static void scheduleAt(Context context, long triggerAt) {
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         setBest(context, manager, triggerAt, pendingIntent(context, triggerAt));
+    }
+
+    public static boolean shouldRecoverSnooze(long snoozeAt, long now) {
+        return snoozeAt > 0L && snoozeAt >= now - SNOOZE_RECOVERY_WINDOW_MS;
     }
 
     static int remindersPerDay(ReminderSettings settings) {

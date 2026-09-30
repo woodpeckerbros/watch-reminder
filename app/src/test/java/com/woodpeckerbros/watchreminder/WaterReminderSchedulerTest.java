@@ -3,10 +3,21 @@ package com.woodpeckerbros.watchreminder;
 import com.woodpeckerbros.watchreminder.reminder.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
 public class WaterReminderSchedulerTest {
+    @Test
+    public void pendingSnoozeSurvivesReschedulingAndShortRecoveryDelay() {
+        long now = 1_000_000_000L;
+        assertTrue(WaterReminderScheduler.shouldRecoverSnooze(now + 15 * 60_000L, now));
+        assertTrue(WaterReminderScheduler.shouldRecoverSnooze(now - 5 * 60_000L, now));
+        assertFalse(WaterReminderScheduler.shouldRecoverSnooze(now - 31 * 60_000L, now));
+        assertFalse(WaterReminderScheduler.shouldRecoverSnooze(0L, now));
+    }
+
     @Test
     public void defaultWaterIntervalIsOneHour() {
         assertEquals(60, ReminderSettings.DEFAULT_WATER_INTERVAL_MINUTES);

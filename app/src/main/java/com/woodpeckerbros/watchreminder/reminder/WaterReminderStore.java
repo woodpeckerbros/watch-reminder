@@ -14,6 +14,7 @@ public final class WaterReminderStore {
     private static final String KEY_CONSUMED_ML = "consumed_ml";
     private static final String KEY_LAST_HANDLED_TRIGGER = "last_handled_trigger";
     private static final String KEY_PENDING_AUTO_TRIGGER = "pending_auto_trigger";
+    private static final String KEY_PENDING_SNOOZE_AT = "pending_snooze_at";
     private static final Object AUTO_TRIGGER_LOCK = new Object();
 
     private final SharedPreferences prefs;
@@ -39,8 +40,25 @@ public final class WaterReminderStore {
         prefs.edit()
                 .putInt(KEY_CONSUMED_ML, consumed)
                 .putLong(KEY_LAST_HANDLED_TRIGGER, triggerAt)
+                .remove(KEY_PENDING_SNOOZE_AT)
                 .apply();
         clearPendingAutoTrigger(triggerAt);
+    }
+
+    public long pendingSnoozeAt() {
+        return prefs.getLong(KEY_PENDING_SNOOZE_AT, 0L);
+    }
+
+    public void setPendingSnoozeAt(long triggerAt) {
+        prefs.edit().putLong(KEY_PENDING_SNOOZE_AT, triggerAt).commit();
+    }
+
+    public void clearPendingSnoozeAt(long triggerAt) {
+        if (pendingSnoozeAt() == triggerAt) clearPendingSnoozeAt();
+    }
+
+    public void clearPendingSnoozeAt() {
+        prefs.edit().remove(KEY_PENDING_SNOOZE_AT).commit();
     }
 
     public void setPendingAutoTrigger(long triggerAt) {
@@ -89,6 +107,7 @@ public final class WaterReminderStore {
                 .putInt(KEY_CONSUMED_ML, 0)
                 .remove(KEY_LAST_HANDLED_TRIGGER)
                 .remove(KEY_PENDING_AUTO_TRIGGER)
+                .remove(KEY_PENDING_SNOOZE_AT)
                 .apply();
     }
 

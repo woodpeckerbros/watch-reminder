@@ -41,17 +41,26 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
         }
         WaterReminderStore store = new WaterReminderStore(context);
         if (store.isHandled(triggerAt)) {
+            store.clearPendingSnoozeAt(triggerAt);
+            WaterReminderScheduler.schedule(context);
+            return;
+        }
+        long pendingSnoozeAt = store.pendingSnoozeAt();
+        if (pendingSnoozeAt > 0L && pendingSnoozeAt != triggerAt
+                && WaterReminderScheduler.shouldRecoverSnooze(pendingSnoozeAt, System.currentTimeMillis())) {
             WaterReminderScheduler.schedule(context);
             return;
         }
         long now = System.currentTimeMillis();
         long quietAdjusted = QuietTimeHelper.adjust(context, Math.max(triggerAt, now));
         if (quietAdjusted > now) {
+            if (pendingSnoozeAt == triggerAt) store.setPendingSnoozeAt(quietAdjusted);
             WaterReminderScheduler.scheduleAt(context, quietAdjusted);
             AppLog.d(context, "water deferred by quiet time until="
                     + NextReminderCalculator.formatDateTime(quietAdjusted));
             return;
         }
+        store.clearPendingSnoozeAt(triggerAt);
         int amountMl = WaterReminderScheduler.plannedAmountMl(context, triggerAt);
         if (amountMl <= 0) {
             WaterReminderScheduler.schedule(context);
