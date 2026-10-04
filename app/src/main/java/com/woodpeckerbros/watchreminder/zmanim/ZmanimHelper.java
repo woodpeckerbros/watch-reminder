@@ -17,6 +17,7 @@ import java.util.TimeZone;
 
 public class ZmanimHelper {
     public static final String KEY_ALOS = "ALOS";
+    public static final String KEY_TALLIT_TEFILLIN = "TALLIT_TEFILLIN";
     public static final String KEY_SUNRISE = "SUNRISE";
     public static final String KEY_SHMA_MGA = "SHMA_MGA";
     public static final String KEY_SHMA_GRA = "SHMA_GRA";
@@ -34,6 +35,7 @@ public class ZmanimHelper {
 
     public static final String[] KEYS = {
             KEY_ALOS,
+            KEY_TALLIT_TEFILLIN,
             KEY_SUNRISE,
             KEY_SHMA_MGA,
             KEY_SHMA_GRA,
@@ -49,6 +51,7 @@ public class ZmanimHelper {
 
     public static final String[] LABELS = {
             "עלות השחר",
+            "טלית ותפילין",
             "זריחה",
             "סוף זמן שמע מג״א",
             "סוף זמן שמע גר״א",
@@ -175,6 +178,12 @@ public class ZmanimHelper {
 
         if (KEY_ALOS.equals(key)) {
             return offset(calendar.getAlos72Zmanis(), ALOS_OHR_HACHAIM_OFFSET);
+        }
+        if (KEY_TALLIT_TEFILLIN.equals(key)) {
+            // Ohr HaChaim: 1.1 seasonal hours (66 seasonal minutes) before astronomical sunrise.
+            // Keep this tied to the same sunrise/sunset pair used by the other daily zmanim.
+            long dayLength = sunset.getTime() - sunrise.getTime();
+            return new Date(sunrise.getTime() - Math.round(dayLength * 1.1 / 12.0));
         }
         if (KEY_SUNRISE.equals(key)) {
             return visibleSunriseApproximation(sunrise, sunset);

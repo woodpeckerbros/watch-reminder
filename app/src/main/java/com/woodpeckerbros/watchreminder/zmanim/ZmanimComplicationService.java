@@ -117,7 +117,8 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
 
         ArrayList<ZmanimComplicationTimelinePlan.Event> events = new ArrayList<>();
         // Include yesterday because its solar midnight may fall just after today's 00:00.
-        for (int offset = -1; offset < TIMELINE_DAYS; offset++) {
+        // One extra calculation day supplies the next event near the timeline's far edge.
+        for (int offset = -1; offset <= TIMELINE_DAYS; offset++) {
             for (String key : ZmanimHelper.KEYS) {
                 addEvent(events, key, ZmanimHelper.timeForKey(this, key, day.getTimeInMillis()));
             }
@@ -172,8 +173,8 @@ public class ZmanimComplicationService extends ComplicationDataSourceService {
     private ComplicationData zmanData(ComplicationType type, String label, String time) {
         Context localized = AppLanguage.wrap(this);
         String description = AppLanguage.isEnglish(localized)
-                ? "Nearest halachic time: " + label + " at " + time
-                : "זמן ההלכה הקרוב ביותר: " + label + " בשעה " + time;
+                ? "Next halachic time: " + label + " at " + time
+                : "זמן ההלכה הבא: " + label + " בשעה " + time;
         if (type.equals(ComplicationType.SHORT_TEXT)) {
             return new ShortTextComplicationData.Builder(
                     new PlainComplicationText.Builder(time).build(),

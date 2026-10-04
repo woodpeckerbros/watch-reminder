@@ -73,6 +73,15 @@ public final class JewishDailyHalacha {
         return day.getJewishDayOfMonth() - firstDay + 1;
     }
 
+    public static boolean isHoshanaRabba(JewishCalendar day) {
+        return day.getYomTovIndex() == JewishCalendar.HOSHANA_RABBA;
+    }
+
+    public static boolean isErevHoshanaRabba(JewishCalendar day) {
+        return day.getJewishMonth() == JewishDate.TISHREI
+                && day.getJewishDayOfMonth() == 20;
+    }
+
     /** In Israel, Shemini Atzeres is Simchat Torah and Vezos Habracha is read. */
     public static JewishCalendar.Parsha yomTovShabbatParsha(int index, boolean inIsrael) {
         return inIsrael && index == JewishCalendar.SHEMINI_ATZERES

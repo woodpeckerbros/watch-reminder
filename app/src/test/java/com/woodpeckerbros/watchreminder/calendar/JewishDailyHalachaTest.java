@@ -66,6 +66,17 @@ public class JewishDailyHalachaTest {
         assertEquals(5, JewishDailyHalacha.cholHamoedDay(diasporaHoshanaRabba));
     }
 
+    @Test public void hoshanaRabbaNightPrecedesItsFridayDayIn5787() {
+        JewishCalendar thursday = new JewishCalendar(5787, JewishDate.TISHREI, 20);
+        JewishCalendar friday = new JewishCalendar(5787, JewishDate.TISHREI, 21);
+        assertEquals(Calendar.THURSDAY, thursday.getDayOfWeek());
+        assertEquals(Calendar.FRIDAY, friday.getDayOfWeek());
+        assertTrue(JewishDailyHalacha.isErevHoshanaRabba(thursday));
+        assertFalse(JewishDailyHalacha.isHoshanaRabba(thursday));
+        assertTrue(JewishDailyHalacha.isHoshanaRabba(friday));
+        assertFalse(JewishDailyHalacha.isErevHoshanaRabba(friday));
+    }
+
     @Test public void displaysVezosHabrachaForIsraeliSheminiAtzeresOnShabbat() {
         JewishCalendar sheminiAtzeres5787 = new JewishCalendar(5787, JewishDate.TISHREI, 22);
         sheminiAtzeres5787.setInIsrael(true);

@@ -83,6 +83,19 @@ public class ZmanimSafetyTest {
     }
 
     @Test
+    public void tallitAndTefillinUseSixtySixSeasonalMinutesBeforeSunrise() {
+        ComplexZmanimCalendar calendar = telAvivCalendar(2026, Calendar.OCTOBER, 2);
+        long sunrise = calendar.getSunrise().getTime();
+        long sunset = calendar.getSunset().getTime();
+        long expected = sunrise - Math.round((sunset - sunrise) * 1.1 / 12.0);
+        assertEquals(expected, ZmanimHelper.ohrHachaimZman(calendar,
+                ZmanimHelper.KEY_TALLIT_TEFILLIN).getTime());
+        assertTrue(expected < sunrise);
+        assertTrue(expected > ZmanimHelper.ohrHachaimZman(calendar,
+                ZmanimHelper.KEY_ALOS).getTime());
+    }
+
+    @Test
     public void candleLightingIsTwentyMinutesBeforeElevationAdjustedSunset() {
         ComplexZmanimCalendar calendar = telAvivCalendar(2026, Calendar.AUGUST, 14);
         long expected = ReminderScheduler.ceilToMinute(calendar.getSunset().getTime() - 20 * 60_000L);

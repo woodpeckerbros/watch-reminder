@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Pure timeline planning for the zmanim complication; Android rendering stays in the service. */
+/** Pure timeline planning for the next unpassed zman; Android rendering stays in the service. */
 final class ZmanimComplicationTimelinePlan {
     private ZmanimComplicationTimelinePlan() {
     }
@@ -24,8 +24,8 @@ final class ZmanimComplicationTimelinePlan {
         ArrayList<Window> windows = new ArrayList<>();
         for (int i = 0; i < unique.size(); i++) {
             Event event = unique.get(i);
-            long start = i == 0 ? intervalStart : midpoint(unique.get(i - 1).at, event.at);
-            long end = i == unique.size() - 1 ? intervalEnd : midpoint(event.at, unique.get(i + 1).at);
+            long start = i == 0 ? intervalStart : unique.get(i - 1).at;
+            long end = event.at;
             start = Math.max(intervalStart, start);
             end = Math.min(intervalEnd, end);
             if (start < end) {
@@ -33,10 +33,6 @@ final class ZmanimComplicationTimelinePlan {
             }
         }
         return windows;
-    }
-
-    private static long midpoint(long first, long second) {
-        return first + (second - first) / 2L;
     }
 
     static final class Event {

@@ -308,6 +308,7 @@ public class UiText {
         res("צאת שבת", R.string.ui_legacy_249);
         res("צאת שבת ר״ת", R.string.ui_legacy_250);
         res("עלות השחר", R.string.ui_legacy_251);
+        res("טלית ותפילין", R.string.zman_tallit_tefillin);
         res("זריחה", R.string.ui_legacy_252);
         res("סוף זמן שמע מג״א", R.string.ui_legacy_253);
         res("סוף זמן שמע גר״א", R.string.ui_legacy_254);

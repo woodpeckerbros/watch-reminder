@@ -166,6 +166,7 @@ public class MainActivity extends Activity {
 
     private ReminderStore store;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingZmanimNextRefresh;
     private Runnable pendingLocationReschedule;
     private Reminder editingReminder;
     private int selectedHour = 9;
@@ -602,6 +603,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         closeRestoreProgress();
+        if (pendingZmanimNextRefresh != null) mainHandler.removeCallbacks(pendingZmanimNextRefresh);
         if (entitlementManager != null) entitlementManager.removeListener(entitlementListener);
         super.onDestroy();
     }
@@ -3745,6 +3747,8 @@ public class MainActivity extends Activity {
     }
 
     private void showZmanimDay(long dateMillis, boolean showDatePickers, int scrollY, int scrollTarget) {
+        if (pendingZmanimNextRefresh != null) mainHandler.removeCallbacks(pendingZmanimNextRefresh);
+        pendingZmanimNextRefresh = null;
         currentScreen = "zmanim_day";
         long dayMillis = zmanimStartOfDay(dateMillis);
         ZmanimSettings settings = new ZmanimSettings(this);
@@ -3785,15 +3789,26 @@ public class MainActivity extends Activity {
         addCurrentFastRows(timesCard, dayMillis);
         addCurrentJewishHolidayRows(timesCard, dayMillis);
         addCholHamoedRow(timesCard, dayMillis);
+        addHoshanaRabbaRows(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
         addErevShabbatRow(timesCard, dayMillis);
         addZmanimParshaRows(timesCard, dayMillis);
 
-        long nearestZmanTime = nearestDisplayedZmanTime(dayMillis);
+        ZmanimUpcomingTime.Event nextZman = nextDisplayedZman(dayMillis);
         View nearestZmanRow = null;
+        if (nextZman != null && nextZman.calculationDay != dayMillis) {
+            String name = UiText.t(this, ZmanimHelper.KEY_RABBEINU_TAM.equals(nextZman.key)
+                    ? "צ.כוכבים ר״ת" : ZmanimHelper.label(nextZman.key));
+            String nextLabel = AppLanguage.isEnglish(this)
+                    ? "Next · " + relativeDayLabel(nextZman.at) + ": " + name
+                    : "הזמן הבא · " + relativeDayLabel(nextZman.at) + ": " + name;
+            nearestZmanRow = zmanimTimeRow(nextLabel, nextZman.at, true);
+            timesCard.addView(nearestZmanRow);
+        }
         for (int i = 0; i < ZmanimHelper.KEYS.length; i++) {
             long zmanTime = ZmanimHelper.timeForKey(this, ZmanimHelper.KEYS[i], dayMillis);
-            boolean nearest = nearestZmanTime != Long.MAX_VALUE && zmanTime == nearestZmanTime;
+            boolean nearest = nextZman != null && nextZman.calculationDay == dayMillis
+                    && nextZman.key.equals(ZmanimHelper.KEYS[i]) && zmanTime == nextZman.at;
             View zmanRow = zmanimTimeRow(ZmanimHelper.LABELS[i], zmanTime, nearest);
             timesCard.addView(zmanRow);
             if (nearest && nearestZmanRow == null) {
@@ -3801,7 +3816,9 @@ public class MainActivity extends Activity {
             }
             if (ZmanimHelper.KEY_TZAIS.equals(ZmanimHelper.KEYS[i])) {
                 long rabbeinuTam = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis);
-                boolean nearestRabbeinuTam = nearestZmanTime != Long.MAX_VALUE && rabbeinuTam == nearestZmanTime;
+                boolean nearestRabbeinuTam = nextZman != null && nextZman.calculationDay == dayMillis
+                        && ZmanimHelper.KEY_RABBEINU_TAM.equals(nextZman.key)
+                        && rabbeinuTam == nextZman.at;
                 View rabbeinuTamRow = zmanimTimeRow("צ.כוכבים ר״ת", rabbeinuTam, nearestRabbeinuTam);
                 timesCard.addView(rabbeinuTamRow);
                 if (nearestRabbeinuTam && nearestZmanRow == null) {
@@ -3838,6 +3855,23 @@ public class MainActivity extends Activity {
             scrollToViewCenter(nearestZmanRow);
         } else {
             restoreScrollY(scrollY);
+        }
+        if (nextZman != null) {
+            pendingZmanimNextRefresh = () -> {
+                if ("zmanim_day".equals(currentScreen)) {
+                    int currentScroll = activeScrollView == null ? 0 : activeScrollView.getScrollY();
+                    showZmanimDay(System.currentTimeMillis(), showDatePickers, currentScroll, 0);
+                }
+            };
+            Calendar tomorrow = zmanimCalendar(dayMillis);
+            tomorrow.set(Calendar.HOUR_OF_DAY, 0);
+            tomorrow.set(Calendar.MINUTE, 0);
+            tomorrow.set(Calendar.SECOND, 0);
+            tomorrow.set(Calendar.MILLISECOND, 0);
+            tomorrow.add(Calendar.DAY_OF_YEAR, 1);
+            long refreshAt = Math.min(nextZman.at, tomorrow.getTimeInMillis());
+            mainHandler.postDelayed(pendingZmanimNextRefresh,
+                    Math.max(1L, refreshAt - System.currentTimeMillis() + 1_000L));
         }
     }
 
@@ -7891,28 +7925,24 @@ public class MainActivity extends Activity {
         return zmanimStartOfDay(calendar.getTimeInMillis());
     }
 
-    /** Returns the displayed zman nearest to now, only when today is on screen. */
-    private long nearestDisplayedZmanTime(long dayMillis) {
+    /** Today's screen follows the next actual event, including a prior night's midnight. */
+    private ZmanimUpcomingTime.Event nextDisplayedZman(long dayMillis) {
         if (dayMillis != zmanimStartOfDay(System.currentTimeMillis())) {
-            return Long.MAX_VALUE;
+            return null;
         }
         long now = System.currentTimeMillis();
-        long nearest = Long.MAX_VALUE;
-        long shortestDistance = Long.MAX_VALUE;
-        for (String key : ZmanimHelper.KEYS) {
-            long time = ZmanimHelper.timeForKey(this, key, dayMillis);
-            if (time == Long.MAX_VALUE) continue;
-            long distance = Math.abs(time - now);
-            if (distance < shortestDistance) {
-                nearest = time;
-                shortestDistance = distance;
+        List<ZmanimUpcomingTime.Event> events = new ArrayList<>();
+        for (int offset = -1; offset <= 1; offset++) {
+            long calculationDay = zmanimDayOffset(dayMillis, offset);
+            for (String key : ZmanimHelper.KEYS) {
+                events.add(new ZmanimUpcomingTime.Event(key,
+                        ZmanimHelper.timeForKey(this, key, calculationDay), calculationDay));
             }
+            events.add(new ZmanimUpcomingTime.Event(ZmanimHelper.KEY_RABBEINU_TAM,
+                    ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM,
+                            calculationDay), calculationDay));
         }
-        long rabbeinuTam = ZmanimHelper.timeForKey(this, ZmanimHelper.KEY_RABBEINU_TAM, dayMillis);
-        if (rabbeinuTam != Long.MAX_VALUE && Math.abs(rabbeinuTam - now) < shortestDistance) {
-            nearest = rabbeinuTam;
-        }
-        return nearest;
+        return ZmanimUpcomingTime.nextAfter(now, events);
     }
 
     private long gregorianZmanimDate(int year, int month, int day) {
@@ -8167,6 +8197,18 @@ public class MainActivity extends Activity {
                 ? "Chol Hamoed " + (pesach ? "Pesach" : "Sukkot") + " · day " + ordinal
                 : hebrewOrdinals[ordinal] + " דחול המועד " + (pesach ? "פסח" : "סוכות");
         addJewishDayStatus(timesCard, status);
+    }
+
+    private void addHoshanaRabbaRows(LinearLayout timesCard, long dayMillis) {
+        JewishCalendar day = JewishCalendarHelper.calendar(this, zmanimCalendar(dayMillis));
+        if (JewishDailyHalacha.isErevHoshanaRabba(day)) {
+            addJewishDayStatus(timesCard, AppLanguage.isEnglish(this)
+                    ? "Hoshana Rabbah night (tonight)" : "ליל הושענא רבה (הערב)");
+        }
+        if (JewishDailyHalacha.isHoshanaRabba(day)) {
+            addJewishDayStatus(timesCard, AppLanguage.isEnglish(this)
+                    ? "Hoshana Rabbah" : "הושענא רבה");
+        }
     }
 
     private void addErevShabbatRow(LinearLayout timesCard, long dayMillis) {
