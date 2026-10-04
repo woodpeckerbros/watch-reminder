@@ -15,6 +15,7 @@ public final class CalendarReminderCatchUp {
 
     public static void dispatchWhenAwake(Context context) {
         JewishDayScheduler.dispatchMissedIfDueNow(context);
+        PrayerSeasonScheduler.dispatchMissedIfDueNow(context);
         MoonBlessingScheduler.dispatchMissedIfDueNow(context);
         TekufaScheduler.dispatchMissedIfDueNow(context);
     }

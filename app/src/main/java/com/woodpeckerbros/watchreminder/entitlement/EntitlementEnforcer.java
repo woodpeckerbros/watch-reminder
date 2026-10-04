@@ -8,6 +8,7 @@ import com.woodpeckerbros.watchreminder.calendar.DafYomiScheduler;
 import com.woodpeckerbros.watchreminder.calendar.JewishDayScheduler;
 import com.woodpeckerbros.watchreminder.calendar.MoonBlessingScheduler;
 import com.woodpeckerbros.watchreminder.calendar.OmerScheduler;
+import com.woodpeckerbros.watchreminder.calendar.PrayerSeasonReceiver;
 import com.woodpeckerbros.watchreminder.calendar.TekufaScheduler;
 import com.woodpeckerbros.watchreminder.reminder.IntermittentFastingScheduler;
 import com.woodpeckerbros.watchreminder.reminder.ReminderMonitoringService;
@@ -55,6 +56,7 @@ public final class EntitlementEnforcer {
         MoonBlessingScheduler.cancel(appContext);
         OmerScheduler.cancel(appContext);
         JewishDayScheduler.cancel(appContext);
+        PrayerSeasonReceiver.cancelNotification(appContext);
         TekufaScheduler.cancel(appContext);
         IntermittentFastingScheduler.cancel(appContext);
         WaterReminderScheduler.cancel(appContext);

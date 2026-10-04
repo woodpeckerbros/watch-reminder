@@ -395,6 +395,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".calendar.PrayerSeasonReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".calendar.TekufaReceiver"
             android:exported="false" />
 

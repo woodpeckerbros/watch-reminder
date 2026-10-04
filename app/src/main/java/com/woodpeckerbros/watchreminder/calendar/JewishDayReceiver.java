@@ -84,6 +84,7 @@ public class JewishDayReceiver extends BroadcastReceiver {
 
     public static void cancelNotification(Context context) {
         InformationalAlertReceiver.complete(context, "jewish-day");
+        PrayerSeasonReceiver.cancelNotification(context);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.cancel(NOTIFICATION_ID);

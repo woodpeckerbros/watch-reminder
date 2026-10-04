@@ -3792,6 +3792,7 @@ public class MainActivity extends Activity {
         addHoshanaRabbaRows(timesCard, dayMillis);
         addErevJewishDayRows(timesCard, dayMillis);
         addErevShabbatRow(timesCard, dayMillis);
+        addPrayerSeasonRows(timesCard, dayMillis);
         addZmanimParshaRows(timesCard, dayMillis);
 
         ZmanimUpcomingTime.Event nextZman = nextDisplayedZman(dayMillis);
@@ -8208,6 +8209,19 @@ public class MainActivity extends Activity {
         if (JewishDailyHalacha.isHoshanaRabba(day)) {
             addJewishDayStatus(timesCard, AppLanguage.isEnglish(this)
                     ? "Hoshana Rabbah" : "הושענא רבה");
+        }
+    }
+
+    private void addPrayerSeasonRows(LinearLayout timesCard, long dayMillis) {
+        for (String message : PrayerSeasonScheduler.displayForDay(this, dayMillis)) {
+            TextView row = text(message, 13, COLOR_WARNING);
+            AppFont.bold(row);
+            row.setGravity(Gravity.CENTER);
+            row.setPadding(dp(8), dp(6), dp(8), dp(6));
+            row.setBackground(rounded(0x662D4A4B, dp(10), 0));
+            LinearLayout.LayoutParams params = matchParams();
+            params.setMargins(dp(5), dp(3), dp(5), dp(3));
+            timesCard.addView(row, params);
         }
     }
 

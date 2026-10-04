@@ -44,6 +44,7 @@ public class JewishDayScheduler {
             AppLog.d(context, "jewish day schedule skipped disabled");
             return;
         }
+        PrayerSeasonScheduler.schedule(context);
         Event event = nextEvent(context, System.currentTimeMillis());
         if (event == null) {
             AppLog.d(context, "jewish day schedule skipped no event");
@@ -55,6 +56,7 @@ public class JewishDayScheduler {
     }
 
     public static void cancel(Context context) {
+        PrayerSeasonScheduler.cancel(context);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager != null) {
             alarmManager.cancel(pendingIntent(context, new Event(KIND_TODAY_EREV, "", 0)));
