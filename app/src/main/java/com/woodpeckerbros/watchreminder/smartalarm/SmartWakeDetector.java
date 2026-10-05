@@ -249,7 +249,8 @@ public final class SmartWakeDetector {
         long latestMovementEvidenceAt = latestMovementEvidenceAt(recentStart, now);
         boolean hrNew = recentHrQuality.latestAt > lastEvaluationAt;
         boolean movementNew = latestMovementEvidenceAt > lastEvaluationAt;
-        boolean stepNew = latestUntaintedStepAt(now - CLEARLY_AWAKE_WINDOW_MS) > lastEvaluationAt;
+        long latestStepEvidenceAt = latestUntaintedStepAt(now - CLEARLY_AWAKE_WINDOW_MS);
+        boolean stepNew = latestStepEvidenceAt > lastEvaluationAt;
         int freshEvaluationMask = ((cardiovascularCurrentEvidence && hrNew
                     ? EVIDENCE_CARDIOVASCULAR : 0)
                 | (movementEvidence && movementNew
@@ -411,7 +412,9 @@ public final class SmartWakeDetector {
                 timeSinceLastMovementMs, movementDataStatus, selfStimulus,
                 stepEvidenceTainted, movementEvidenceTainted, cardioEvidenceTainted,
                 clearlyAwakeBlockedReason, hrNew, movementNew, stepNew,
-                freshEvaluationMask != 0 || stepNew, trend.samples, trend.recentSamples);
+                freshEvaluationMask != 0 || stepNew, trend.samples, trend.recentSamples,
+                cardiovascularCurrentEvidence, movementEvidence, latestMovementEvidenceAt,
+                latestStepEvidenceAt);
     }
 
     private void beginCandidate(long now, int score, int groups) {
@@ -823,6 +826,22 @@ public final class SmartWakeDetector {
         return new BucketSeries(active, strong, activeCount, strongCount, span(firstStrong, lastStrong));
     }
 
+    /** Read-only shadow view of the existing 15-second motion buckets; never feeds decisions. */
+    List<SmartWakeShadowTelemetry.MovementBucket> shadowMovementBuckets(long fromAt, long now) {
+        List<SmartWakeShadowTelemetry.MovementBucket> result = new ArrayList<>();
+        long firstBucketAt = Math.floorDiv(fromAt, MOVEMENT_BUCKET_MS) * MOVEMENT_BUCKET_MS;
+        long lastBucketAt = Math.floorDiv(now, MOVEMENT_BUCKET_MS) * MOVEMENT_BUCKET_MS;
+        int bucketCount = (int) ((lastBucketAt - firstBucketAt) / MOVEMENT_BUCKET_MS) + 1;
+        BucketSeries accel = bucketSeries(accelerometer, firstBucketAt, now, bucketCount, .35, 1.15);
+        BucketSeries gyro = bucketSeries(gyroscope, firstBucketAt, now, bucketCount, .55, 1.50);
+        for (int i = 0; i < bucketCount; i++) {
+            long bucketAt = firstBucketAt + i * MOVEMENT_BUCKET_MS;
+            result.add(new SmartWakeShadowTelemetry.MovementBucket(bucketAt,
+                    accel.active[i] || gyro.active[i]));
+        }
+        return result;
+    }
+
     private static long span(int firstBucket, int lastBucket) {
         return firstBucket < 0 ? 0 : (lastBucket - firstBucket + 1L) * MOVEMENT_BUCKET_MS;
     }
@@ -971,7 +990,10 @@ public final class SmartWakeDetector {
         public final String wakeabilityTrend, wakeabilityEvidence, movementDataStatus;
         public final String baselineStatus;
         public final int baselineHeartRateSamples, baselineAccelerometerSamples, baselineGyroscopeSamples;
-        public final long heartRateSampleAgeMs, hrvSampleAgeMs;
+        public final long heartRateSampleAgeMs, movementSampleAgeMs, stepSampleAgeMs, hrvSampleAgeMs;
+        /** Event times are source timestamps; callback delivery is intentionally not substituted. */
+        public final long evaluatedAtEpochMs, heartRateEventTimeEpochMs, movementEventTimeEpochMs,
+                stepEventTimeEpochMs;
         public final double heartRateRecentSlope;
         public final int heartRateRecentSamples, heartRateElevatedSamples;
         public final String heartRateRecentValues;
@@ -979,7 +1001,16 @@ public final class SmartWakeDetector {
         public final int movementClusterCount, microMovementCount;
         public final long timeSinceLastMovementMs;
         public final boolean selfStimulusActive, stepEvidenceTainted, movementEvidenceTainted, cardioEvidenceTainted;
+        /** Existing booleans mean only “new since the previous detector evaluation”. */
         public final boolean hrNew, movementNew, stepNew, freshEvidenceChanged;
+        public final boolean hrRecent5s, hrRecent15s, hrRecent30s;
+        public final boolean movementRecent5s, movementRecent15s, movementRecent30s;
+        public final int currentEvidenceGroupCount, newSinceLastEvalGroupCount;
+        public final int recent5sGroupCount, recent15sGroupCount, recent30sGroupCount;
+        public final long crossModalTimeGapMs;
+        public final String crossModalOrder, crossModalConvergenceLevel;
+        /** Read-only exposure of the existing motion evidence group for shadow telemetry. */
+        public final boolean movementEvidence;
         public final int interestingFrameCount, recentInterestingFrameCount;
         public final int temporalCardioUpdates, temporalMovementUpdates;
         public final String selfStimulusSource, selfStimulusType, clearlyAwakeBlockedReason;
@@ -1015,7 +1046,9 @@ public final class SmartWakeDetector {
                  boolean stepEvidenceTainted, boolean movementEvidenceTainted, boolean cardioEvidenceTainted,
                  String clearlyAwakeBlockedReason, boolean hrNew, boolean movementNew,
                  boolean stepNew, boolean freshEvidenceChanged, int interestingFrameCount,
-                 int recentInterestingFrameCount) {
+                 int recentInterestingFrameCount, boolean cardiovascularEvidence,
+                 boolean movementEvidence, long latestMovementEvidenceAt,
+                 long latestStepEvidenceAt) {
             this.shouldWake = shouldWake; this.score = score; this.baselineReady = baselineReady; this.candidate = candidate;
             this.immediateCandidate = immediateCandidate; this.candidateActive = candidateActive;
             this.candidateConfirmed = candidateConfirmed; this.candidateAgeMs = candidateAgeMs;
@@ -1043,6 +1076,12 @@ public final class SmartWakeDetector {
             this.baselineAccelerometerSamples = baselineAccelQuality.count;
             this.baselineGyroscopeSamples = baselineGyroQuality.count;
             this.heartRateSampleAgeMs = ageAt(evaluatedAt, recentHrQuality.latestAt);
+            this.movementSampleAgeMs = ageAt(evaluatedAt, latestMovementEvidenceAt);
+            this.stepSampleAgeMs = ageAt(evaluatedAt, latestStepEvidenceAt);
+            this.evaluatedAtEpochMs = evaluatedAt;
+            this.heartRateEventTimeEpochMs = timestampOrNoData(recentHrQuality.latestAt);
+            this.movementEventTimeEpochMs = timestampOrNoData(latestMovementEvidenceAt);
+            this.stepEventTimeEpochMs = timestampOrNoData(latestStepEvidenceAt);
             this.hrvSampleAgeMs = -1L;
             this.movementCoverageBuckets = movementCoverage.coveredBuckets;
             this.movementCoverageTotalBuckets = movementCoverage.totalBuckets;
@@ -1087,15 +1126,87 @@ public final class SmartWakeDetector {
             this.clearlyAwakeBlockedReason = clearlyAwakeBlockedReason;
             this.hrNew = hrNew;
             this.movementNew = movementNew;
+            this.movementEvidence = movementEvidence;
             this.stepNew = stepNew;
             this.freshEvidenceChanged = freshEvidenceChanged;
+            this.hrRecent5s = isRecent(this.heartRateSampleAgeMs, 5_000L);
+            this.hrRecent15s = isRecent(this.heartRateSampleAgeMs, 15_000L);
+            this.hrRecent30s = isRecent(this.heartRateSampleAgeMs, 30_000L);
+            this.movementRecent5s = isRecent(this.movementSampleAgeMs, 5_000L);
+            this.movementRecent15s = isRecent(this.movementSampleAgeMs, 15_000L);
+            this.movementRecent30s = isRecent(this.movementSampleAgeMs, 30_000L);
+            this.currentEvidenceGroupCount = evidenceGroups;
+            this.newSinceLastEvalGroupCount = freshEvidenceGroups;
+            this.recent5sGroupCount = recentGroupCount(cardiovascularEvidence, movementEvidence,
+                    this.hrRecent5s, this.movementRecent5s);
+            this.recent15sGroupCount = recentGroupCount(cardiovascularEvidence, movementEvidence,
+                    this.hrRecent15s, this.movementRecent15s);
+            this.recent30sGroupCount = recentGroupCount(cardiovascularEvidence, movementEvidence,
+                    this.hrRecent30s, this.movementRecent30s);
+            if (cardiovascularEvidence && movementEvidence
+                    && this.heartRateEventTimeEpochMs >= 0L && this.movementEventTimeEpochMs >= 0L) {
+                this.crossModalTimeGapMs = Math.abs(this.heartRateEventTimeEpochMs
+                        - this.movementEventTimeEpochMs);
+                this.crossModalOrder = this.heartRateEventTimeEpochMs > this.movementEventTimeEpochMs
+                        ? "HR_AFTER_MOVEMENT" : this.movementEventTimeEpochMs > this.heartRateEventTimeEpochMs
+                        ? "MOVEMENT_AFTER_HR" : "SAME_TIME";
+            } else {
+                this.crossModalTimeGapMs = -1L;
+                this.crossModalOrder = "NO_DATA";
+            }
+            this.crossModalConvergenceLevel = convergenceLevel(cardiovascularEvidence,
+                    movementEvidence);
             this.interestingFrameCount = interestingFrameCount;
             this.recentInterestingFrameCount = recentInterestingFrameCount;
             this.temporalCardioUpdates = wakeabilityTrend.cardioUpdates;
             this.temporalMovementUpdates = wakeabilityTrend.movementUpdates;
         }
 
-        private long ageAt(long evaluatedAt, long timestamp) { return timestamp == Long.MIN_VALUE ? -1L : Math.max(0L, evaluatedAt - timestamp); }
+        private long ageAt(long evaluatedAt, long timestamp) {
+            return timestamp == Long.MIN_VALUE ? -1L : Math.max(0L, evaluatedAt - timestamp);
+        }
+
+        private static long timestampOrNoData(long timestamp) {
+            return timestamp == Long.MIN_VALUE ? -1L : timestamp;
+        }
+
+        private static boolean isRecent(long ageMs, long thresholdMs) {
+            return ageMs >= 0L && ageMs <= thresholdMs;
+        }
+
+        private static int recentGroupCount(boolean cardiovascularEvidence, boolean movementEvidence,
+                                            boolean hrRecent, boolean movementRecent) {
+            return (cardiovascularEvidence && hrRecent ? 1 : 0)
+                    + (movementEvidence && movementRecent ? 1 : 0);
+        }
+
+        private String convergenceLevel(boolean cardiovascularEvidence, boolean movementEvidence) {
+            if (!cardiovascularEvidence || !movementEvidence || crossModalTimeGapMs < 0L) return "NO_DATA";
+            if (hrRecent5s && movementRecent5s && crossModalTimeGapMs <= 5_000L) return "5S";
+            if (hrRecent15s && movementRecent15s && crossModalTimeGapMs <= 15_000L) return "15S";
+            if (hrRecent30s && movementRecent30s && crossModalTimeGapMs <= 30_000L) return "30S";
+            return "NONE";
+        }
+
+        private static String timestamp(long eventAt) { return eventAt < 0L ? "NO_DATA" : Long.toString(eventAt); }
+
+        /** Compact semantics-first fields persisted for every evaluation summary. */
+        public String recencyCompact() {
+            return " HR_NEW_SINCE_LAST_EVAL=" + hrNew
+                    + " MOVEMENT_NEW_SINCE_LAST_EVAL=" + movementNew
+                    + " STEP_NEW_SINCE_LAST_EVAL=" + stepNew
+                    + " HR_AGE_MS=" + heartRateSampleAgeMs
+                    + " MOVEMENT_AGE_MS=" + movementSampleAgeMs
+                    + " STEP_AGE_MS=" + stepSampleAgeMs
+                    + " CURRENT_EVIDENCE_GROUP_COUNT=" + currentEvidenceGroupCount
+                    + " NEW_SINCE_LAST_EVAL_GROUP_COUNT=" + newSinceLastEvalGroupCount
+                    + " RECENT_5S_GROUP_COUNT=" + recent5sGroupCount
+                    + " RECENT_15S_GROUP_COUNT=" + recent15sGroupCount
+                    + " RECENT_30S_GROUP_COUNT=" + recent30sGroupCount
+                    + " CROSS_MODAL_TIME_GAP_MS=" + crossModalTimeGapMs
+                    + " CROSS_MODAL_ORDER=" + crossModalOrder
+                    + " CROSS_MODAL_CONVERGENCE=" + crossModalConvergenceLevel;
+        }
 
         /** One grep-friendly record per scoring evaluation for reviewing an entire night. */
         public String summary(long timestamp) {
@@ -1108,25 +1219,27 @@ public final class SmartWakeDetector {
                             + " → wakeability_trend=%s → clearly_awake=%s"
                             + " → self_stimulus_active=%s"
                             + " → system_awake_evidence=%s → system_awake_corroborated=%s"
-                            + " → decision=%s → DECISION_REASON=%s",
+                            + " → decision=%s → DECISION_REASON=%s%s",
                     timestamp, userActivity, healthEpisodeId, systemStateAgeMs, score, evidenceGroups, freshEvidenceGroups,
                     candidateActive, candidateAgeMs,
                     candidateOriginScore, candidateOriginGroups, candidateConfirmationStatus,
                     wakeabilityState, wakeabilityTrend, clearlyAwake, selfStimulusActive,
                     systemAwakeEvidence, systemAwakeCorroborated,
                     shouldWake ? "WAKE" : "CONTINUE",
-                    shouldWake ? wakeReason : continueReason);
+                    shouldWake ? wakeReason : continueReason, recencyCompact());
         }
 
         /** One persisted debug record per 30-second scoring evaluation. */
         public String telemetry() {
             return String.format(Locale.US,
-                    "HEALTH_ACTIVITY_STATE=%s HEALTH_STATE_CHANGE_TIME=%d HEALTH_CALLBACK_RECEIVED_AT=%d HEALTH_STATE_AGE=%dms HEALTH_EPISODE_ID=%s HEALTH_DUPLICATE_EPISODE_CALLBACK=%s\n"
+                    "HEALTH_ACTIVITY_STATE=%s HEALTH_STATE_CHANGE_TIME=%d HEALTH_CALLBACK_RECEIVED_AT=%d HEALTH_STATE_AGE_MS=%d HEALTH_EPISODE_ID=%s HEALTH_DUPLICATE_EPISODE_CALLBACK=%s\n"
                             + "SYSTEM_AWAKE_EVIDENCE=%s SYSTEM_AWAKE_CORROBORATED=%s SYSTEM_AWAKE_CORROBORATION_SOURCE=%s\n"
                             + "BASELINE_READY=%s BASELINE_STATUS=%s BASELINE_SAMPLES[HR=%d,ACCEL=%d,GYRO=%d] METHOD=HR_TRIMMED_MEAN,MOTION_MEDIAN_30S_BUCKETS\n"
                             + "WAKE_SCORE=%d EVIDENCE_GROUPS=%d FRESH_EVIDENCE_GROUPS=%d\n"
                             + "SELF_STIMULUS_ACTIVE=%s SELF_STIMULUS_SOURCE=%s SELF_STIMULUS_TYPE=%s SELF_STIMULUS_STARTED_AT=%d SELF_STIMULUS_ENDED_AT=%d\n"
                             + "STEP_EVIDENCE_TAINTED=%s MOVEMENT_EVIDENCE_TAINTED=%s CARDIO_EVIDENCE_TAINTED=%s EVIDENCE_EXCLUDED_SELF_STIMULUS=%s\n"
+                            + "SOURCE_TIMES EVALUATION_TIME=%d HR_SOURCE_EVENT_TIME=%s HR_CALLBACK_RECEIVED_TIME=NO_DATA MOVEMENT_SOURCE_EVENT_TIME=%s MOVEMENT_CALLBACK_RECEIVED_TIME=NO_DATA STEP_SOURCE_EVENT_TIME=%s STEP_CALLBACK_RECEIVED_TIME=NO_DATA\n"
+                            + "EVIDENCE_SEMANTICS HR_NEW_SINCE_LAST_EVAL=%s MOVEMENT_NEW_SINCE_LAST_EVAL=%s STEP_NEW_SINCE_LAST_EVAL=%s HR_AGE_MS=%d MOVEMENT_AGE_MS=%d STEP_AGE_MS=%d HR_RECENT_5S=%s HR_RECENT_15S=%s HR_RECENT_30S=%s MOVEMENT_RECENT_5S=%s MOVEMENT_RECENT_15S=%s MOVEMENT_RECENT_30S=%s CURRENT_EVIDENCE_GROUP_COUNT=%d NEW_SINCE_LAST_EVAL_GROUP_COUNT=%d RECENT_5S_GROUP_COUNT=%d RECENT_15S_GROUP_COUNT=%d RECENT_30S_GROUP_COUNT=%d CROSS_MODAL_TIME_GAP_MS=%d CROSS_MODAL_ORDER=%s CROSS_MODAL_CONVERGENCE=%s\n"
                             + "HR=%.1f HR_AGE=%dms HR_BASELINE=%.1f HR_DELTA=%+.1f HR_RECENT_SLOPE=%+.2f_bpm_per_min HR_RECENT_SAMPLES=%s HR_SAMPLE_COUNT=%d HR_ELEVATED_SAMPLES=%d (+%d_delta,+%d_trend)\n"
                             + "HR_BPM_VARIABILITY_PROXY=%.1f BASELINE_PROXY=%.1f HRV=NO_DATA HRV_AGE=-1ms HRV_BASELINE=NO_DATA HRV_DELTA=NO_DATA SOURCE=UNAVAILABLE\n"
                             + "MOVEMENT_DATA_STATUS=%s MOVEMENT_WINDOW_COVERAGE=%d/%d\n"
@@ -1148,6 +1261,12 @@ public final class SmartWakeDetector {
                     selfStimulusActive, selfStimulusSource, selfStimulusType, selfStimulusStartedAt,
                     selfStimulusEndedAt, stepEvidenceTainted, movementEvidenceTainted, cardioEvidenceTainted,
                     stepEvidenceTainted || movementEvidenceTainted || cardioEvidenceTainted,
+                    evaluatedAtEpochMs, timestamp(heartRateEventTimeEpochMs), timestamp(movementEventTimeEpochMs),
+                    timestamp(stepEventTimeEpochMs), hrNew, movementNew, stepNew, heartRateSampleAgeMs,
+                    movementSampleAgeMs, stepSampleAgeMs, hrRecent5s, hrRecent15s, hrRecent30s,
+                    movementRecent5s, movementRecent15s, movementRecent30s, currentEvidenceGroupCount,
+                    newSinceLastEvalGroupCount, recent5sGroupCount, recent15sGroupCount, recent30sGroupCount,
+                    crossModalTimeGapMs, crossModalOrder, crossModalConvergenceLevel,
                     heartRateMean, heartRateSampleAgeMs, heartRateBaseline, hrAboveBaseline,
                     heartRateRecentSlope, heartRateRecentValues, heartRateRecentSamples,
                     heartRateElevatedSamples, hrRisePoints, hrTrendPoints,

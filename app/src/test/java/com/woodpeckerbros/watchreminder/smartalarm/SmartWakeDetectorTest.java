@@ -573,6 +573,96 @@ public class SmartWakeDetectorTest {
         assertTrue(telemetry.contains("SELF_STIMULUS_ACTIVE="));
         assertTrue(telemetry.contains("STEP_EVIDENCE_TAINTED="));
         assertTrue(telemetry.contains("CLEARLY_AWAKE_BLOCKED_REASON="));
+        assertTrue(telemetry.contains("HR_NEW_SINCE_LAST_EVAL="));
+        assertTrue(telemetry.contains("MOVEMENT_NEW_SINCE_LAST_EVAL="));
+        assertTrue(telemetry.contains("HR_AGE_MS="));
+        assertTrue(telemetry.contains("MOVEMENT_AGE_MS="));
+        assertTrue(telemetry.contains("CROSS_MODAL_TIME_GAP_MS="));
+        assertTrue(telemetry.contains("CURRENT_EVIDENCE_GROUP_COUNT="));
+    }
+
+    @Test public void newSinceLastEvaluationIsSeparateFromPhysiologicalRecency() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(64, 610_000L);
+        detector.addHeartRate(65, 640_000L);
+        detector.addHeartRate(66, 674_000L); // One second old at evaluation.
+        for (int i = 0; i < 4; i++) detector.addAccelerometerMotion(1.2, 644_000L);
+
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+
+        assertTrue(decision.hrNew);
+        assertTrue(decision.movementNew);
+        assertEquals(1_000L, decision.heartRateSampleAgeMs);
+        assertEquals(31_000L, decision.movementSampleAgeMs);
+        assertTrue(decision.hrRecent5s);
+        assertFalse(decision.movementRecent30s);
+        assertEquals(2, decision.currentEvidenceGroupCount);
+        assertEquals(2, decision.newSinceLastEvalGroupCount);
+        assertEquals(1, decision.recent5sGroupCount);
+        assertEquals(1, decision.recent15sGroupCount);
+        assertEquals(1, decision.recent30sGroupCount);
+        assertEquals(30_000L, decision.crossModalTimeGapMs);
+        assertEquals("HR_AFTER_MOVEMENT", decision.crossModalOrder);
+        assertEquals("NONE", decision.crossModalConvergenceLevel);
+    }
+
+    @Test public void crossModalConvergenceUsesSourceEventsAndIndependentAgeLimits() {
+        SmartWakeDetector withinFive = preparedDetector();
+        withinFive.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        withinFive.addHeartRate(64, 610_000L);
+        withinFive.addHeartRate(65, 640_000L);
+        withinFive.addHeartRate(66, 673_000L);
+        for (int i = 0; i < 4; i++) withinFive.addAccelerometerMotion(1.2, 673_000L);
+        SmartWakeDetector.Decision five = withinFive.evaluate(675_000L);
+        assertEquals("5S", five.crossModalConvergenceLevel);
+        assertEquals(2, five.recent5sGroupCount);
+
+        SmartWakeDetector withinFifteen = preparedDetector();
+        withinFifteen.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        withinFifteen.addHeartRate(64, 610_000L);
+        withinFifteen.addHeartRate(65, 640_000L);
+        withinFifteen.addHeartRate(66, 673_000L);
+        for (int i = 0; i < 4; i++) withinFifteen.addAccelerometerMotion(1.2, 665_000L);
+        SmartWakeDetector.Decision fifteen = withinFifteen.evaluate(675_000L);
+        assertEquals("15S", fifteen.crossModalConvergenceLevel);
+        assertFalse(fifteen.movementRecent5s);
+        assertTrue(fifteen.movementRecent15s);
+
+        SmartWakeDetector onlyThirty = preparedDetector();
+        onlyThirty.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        onlyThirty.addHeartRate(64, 610_000L);
+        onlyThirty.addHeartRate(65, 640_000L);
+        onlyThirty.addHeartRate(66, 674_000L);
+        for (int i = 0; i < 4; i++) onlyThirty.addAccelerometerMotion(1.2, 646_000L);
+        SmartWakeDetector.Decision thirty = onlyThirty.evaluate(675_000L);
+        assertEquals("30S", thirty.crossModalConvergenceLevel);
+        assertFalse(thirty.movementRecent15s);
+        assertTrue(thirty.movementRecent30s);
+    }
+
+    @Test public void identicalTimestampsAgeNaturallyWithoutCreatingNewEvidence() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(64, 610_000L);
+        detector.addHeartRate(65, 640_000L);
+        detector.addHeartRate(66, 673_000L);
+        for (int i = 0; i < 4; i++) detector.addAccelerometerMotion(1.2, 673_000L);
+        SmartWakeDetector.Decision first = detector.evaluate(675_000L);
+        SmartWakeDetector.Decision repeated = detector.evaluate(680_000L);
+
+        assertTrue(first.hrNew);
+        assertTrue(first.movementNew);
+        assertFalse(repeated.hrNew);
+        assertFalse(repeated.movementNew);
+        assertEquals(first.heartRateSampleAgeMs + 5_000L, repeated.heartRateSampleAgeMs);
+        assertEquals(first.movementSampleAgeMs + 5_000L, repeated.movementSampleAgeMs);
+        assertFalse(repeated.hrRecent5s);
+        assertFalse(repeated.movementRecent5s);
+        assertEquals(first.score, repeated.score);
+        assertEquals(first.evidenceGroups, repeated.evidenceGroups);
+        assertEquals(first.candidateActive, repeated.candidateActive);
+        assertEquals(first.shouldWake, repeated.shouldWake);
     }
 
     @Test public void stableQuietSleepDoesNotWake() {
