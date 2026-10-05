@@ -65,6 +65,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.ArrayAdapter;
@@ -3112,13 +3114,29 @@ public class MainActivity extends Activity {
         TextView planTitle = text(getString(R.string.water_plan_title), 15, COLOR_TEXT);
         AppFont.bold(planTitle);
         planCard.addView(planTitle);
-        Spinner mode = new Spinner(this);
-        String[] modeLabels = {
-                getString(R.string.water_mode_daily_target),
-                getString(R.string.water_mode_fixed_amount)
-        };
-        mode.setAdapter(spinnerAdapter(modeLabels));
-        mode.setSelection(ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode()) ? 1 : 0);
+        RadioGroup mode = new RadioGroup(this);
+        mode.setOrientation(LinearLayout.VERTICAL);
+        mode.setLayoutDirection(AppLanguage.isRtl(this)
+                ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        RadioButton targetModeOption = new RadioButton(this);
+        targetModeOption.setId(View.generateViewId());
+        targetModeOption.setText(getString(R.string.water_mode_daily_target));
+        RadioButton glassModeOption = new RadioButton(this);
+        glassModeOption.setId(View.generateViewId());
+        glassModeOption.setText(getString(R.string.water_mode_fixed_amount));
+        android.content.res.ColorStateList modeColors = new android.content.res.ColorStateList(
+                new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+                new int[]{COLOR_ACCENT, COLOR_MUTED});
+        for (RadioButton option : new RadioButton[]{targetModeOption, glassModeOption}) {
+            option.setTextSize(12);
+            option.setTextColor(COLOR_TEXT);
+            option.setButtonTintList(modeColors);
+            option.setMinHeight(dp(48));
+            option.setPadding(dp(4), dp(5), dp(4), dp(5));
+            mode.addView(option, matchParams());
+        }
+        mode.check(ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())
+                ? glassModeOption.getId() : targetModeOption.getId());
         planCard.addView(mode, matchParams());
         TextView choiceExplanation = text(getString(R.string.water_plan_choice_explanation), 11, COLOR_MUTED);
         choiceExplanation.setGravity(Gravity.CENTER);
@@ -3171,7 +3189,7 @@ public class MainActivity extends Activity {
         content.addView(scheduleCard, cardParams());
 
         Runnable updatePlan = () -> {
-            boolean targetMode = mode.getSelectedItemPosition() == 0;
+            boolean targetMode = mode.getCheckedRadioButtonId() == targetModeOption.getId();
             targetCard.setVisibility(View.VISIBLE);
             fixedCard.setVisibility(targetMode ? View.GONE : View.VISIBLE);
             int start = startHour.getValue() * 60 + steppedPickerValue(startMinute, 0, 5);
@@ -3205,16 +3223,7 @@ public class MainActivity extends Activity {
                 summary.setText(getString(R.string.water_plan_summary_glass, reminders, firstAmount));
             }
         };
-        mode.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                updatePlan.run();
-            }
-
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-            }
-        });
+        mode.setOnCheckedChangeListener((group, checkedId) -> updatePlan.run());
         NumberPicker.OnValueChangeListener planChanged = (picker, oldValue, newValue) -> updatePlan.run();
         targetPicker.setOnValueChangedListener(planChanged);
         amountPicker.setOnValueChangedListener(planChanged);
@@ -3234,7 +3243,7 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, getString(R.string.water_invalid_window), Toast.LENGTH_LONG).show();
                 return;
             }
-            if (mode.getSelectedItemPosition() == 1
+            if (mode.getCheckedRadioButtonId() == glassModeOption.getId()
                     && WaterReminderScheduler.fixedAmountSlotsAvailable(start, end) == 0) {
                 Toast.makeText(this, getString(R.string.water_fixed_window_too_short), Toast.LENGTH_LONG).show();
                 return;
@@ -3242,7 +3251,7 @@ public class MainActivity extends Activity {
             String oldMode = settings.waterMode();
             int oldTarget = settings.waterDailyTargetMl();
             boolean wasEnabled = settings.waterRemindersEnabled();
-            String selectedMode = mode.getSelectedItemPosition() == 0
+            String selectedMode = mode.getCheckedRadioButtonId() == targetModeOption.getId()
                     ? ReminderSettings.WATER_MODE_DAILY_TARGET : ReminderSettings.WATER_MODE_FIXED_AMOUNT;
             int selectedTarget = steppedPickerValue(targetPicker, 500, 100);
             settings.setWaterRemindersEnabled(enabled.isChecked());
