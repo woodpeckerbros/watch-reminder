@@ -13,10 +13,10 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
+import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -143,10 +143,7 @@ public final class PrayerSeasonScheduler {
 
     static String message(Context context, Item item) {
         boolean english = AppLanguage.isEnglish(context);
-        TimeZone zone = TimeZone.getTimeZone(new ZmanimSettings(context).timeZoneId());
-        SimpleDateFormat date = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
-        date.setTimeZone(zone);
-        String day = date.format(new Date(item.startDay));
+        String day = startDayLabel(context, item.startDay);
         String wording;
         switch (item.kind) {
             case MASHIV_HARUACH: wording = "משיב הרוח ומוריד הגשם"; break;
@@ -166,8 +163,31 @@ public final class PrayerSeasonScheduler {
                     ? "Musaf on " : "Maariv on the evening of ") + day + ": " + englishWording;
         }
         return "מ" + (prayer(item.kind) == PrayerSeasonChanges.Prayer.MUSAF
-                ? "תפילת מוסף ביום " : "תפילת ערבית בערב ") + day
+                ? "תפילת מוסף ב" : "תפילת ערבית בערב ") + day
                 + " מתחילים לומר ״" + wording + "״";
+    }
+
+    /** The prayer change is easier to verify when its civil and Hebrew dates travel together. */
+    private static String startDayLabel(Context context, long startDay) {
+        TimeZone zone = TimeZone.getTimeZone(new ZmanimSettings(context).timeZoneId());
+        Calendar calendar = Calendar.getInstance(zone);
+        calendar.setTimeInMillis(startDay);
+        calendar.set(Calendar.HOUR_OF_DAY, 12);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        SimpleDateFormat gregorian = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
+        gregorian.setTimeZone(zone);
+        String hebrewDate = JewishCalendarHelper.formatter(context)
+                .format(JewishCalendarHelper.calendar(context, calendar));
+        if (AppLanguage.isEnglish(context)) {
+            String weekday = new DateFormatSymbols(Locale.US).getWeekdays()
+                    [calendar.get(Calendar.DAY_OF_WEEK)];
+            return weekday + ", " + gregorian.format(calendar.getTime()) + " (" + hebrewDate + ")";
+        }
+        String weekday = new String[]{"", "א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"}
+                [calendar.get(Calendar.DAY_OF_WEEK)];
+        return "יום " + weekday + ", " + hebrewDate + " (" + gregorian.format(calendar.getTime()) + ")";
     }
 
     /** Shows both the real first-prayer day and an earlier non-rest reminder day. */
