@@ -66,35 +66,52 @@ public class WaterReminderSchedulerTest {
     }
 
     @Test
-    public void glassSizePlanUsesTheWholeWindowAndSelectedGlass() {
-        // 2,000 ml as ten 200 ml glasses across 14 hours: 84 minutes per glass.
-        assertEquals(84, WaterReminderScheduler.automaticIntervalMinutes(
+    public void glassSizePlanKeepsThirtyMinutesBetweenRegularReminders() {
+        assertEquals(30, WaterReminderScheduler.automaticIntervalMinutes(
                 8 * 60, 22 * 60, 2000, 200));
-        assertEquals(58, WaterReminderScheduler.automaticIntervalMinutes(
+        assertEquals(30, WaterReminderScheduler.automaticIntervalMinutes(
                 10 * 60, 22 * 60, 2500, 200));
+        assertEquals(0, WaterReminderScheduler.automaticIntervalMinutes(
+                10 * 60, 10 * 60 + 20, 2500, 200));
+        assertEquals(24, WaterReminderScheduler.fixedAmountSlotsAvailable(10 * 60, 22 * 60));
         long start = 10 * 60 * 60_000L;
         long end = 22 * 60 * 60_000L;
-        assertEquals(start + 57 * 60_000L + 36_000L,
+        assertEquals(start + 30 * 60_000L,
                 WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200));
         long first = WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200);
-        assertEquals(first + 57 * 60_000L + 36_000L,
+        assertEquals(first + 30 * 60_000L,
                 WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2300, 200));
+        assertEquals(0L, WaterReminderScheduler.fixedAmountNextAt(
+                start, end, end - 20 * 60_000L, 2500, 200));
     }
 
     @Test
-    public void skipAndFifteenMinuteSnoozeRebalanceTheRemainingDay() {
+    public void glassSizePlanRaisesAmountOnlyWhenRemainingSlotsRequireIt() {
+        long end = 22 * 60 * 60_000L;
+        assertEquals(200, WaterReminderScheduler.fixedAmountForReminder(
+                2500, 200, 10 * 60 * 60_000L + 30 * 60_000L, end));
+        assertEquals(209, WaterReminderScheduler.fixedAmountForReminder(
+                5000, 50, 10 * 60 * 60_000L + 30 * 60_000L, end));
+        assertEquals(834, WaterReminderScheduler.fixedAmountForReminder(
+                2500, 200, 21 * 60 * 60_000L, end));
+        assertEquals(100, WaterReminderScheduler.fixedAmountForReminder(
+                100, 200, 21 * 60 * 60_000L, end));
+    }
+
+    @Test
+    public void skipAndFifteenMinuteSnoozeKeepTheRegularThirtyMinuteCadence() {
         long start = 10 * 60 * 60_000L;
         long end = 22 * 60 * 60_000L;
         long first = WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200);
         long afterSkip = WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2500, 200);
-        assertEquals(first + 53 * 60_000L, afterSkip);
-        long snoozed = first + 15 * 60_000L;
+        assertEquals(first + 30 * 60_000L, afterSkip);
+        long snoozed = WaterReminderScheduler.requestedSnoozeAt(first, 15);
+        assertEquals(first + 15 * 60_000L, snoozed);
         long afterDrinkingAtSnooze = WaterReminderScheduler.fixedAmountNextAt(
                 start, end, snoozed, 2300, 200);
-        assertTrue(afterDrinkingAtSnooze > snoozed);
-        assertTrue(afterDrinkingAtSnooze < first + 15 * 60_000L + 57 * 60_000L + 36_000L);
-        assertEquals(end, WaterReminderScheduler.fixedAmountNextAt(start, end,
-                end - 40 * 60_000L, 100, 200));
+        assertEquals(snoozed + 30 * 60_000L, afterDrinkingAtSnooze);
+        assertEquals(end - 10 * 60_000L, WaterReminderScheduler.fixedAmountNextAt(
+                start, end, end - 40 * 60_000L, 100, 200));
     }
 
     @Test

@@ -3192,11 +3192,17 @@ public class MainActivity extends Activity {
                 intervalChoice.setVisibility(View.GONE);
                 automaticInterval.setVisibility(View.VISIBLE);
                 int glassSize = steppedPickerValue(amountPicker, 50, 50);
-                int reminders = (int) Math.ceil(target / (double) glassSize);
-                String exactInterval = String.format(AppLanguage.isEnglish(this) ? Locale.US : new Locale("he", "IL"),
-                        "%.1f", (end - start) * Math.min(glassSize, target) / (double) target);
-                automaticInterval.setText(getString(R.string.water_auto_interval, exactInterval));
-                summary.setText(getString(R.string.water_plan_summary_glass, reminders, glassSize));
+                int slots = WaterReminderScheduler.fixedAmountSlotsAvailable(start, end);
+                if (slots == 0) {
+                    automaticInterval.setText("");
+                    summary.setText(getString(R.string.water_fixed_window_too_short));
+                    return;
+                }
+                int firstAmount = Math.max(glassSize,
+                        WaterReminderScheduler.amountForRemaining(target, slots));
+                int reminders = (int) Math.ceil(target / (double) firstAmount);
+                automaticInterval.setText(getString(R.string.water_auto_interval));
+                summary.setText(getString(R.string.water_plan_summary_glass, reminders, firstAmount));
             }
         };
         mode.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -3226,6 +3232,11 @@ public class MainActivity extends Activity {
             int end = endHour.getValue() * 60 + steppedPickerValue(endMinute, 0, 5);
             if (end <= start) {
                 Toast.makeText(this, getString(R.string.water_invalid_window), Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (mode.getSelectedItemPosition() == 1
+                    && WaterReminderScheduler.fixedAmountSlotsAvailable(start, end) == 0) {
+                Toast.makeText(this, getString(R.string.water_fixed_window_too_short), Toast.LENGTH_LONG).show();
                 return;
             }
             String oldMode = settings.waterMode();

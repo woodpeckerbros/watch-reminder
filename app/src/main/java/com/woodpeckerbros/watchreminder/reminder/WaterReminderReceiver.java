@@ -83,10 +83,20 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
         if (!store.consumePendingAutoTrigger(triggerAt)) return;
         WaterReminderScheduler.cancelAutoSnooze(context);
         cancelNotification(context);
-        WaterReminderScheduler.scheduleSnooze(context, WaterReminderScheduler.AUTO_RETRY_MINUTES, true);
+        boolean fixedAmount = ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(
+                new ReminderSettings(context).waterMode());
+        if (fixedAmount) {
+            // The next regular half-hour alert is already planned; do not replace it
+            // with a retry measured from the later auto-close time.
+            WaterReminderScheduler.schedule(context);
+        } else {
+            WaterReminderScheduler.scheduleSnooze(context,
+                    WaterReminderScheduler.AUTO_RETRY_MINUTES, true);
+        }
         ComplicationRefresh.requestWater(context);
         AppLog.d(context, "water auto-snooze original=" + triggerAt
-                + " retry_minutes=" + WaterReminderScheduler.AUTO_RETRY_MINUTES);
+                + (fixedAmount ? " next_regular_half_hour" :
+                " retry_minutes=" + WaterReminderScheduler.AUTO_RETRY_MINUTES));
     }
 
     public static void cancelNotification(Context context) {

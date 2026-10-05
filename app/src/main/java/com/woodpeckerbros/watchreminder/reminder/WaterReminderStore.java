@@ -16,6 +16,8 @@ public final class WaterReminderStore {
     private static final String KEY_PENDING_AUTO_TRIGGER = "pending_auto_trigger";
     private static final String KEY_PENDING_SNOOZE_AT = "pending_snooze_at";
     private static final String KEY_NEXT_FIXED_AT = "next_fixed_at";
+    private static final String KEY_FIXED_PLAN_VERSION = "fixed_plan_version";
+    private static final int FIXED_PLAN_VERSION = 2;
     private static final Object AUTO_TRIGGER_LOCK = new Object();
 
     private final SharedPreferences prefs;
@@ -65,12 +67,19 @@ public final class WaterReminderStore {
 
     public long nextFixedAt() {
         ensureToday();
+        if (prefs.getInt(KEY_FIXED_PLAN_VERSION, 0) < FIXED_PLAN_VERSION) {
+            // Replace a pending alert calculated by the previous variable-interval plan.
+            prefs.edit().putInt(KEY_FIXED_PLAN_VERSION, FIXED_PLAN_VERSION)
+                    .remove(KEY_NEXT_FIXED_AT).commit();
+            return 0L;
+        }
         return prefs.getLong(KEY_NEXT_FIXED_AT, 0L);
     }
 
     public void setNextFixedAt(long triggerAt) {
         ensureToday();
-        prefs.edit().putLong(KEY_NEXT_FIXED_AT, triggerAt).commit();
+        prefs.edit().putInt(KEY_FIXED_PLAN_VERSION, FIXED_PLAN_VERSION)
+                .putLong(KEY_NEXT_FIXED_AT, triggerAt).commit();
     }
 
     public void clearNextFixedAt() {

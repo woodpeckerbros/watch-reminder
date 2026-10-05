@@ -28,7 +28,7 @@
     <string name="water_reminders_subtitle">תוכנית שתייה אישית לאורך היום</string>
     <string name="water_plan_title">אופן חישוב השתייה</string>
     <string name="water_mode_daily_target">אני בוחר מרווח · הכמות אוטומטית</string>
-    <string name="water_mode_fixed_amount">אני בוחר גודל כוס · המרווח אוטומטי</string>
+    <string name="water_mode_fixed_amount">אני בוחר גודל כוס · כל 30 דקות</string>
     <string name="water_daily_target">יעד יומי במ״ל</string>
     <string name="water_amount_each">כמות בכל תזכורת במ״ל</string>
     <string name="water_schedule_title">שעות ומרווח תזכורות</string>
@@ -37,10 +37,11 @@
     <string name="water_end_time">עד שעה</string>
     <string name="water_plan_summary_target">%1$d תזכורות ביום · כ־%2$d מ״ל בכל פעם</string>
     <string name="water_plan_summary_fixed">%1$d תזכורות ביום · %2$d מ״ל בכל פעם · עד %3$d מ״ל ביום</string>
-    <string name="water_plan_summary_glass">%1$d תזכורות ביום · כוס של %2$d מ״ל</string>
+    <string name="water_plan_summary_glass">בתוכנית הראשונית: כ־%1$d תזכורות · %2$d מ״ל בכל פעם</string>
     <string name="water_plan_choice_explanation">בחר דרך תכנון אחת: מרווח קבוע או גודל כוס קבוע</string>
     <string name="water_glass_size">גודל כוס במ״ל</string>
-    <string name="water_auto_interval">מרווח התחלתי: כ־%1$s דקות · מתעדכן לפי השתייה</string>
+    <string name="water_auto_interval">כל 30 דקות · הכמות גדלה אם נדרש להשלמת היעד</string>
+    <string name="water_fixed_window_too_short">חלון השתייה חייב להימשך לפחות 30 דקות</string>
     <string name="water_invalid_window">שעת הסיום חייבת להיות מאוחרת משעת ההתחלה</string>
     <string name="water_settings_saved">הגדרות תזכורות המים נשמרו</string>
     <string name="water_settings_next_reminder">התזכורת הבאה לשתייה: %1$s</string>

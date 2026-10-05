@@ -16,6 +16,8 @@ public final class WaterReminderScheduler {
     private static final int AUTO_SNOOZE_REQUEST_CODE = "water_auto_snooze".hashCode();
     static final String ACTION_AUTO_SNOOZE = "com.woodpeckerbros.watchreminder.WATER_AUTO_SNOOZE";
     static final int AUTO_RETRY_MINUTES = 5;
+    static final int FIXED_AMOUNT_INTERVAL_MINUTES = 30;
+    private static final long FIXED_AMOUNT_INTERVAL_MS = FIXED_AMOUNT_INTERVAL_MINUTES * 60_000L;
     private static final long SNOOZE_RECOVERY_WINDOW_MS = 30 * 60_000L;
 
     private WaterReminderScheduler() {
@@ -162,7 +164,14 @@ public final class WaterReminderScheduler {
             return 0;
         }
         if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
-            return Math.min(remaining, settings.waterAmountMl());
+            Calendar end = Calendar.getInstance();
+            end.setTimeInMillis(triggerAt);
+            end.set(Calendar.HOUR_OF_DAY, settings.waterEndHour());
+            end.set(Calendar.MINUTE, settings.waterEndMinute());
+            end.set(Calendar.SECOND, 0);
+            end.set(Calendar.MILLISECOND, 0);
+            return fixedAmountForReminder(remaining, settings.waterAmountMl(),
+                    triggerAt, end.getTimeInMillis());
         }
         // Rebalance the remaining goal across the alerts that can still be delivered today.
         // A missed glass therefore changes each later request gradually, instead of leaving
@@ -180,25 +189,37 @@ public final class WaterReminderScheduler {
         return Math.min(remaining, dailyTargetPortionMl(targetMl, remindersPerDay));
     }
 
-    /** Initial rate for the glass-size plan; subsequent alerts use the remaining goal and time. */
+    /** The glass-size plan uses one regular reminder every half hour. */
     public static int automaticIntervalMinutes(int startMinute, int endMinute,
                                                int dailyTargetMl, int glassSizeMl) {
-        int window = endMinute - startMinute;
-        if (window <= 0 || dailyTargetMl <= 0 || glassSizeMl <= 0) {
+        if (endMinute - startMinute < FIXED_AMOUNT_INTERVAL_MINUTES
+                || dailyTargetMl <= 0 || glassSizeMl <= 0) {
             return 0;
         }
-        return (int) Math.round(window * Math.min(glassSizeMl, dailyTargetMl)
-                / (double) dailyTargetMl);
+        return FIXED_AMOUNT_INTERVAL_MINUTES;
     }
 
-    /** One glass's share of the time remaining, rounded to the nearest second. */
+    public static int fixedAmountSlotsAvailable(int startMinute, int endMinute) {
+        return Math.max(0, (endMinute - startMinute) / FIXED_AMOUNT_INTERVAL_MINUTES);
+    }
+
+    /** Keep the chosen glass size unless the remaining half-hour slots need a larger amount. */
+    public static int fixedAmountForReminder(int remainingMl, int glassSizeMl,
+                                             long triggerAt, long endAt) {
+        if (remainingMl <= 0 || glassSizeMl <= 0) return 0;
+        long slots = triggerAt > endAt ? 1L : (endAt - triggerAt) / FIXED_AMOUNT_INTERVAL_MS + 1L;
+        int neededMl = (int) ((remainingMl + slots - 1L) / slots);
+        return Math.min(remainingMl, Math.max(glassSizeMl, neededMl));
+    }
+
+    /** The first alert and each later regular alert are at least 30 minutes from the anchor. */
     public static long fixedAmountNextAt(long startAt, long endAt, long now,
                                          int remainingMl, int glassSizeMl) {
-        if (endAt <= startAt || remainingMl <= 0 || glassSizeMl <= 0 || now >= endAt) return 0L;
+        if (endAt - startAt < FIXED_AMOUNT_INTERVAL_MS
+                || remainingMl <= 0 || glassSizeMl <= 0) return 0L;
         long anchor = Math.max(startAt, now);
-        long delay = Math.round((endAt - anchor)
-                * Math.min(1.0, glassSizeMl / (double) remainingMl) / 1000.0) * 1000L;
-        return Math.min(endAt, anchor + Math.max(1000L, delay));
+        long nextAt = anchor + FIXED_AMOUNT_INTERVAL_MS;
+        return nextAt <= endAt ? nextAt : 0L;
     }
 
     static long nextFixedAmountTriggerAt(ReminderSettings settings, long now,
@@ -218,8 +239,13 @@ public final class WaterReminderScheduler {
             end.add(Calendar.DAY_OF_YEAR, 1);
             consumedMl = 0;
         }
-        return fixedAmountNextAt(start.getTimeInMillis(), end.getTimeInMillis(), now,
+        long nextAt = fixedAmountNextAt(start.getTimeInMillis(), end.getTimeInMillis(), now,
                 Math.max(0, settings.waterDailyTargetMl() - consumedMl), settings.waterAmountMl());
+        if (nextAt > 0L) return nextAt;
+        start.add(Calendar.DAY_OF_YEAR, 1);
+        end.add(Calendar.DAY_OF_YEAR, 1);
+        return fixedAmountNextAt(start.getTimeInMillis(), end.getTimeInMillis(), now,
+                settings.waterDailyTargetMl(), settings.waterAmountMl());
     }
 
     public static long nextTriggerAt(Context context, long now, boolean targetReached) {
