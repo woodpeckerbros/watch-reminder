@@ -41,6 +41,8 @@
     <string name="water_auto_interval">Initial interval: about %1$s minutes · adjusts to intake</string>
     <string name="water_invalid_window">The end time must be later than the start time</string>
     <string name="water_settings_saved">Water reminder settings saved</string>
+    <string name="water_settings_next_reminder">Next drinking reminder: %1$s</string>
+    <string name="water_settings_next_reminder_unavailable">No drinking reminder is scheduled</string>
     <string name="water_today_progress">Today: %1$d of %2$d ml</string>
     <string name="water_reset_today">Reset today’s intake</string>
     <string name="water_alert_title">Time to drink water</string>

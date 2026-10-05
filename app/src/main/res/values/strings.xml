@@ -43,6 +43,8 @@
     <string name="water_auto_interval">מרווח התחלתי: כ־%1$s דקות · מתעדכן לפי השתייה</string>
     <string name="water_invalid_window">שעת הסיום חייבת להיות מאוחרת משעת ההתחלה</string>
     <string name="water_settings_saved">הגדרות תזכורות המים נשמרו</string>
+    <string name="water_settings_next_reminder">התזכורת הבאה לשתייה: %1$s</string>
+    <string name="water_settings_next_reminder_unavailable">אין תזכורת שתייה מתוכננת</string>
     <string name="water_today_progress">היום: %1$d מתוך %2$d מ״ל</string>
     <string name="water_reset_today">איפוס השתייה של היום</string>
     <string name="water_alert_title">הגיע הזמן לשתות מים</string>

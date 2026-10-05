@@ -235,6 +235,24 @@ public final class WaterReminderScheduler {
         return nextTriggerAt(settings, now, targetReached);
     }
 
+    /** Returns the actual next water delivery time, including a preserved snooze and quiet time. */
+    public static long nextScheduledAt(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return 0L;
+        ReminderSettings settings = new ReminderSettings(context);
+        if (!settings.waterRemindersEnabled()) return 0L;
+        WaterReminderStore store = new WaterReminderStore(context);
+        long now = System.currentTimeMillis();
+        long snoozeAt = store.pendingSnoozeAt();
+        if (snoozeAt > 0L && shouldRecoverSnooze(snoozeAt, now)) return snoozeAt;
+        boolean targetReached = store.consumedTodayMl() >= settings.waterDailyTargetMl();
+        if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
+            long saved = store.nextFixedAt();
+            if (!targetReached && shouldRecoverSnooze(saved, now)) return saved;
+        }
+        long triggerAt = nextTriggerAt(settings, now, targetReached);
+        return triggerAt <= 0L ? 0L : QuietTimeHelper.adjust(context, triggerAt);
+    }
+
     public static int amountForRemaining(int remainingMl, int remainingSlots) {
         if (remainingMl <= 0 || remainingSlots <= 0) {
             return 0;

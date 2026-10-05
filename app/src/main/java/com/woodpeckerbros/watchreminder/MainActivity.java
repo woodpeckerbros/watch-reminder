@@ -3035,6 +3035,10 @@ public class MainActivity extends Activity {
         remaining.setGravity(Gravity.CENTER);
         remaining.setPadding(0, dp(2), 0, dp(4));
         progressCard.addView(remaining, matchParams());
+        TextView nextWaterReminder = text("", 12, COLOR_ACCENT);
+        nextWaterReminder.setGravity(Gravity.CENTER);
+        nextWaterReminder.setPadding(0, 0, 0, dp(4));
+        progressCard.addView(nextWaterReminder, matchParams());
         Button addGlass = pillButton(getString(R.string.water_dashboard_add_glass), COLOR_ACCENT_DARK);
         addGlass.setTextSize(11);
         progressCard.addView(addGlass, matchParams());
@@ -3065,6 +3069,11 @@ public class MainActivity extends Activity {
             remaining.setText(remainingMl == 0
                     ? getString(R.string.water_dashboard_goal_reached)
                     : getString(R.string.water_dashboard_remaining, remainingMl));
+            long nextAt = WaterReminderScheduler.nextScheduledAt(this);
+            nextWaterReminder.setText(nextAt > 0L
+                    ? getString(R.string.water_settings_next_reminder,
+                    NextReminderCalculator.formatDateTime(nextAt))
+                    : getString(R.string.water_settings_next_reminder_unavailable));
         };
         addGlass.setOnClickListener(v -> {
             new WaterReminderStore(this).addConsumedMl(250);
