@@ -358,7 +358,8 @@ public class ReminderBackup {
                 .put("omer", exportPreferences(context, "omer_state", "retry_until"))
                 .put("moonBlessing", exportPreferences(context, "moon_blessing_state"))
                 .put("intermittentFasting", exportPreferences(context, "intermittent_fasting"))
-                .put("waterReminder", exportPreferences(context, WaterReminderStore.PREFS_NAME))
+                .put("waterReminder", exportPreferences(context, WaterReminderStore.PREFS_NAME,
+                        "next_fixed_at"))
                 .put("reminderHistory", new ReminderEventStore(context).recentForBackup(
                         System.currentTimeMillis() - HISTORY_BACKUP_WINDOW_MS))
                 .put("occurrenceState", exportPreferences(context, "reminder_occurrence_state"))
@@ -374,6 +375,7 @@ public class ReminderBackup {
         restorePreferences(context, "moon_blessing_state", state.optJSONObject("moonBlessing"));
         restorePreferences(context, "intermittent_fasting", state.optJSONObject("intermittentFasting"));
         restorePreferences(context, WaterReminderStore.PREFS_NAME, state.optJSONObject("waterReminder"));
+        new WaterReminderStore(context).clearNextFixedAt();
         JSONArray reminderHistory = state.optJSONArray("reminderHistory");
         if (reminderHistory != null) {
             new ReminderEventStore(context).restoreRecent(reminderHistory);
@@ -519,6 +521,7 @@ public class ReminderBackup {
         );
         settings.setLanguage(json.optString("language", settings.language()));
         settings.setJewishMode(json.optBoolean("jewishMode", settings.jewishMode()));
+        new WaterReminderStore(context).clearNextFixedAt();
         MoonBlessingScheduler.schedule(context);
         DafYomiScheduler.schedule(context);
         OmerScheduler.schedule(context);

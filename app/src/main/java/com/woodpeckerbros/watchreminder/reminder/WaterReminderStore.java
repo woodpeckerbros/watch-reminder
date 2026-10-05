@@ -15,6 +15,7 @@ public final class WaterReminderStore {
     private static final String KEY_LAST_HANDLED_TRIGGER = "last_handled_trigger";
     private static final String KEY_PENDING_AUTO_TRIGGER = "pending_auto_trigger";
     private static final String KEY_PENDING_SNOOZE_AT = "pending_snooze_at";
+    private static final String KEY_NEXT_FIXED_AT = "next_fixed_at";
     private static final Object AUTO_TRIGGER_LOCK = new Object();
 
     private final SharedPreferences prefs;
@@ -41,6 +42,7 @@ public final class WaterReminderStore {
                 .putInt(KEY_CONSUMED_ML, consumed)
                 .putLong(KEY_LAST_HANDLED_TRIGGER, triggerAt)
                 .remove(KEY_PENDING_SNOOZE_AT)
+                .remove(KEY_NEXT_FIXED_AT)
                 .apply();
         clearPendingAutoTrigger(triggerAt);
     }
@@ -59,6 +61,24 @@ public final class WaterReminderStore {
 
     public void clearPendingSnoozeAt() {
         prefs.edit().remove(KEY_PENDING_SNOOZE_AT).commit();
+    }
+
+    public long nextFixedAt() {
+        ensureToday();
+        return prefs.getLong(KEY_NEXT_FIXED_AT, 0L);
+    }
+
+    public void setNextFixedAt(long triggerAt) {
+        ensureToday();
+        prefs.edit().putLong(KEY_NEXT_FIXED_AT, triggerAt).commit();
+    }
+
+    public void clearNextFixedAt() {
+        prefs.edit().remove(KEY_NEXT_FIXED_AT).commit();
+    }
+
+    public void clearNextFixedAt(long triggerAt) {
+        if (nextFixedAt() == triggerAt) clearNextFixedAt();
     }
 
     public void setPendingAutoTrigger(long triggerAt) {
@@ -99,6 +119,7 @@ public final class WaterReminderStore {
         ensureToday();
         int consumed = Math.max(0, prefs.getInt(KEY_CONSUMED_ML, 0));
         prefs.edit().putInt(KEY_CONSUMED_ML, consumed + amountMl).apply();
+        clearNextFixedAt();
     }
 
     public void resetToday() {
@@ -108,6 +129,7 @@ public final class WaterReminderStore {
                 .remove(KEY_LAST_HANDLED_TRIGGER)
                 .remove(KEY_PENDING_AUTO_TRIGGER)
                 .remove(KEY_PENDING_SNOOZE_AT)
+                .remove(KEY_NEXT_FIXED_AT)
                 .apply();
     }
 
@@ -118,6 +140,7 @@ public final class WaterReminderStore {
                     .putString(KEY_DAY, today)
                     .putInt(KEY_CONSUMED_ML, 0)
                     .remove(KEY_LAST_HANDLED_TRIGGER)
+                    .remove(KEY_NEXT_FIXED_AT)
                     .apply();
         }
     }

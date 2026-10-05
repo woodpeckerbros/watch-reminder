@@ -52,7 +52,11 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
             return;
         }
         long now = System.currentTimeMillis();
-        long quietAdjusted = QuietTimeHelper.adjust(context, Math.max(triggerAt, now));
+        // A snooze was already placed at its chosen time. Reapplying quiet-time here
+        // would silently move a manual 15-minute snooze after the user selected it.
+        long quietAdjusted = pendingSnoozeAt == triggerAt
+                ? Math.max(triggerAt, now)
+                : QuietTimeHelper.adjust(context, Math.max(triggerAt, now));
         if (quietAdjusted > now) {
             if (pendingSnoozeAt == triggerAt) store.setPendingSnoozeAt(quietAdjusted);
             WaterReminderScheduler.scheduleAt(context, quietAdjusted);
@@ -61,14 +65,15 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
             return;
         }
         store.clearPendingSnoozeAt(triggerAt);
+        store.clearNextFixedAt(triggerAt);
         int amountMl = WaterReminderScheduler.plannedAmountMl(context, triggerAt);
         if (amountMl <= 0) {
             WaterReminderScheduler.schedule(context);
             return;
         }
         int consumedMl = store.consumedTodayMl();
-        ComplicationRefresh.requestWater(context);
         WaterReminderScheduler.schedule(context);
+        ComplicationRefresh.requestWater(context);
         WaterReminderScheduler.scheduleAutoSnooze(context, triggerAt);
         showNotification(context, triggerAt, amountMl, consumedMl, settings.waterDailyTargetMl());
     }
@@ -78,7 +83,8 @@ public final class WaterReminderReceiver extends BroadcastReceiver {
         if (!store.consumePendingAutoTrigger(triggerAt)) return;
         WaterReminderScheduler.cancelAutoSnooze(context);
         cancelNotification(context);
-        WaterReminderScheduler.scheduleSnooze(context, WaterReminderScheduler.AUTO_RETRY_MINUTES);
+        WaterReminderScheduler.scheduleSnooze(context, WaterReminderScheduler.AUTO_RETRY_MINUTES, true);
+        ComplicationRefresh.requestWater(context);
         AppLog.d(context, "water auto-snooze original=" + triggerAt
                 + " retry_minutes=" + WaterReminderScheduler.AUTO_RETRY_MINUTES);
     }

@@ -48,9 +48,23 @@ public final class WaterReminderScheduler {
             store.clearPendingSnoozeAt(snoozeAt);
             AppLog.d(context, "water schedule cleared stale_or_completed snooze_at=" + snoozeAt);
         }
-        long triggerAt = nextTriggerAt(settings, now, targetReached);
+        boolean fixedAmount = ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode());
+        long triggerAt;
+        if (fixedAmount) {
+            long saved = store.nextFixedAt();
+            if (!targetReached && shouldRecoverSnooze(saved, now)) {
+                triggerAt = saved;
+            } else {
+                triggerAt = nextFixedAmountTriggerAt(settings, now, targetReached, store.consumedTodayMl());
+            }
+        } else {
+            store.clearNextFixedAt();
+            triggerAt = nextTriggerAt(settings, now, targetReached);
+        }
+        if (triggerAt <= 0L) return;
         triggerAt = QuietTimeHelper.adjust(context, triggerAt);
-        if (triggerAt <= now) {
+        if (fixedAmount) store.setNextFixedAt(triggerAt);
+        if (!fixedAmount && triggerAt <= now) {
             return;
         }
         AppLog.d(context, "water schedule at=" + NextReminderCalculator.formatDateTime(triggerAt));
@@ -64,6 +78,7 @@ public final class WaterReminderScheduler {
         WaterReminderStore store = new WaterReminderStore(context);
         store.clearPendingAutoTrigger();
         store.clearPendingSnoozeAt();
+        store.clearNextFixedAt();
     }
 
     private static void cancelPeriodic(Context context) {
@@ -87,7 +102,7 @@ public final class WaterReminderScheduler {
         if (manager != null) manager.cancel(autoSnoozeIntent(context, 0L));
     }
 
-    public static void scheduleSnooze(Context context, int minutes) {
+    public static void scheduleSnooze(Context context, int minutes, boolean respectQuietTime) {
         if (!EntitlementAccess.isFeatureAccessGranted(context)) {
             cancel(context);
             return;
@@ -97,17 +112,22 @@ public final class WaterReminderScheduler {
             cancel(context);
             return;
         }
-        long requestedAt = ReminderScheduler.ceilToMinute(
-                System.currentTimeMillis() + Math.max(1, minutes) * 60_000L);
-        long triggerAt = QuietTimeHelper.adjust(context, requestedAt);
+        long requestedAt = requestedSnoozeAt(System.currentTimeMillis(), minutes);
+        long triggerAt = respectQuietTime ? QuietTimeHelper.adjust(context, requestedAt) : requestedAt;
         // A snooze replaces the normal periodic alarm, never competes with it.
-        new WaterReminderStore(context).setPendingSnoozeAt(triggerAt);
+        WaterReminderStore store = new WaterReminderStore(context);
+        store.setPendingSnoozeAt(triggerAt);
+        store.clearNextFixedAt();
         cancelPeriodic(context);
         scheduleAt(context, triggerAt);
         AppLog.d(context, "water snooze minutes=" + Math.max(1, minutes)
                 + " requested_at=" + NextReminderCalculator.formatDateTime(requestedAt)
                 + " scheduled_at=" + NextReminderCalculator.formatDateTime(triggerAt)
                 + " quiet_adjusted=" + (triggerAt != requestedAt));
+    }
+
+    public static long requestedSnoozeAt(long now, int minutes) {
+        return now + Math.max(1, minutes) * 60_000L;
     }
 
     static void scheduleAt(Context context, long triggerAt) {
@@ -160,23 +180,59 @@ public final class WaterReminderScheduler {
         return Math.min(remaining, dailyTargetPortionMl(targetMl, remindersPerDay));
     }
 
-    /**
-     * Derives the widest 15-minute-aligned interval that still fits the selected cups
-     * in the daily window. The final cup may be smaller so the goal is never exceeded.
-     */
+    /** Initial rate for the glass-size plan; subsequent alerts use the remaining goal and time. */
     public static int automaticIntervalMinutes(int startMinute, int endMinute,
                                                int dailyTargetMl, int glassSizeMl) {
         int window = endMinute - startMinute;
         if (window <= 0 || dailyTargetMl <= 0 || glassSizeMl <= 0) {
             return 0;
         }
-        int cups = (int) Math.ceil(dailyTargetMl / (double) glassSizeMl);
-        if (cups <= 1) {
-            return Math.max(15, Math.min(240, window));
+        return (int) Math.round(window * Math.min(glassSizeMl, dailyTargetMl)
+                / (double) dailyTargetMl);
+    }
+
+    /** One glass's share of the time remaining, rounded to the nearest second. */
+    public static long fixedAmountNextAt(long startAt, long endAt, long now,
+                                         int remainingMl, int glassSizeMl) {
+        if (endAt <= startAt || remainingMl <= 0 || glassSizeMl <= 0 || now >= endAt) return 0L;
+        long anchor = Math.max(startAt, now);
+        long delay = Math.round((endAt - anchor)
+                * Math.min(1.0, glassSizeMl / (double) remainingMl) / 1000.0) * 1000L;
+        return Math.min(endAt, anchor + Math.max(1000L, delay));
+    }
+
+    static long nextFixedAmountTriggerAt(ReminderSettings settings, long now,
+                                         boolean tomorrowOnly, int consumedMl) {
+        Calendar start = Calendar.getInstance();
+        start.setTimeInMillis(now);
+        start.set(Calendar.HOUR_OF_DAY, settings.waterStartHour());
+        start.set(Calendar.MINUTE, settings.waterStartMinute());
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+        Calendar end = (Calendar) start.clone();
+        end.set(Calendar.HOUR_OF_DAY, settings.waterEndHour());
+        end.set(Calendar.MINUTE, settings.waterEndMinute());
+        if (end.getTimeInMillis() <= start.getTimeInMillis()) return 0L;
+        if (tomorrowOnly || now >= end.getTimeInMillis()) {
+            start.add(Calendar.DAY_OF_YEAR, 1);
+            end.add(Calendar.DAY_OF_YEAR, 1);
+            consumedMl = 0;
         }
-        int maximumInterval = window / (cups - 1);
-        int aligned = (maximumInterval / 15) * 15;
-        return Math.max(15, Math.min(240, aligned));
+        return fixedAmountNextAt(start.getTimeInMillis(), end.getTimeInMillis(), now,
+                Math.max(0, settings.waterDailyTargetMl() - consumedMl), settings.waterAmountMl());
+    }
+
+    public static long nextTriggerAt(Context context, long now, boolean targetReached) {
+        ReminderSettings settings = new ReminderSettings(context);
+        WaterReminderStore store = new WaterReminderStore(context);
+        long snoozeAt = store.pendingSnoozeAt();
+        if (snoozeAt > 0L && shouldRecoverSnooze(snoozeAt, now)) return snoozeAt;
+        if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
+            long saved = store.nextFixedAt();
+            if (!targetReached && shouldRecoverSnooze(saved, now)) return saved;
+            return nextFixedAmountTriggerAt(settings, now, targetReached, store.consumedTodayMl());
+        }
+        return nextTriggerAt(settings, now, targetReached);
     }
 
     public static int amountForRemaining(int remainingMl, int remainingSlots) {

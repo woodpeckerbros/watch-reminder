@@ -3183,9 +3183,10 @@ public class MainActivity extends Activity {
                 intervalChoice.setVisibility(View.GONE);
                 automaticInterval.setVisibility(View.VISIBLE);
                 int glassSize = steppedPickerValue(amountPicker, 50, 50);
-                int interval = WaterReminderScheduler.automaticIntervalMinutes(start, end, target, glassSize);
-                int reminders = WaterReminderScheduler.remindersPerDay(start, end, interval);
-                automaticInterval.setText(getString(R.string.water_auto_interval, interval));
+                int reminders = (int) Math.ceil(target / (double) glassSize);
+                String exactInterval = String.format(AppLanguage.isEnglish(this) ? Locale.US : new Locale("he", "IL"),
+                        "%.1f", (end - start) * Math.min(glassSize, target) / (double) target);
+                automaticInterval.setText(getString(R.string.water_auto_interval, exactInterval));
                 summary.setText(getString(R.string.water_plan_summary_glass, reminders, glassSize));
             }
         };
@@ -3235,6 +3236,7 @@ public class MainActivity extends Activity {
             settings.setWaterIntervalMinutes(selectedInterval);
             settings.setWaterWindow(startHour.getValue(), steppedPickerValue(startMinute, 0, 5),
                     endHour.getValue(), steppedPickerValue(endMinute, 0, 5));
+            new WaterReminderStore(this).clearNextFixedAt();
             WaterReminderReceiver.cancelNotification(this);
             if (!enabled.isChecked()) {
                 WaterReminderScheduler.cancel(this);

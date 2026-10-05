@@ -78,7 +78,7 @@ public final class WaterReminderComplicationService extends ComplicationDataSour
         String shortText = compactLiters(consumed) + "/" + compactLiters(planned) + "L";
         boolean targetReached = consumed >= settings.waterDailyTargetMl();
         String nextTime = NextReminderCalculator.formatTime(
-                WaterReminderScheduler.nextTriggerAt(settings, System.currentTimeMillis(), targetReached));
+                WaterReminderScheduler.nextTriggerAt(localized, System.currentTimeMillis(), targetReached));
         String secondLine = localized.getString(R.string.water_complication_next_time_short, nextTime);
         String longText = localized.getString(R.string.water_complication_long, consumed, planned, nextTime);
         String description = localized.getString(R.string.water_complication_description_with_next,

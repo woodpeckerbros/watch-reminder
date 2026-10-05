@@ -38,7 +38,7 @@
     <string name="water_plan_summary_glass">%1$d reminders per day · %2$d ml glass</string>
     <string name="water_plan_choice_explanation">Choose one plan: a fixed interval or a fixed glass size</string>
     <string name="water_glass_size">Glass size in ml</string>
-    <string name="water_auto_interval">Automatic interval: every %1$d minutes</string>
+    <string name="water_auto_interval">Initial interval: about %1$s minutes · adjusts to intake</string>
     <string name="water_invalid_window">The end time must be later than the start time</string>
     <string name="water_settings_saved">Water reminder settings saved</string>
     <string name="water_today_progress">Today: %1$d of %2$d ml</string>

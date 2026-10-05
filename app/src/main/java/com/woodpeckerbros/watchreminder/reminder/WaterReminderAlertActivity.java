@@ -205,7 +205,8 @@ public final class WaterReminderAlertActivity extends Activity {
         WaterReminderReceiver.cancelNotification(this);
         new WaterReminderStore(this).clearPendingAutoTrigger(triggerAt);
         WaterReminderScheduler.cancelAutoSnooze(this);
-        WaterReminderScheduler.scheduleSnooze(this, 15);
+        WaterReminderScheduler.scheduleSnooze(this, 15, false);
+        ComplicationRefresh.requestWater(this);
         finish();
     }
 

@@ -12,6 +12,7 @@ public class WaterReminderSchedulerTest {
     @Test
     public void pendingSnoozeSurvivesReschedulingAndShortRecoveryDelay() {
         long now = 1_000_000_000L;
+        assertEquals(now + 15 * 60_000L, WaterReminderScheduler.requestedSnoozeAt(now, 15));
         assertTrue(WaterReminderScheduler.shouldRecoverSnooze(now + 15 * 60_000L, now));
         assertTrue(WaterReminderScheduler.shouldRecoverSnooze(now - 5 * 60_000L, now));
         assertFalse(WaterReminderScheduler.shouldRecoverSnooze(now - 31 * 60_000L, now));
@@ -65,17 +66,35 @@ public class WaterReminderSchedulerTest {
     }
 
     @Test
-    public void glassSizePlanDerivesAnIntervalThatFitsTheDailyGoal() {
-        // 2,000 ml as ten 200 ml glasses between 08:00 and 22:00 fits every 90 minutes.
-        assertEquals(90, WaterReminderScheduler.automaticIntervalMinutes(
+    public void glassSizePlanUsesTheWholeWindowAndSelectedGlass() {
+        // 2,000 ml as ten 200 ml glasses across 14 hours: 84 minutes per glass.
+        assertEquals(84, WaterReminderScheduler.automaticIntervalMinutes(
                 8 * 60, 22 * 60, 2000, 200));
-        assertEquals(10, WaterReminderScheduler.remindersPerDay(8 * 60, 22 * 60, 90));
+        assertEquals(58, WaterReminderScheduler.automaticIntervalMinutes(
+                10 * 60, 22 * 60, 2500, 200));
+        long start = 10 * 60 * 60_000L;
+        long end = 22 * 60 * 60_000L;
+        assertEquals(start + 57 * 60_000L + 36_000L,
+                WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200));
+        long first = WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200);
+        assertEquals(first + 57 * 60_000L + 36_000L,
+                WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2300, 200));
     }
 
     @Test
-    public void glassSizePlanUsesQuarterHourMinimumForDensePlans() {
-        assertEquals(15, WaterReminderScheduler.automaticIntervalMinutes(
-                8 * 60, 22 * 60, 5000, 100));
+    public void skipAndFifteenMinuteSnoozeRebalanceTheRemainingDay() {
+        long start = 10 * 60 * 60_000L;
+        long end = 22 * 60 * 60_000L;
+        long first = WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200);
+        long afterSkip = WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2500, 200);
+        assertEquals(first + 53 * 60_000L, afterSkip);
+        long snoozed = first + 15 * 60_000L;
+        long afterDrinkingAtSnooze = WaterReminderScheduler.fixedAmountNextAt(
+                start, end, snoozed, 2300, 200);
+        assertTrue(afterDrinkingAtSnooze > snoozed);
+        assertTrue(afterDrinkingAtSnooze < first + 15 * 60_000L + 57 * 60_000L + 36_000L);
+        assertEquals(end, WaterReminderScheduler.fixedAmountNextAt(start, end,
+                end - 40 * 60_000L, 100, 200));
     }
 
     @Test
