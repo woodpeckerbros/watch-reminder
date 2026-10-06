@@ -423,6 +423,7 @@
     <string name="ui_legacy_241">Avoid drinking uncovered water from </string>
     <string name="ui_legacy_242">to</string>
     <string name="ui_legacy_243">No upcoming tekufa found</string>
+    <string name="tekufa_iron_water_guidance">For those who use iron: if a clean piece of iron was placed in the water before tekufa time and remained there during it, the water may be drunk at that time.</string>
     <string name="ui_legacy_244">Yom Kippur Katan</string>
     <string name="ui_legacy_245">Weekly Parsha</string>
     <string name="ui_legacy_246">Special Shabbat</string>

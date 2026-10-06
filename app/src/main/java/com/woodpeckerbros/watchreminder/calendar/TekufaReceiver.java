@@ -67,6 +67,9 @@ public class TekufaReceiver extends BroadcastReceiver {
         String prefix = TekufaScheduler.KIND_START.equals(event.kind)
                 ? UiText.t(context, "זמן התקופה מתחיל עכשיו")
                 : UiText.t(context, "תזכורת מקדימה לזמן התקופה");
+        String ironWaterGuidance = TekufaScheduler.KIND_ADVANCE.equals(event.kind)
+                ? " | " + context.getString(R.string.tekufa_iron_water_guidance)
+                : "";
         String text = prefix
                 + ". "
                 + TekufaHelper.name(context, tekufa.seasonIndex)
@@ -88,7 +91,8 @@ public class TekufaReceiver extends BroadcastReceiver {
                 + " "
                 + UiText.t(context, "עד")
                 + " "
-                + NextReminderCalculator.formatTime(tekufa.windowEndAt);
+                + NextReminderCalculator.formatTime(tekufa.windowEndAt)
+                + ironWaterGuidance;
         InformationalAlertReceiver.show(context, "tekufa", title, text);
     }
 
