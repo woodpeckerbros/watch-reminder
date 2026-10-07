@@ -52,7 +52,8 @@ public class BootReceiver extends BroadcastReceiver {
         new Thread(() -> {
             RECOVERY_RUNNING.set(true);
             try {
-                recover(appContext, true);
+                recover(appContext, true, Intent.ACTION_USER_UNLOCKED.equals(action)
+                        ? "UNLOCK_RECOVERY" : "RECONCILIATION");
                 if (Intent.ACTION_TIME_CHANGED.equals(action)
                         || Intent.ACTION_TIMEZONE_CHANGED.equals(action)) {
                     SmartAlarmScheduler.rescheduleZmanimAlarms(appContext);
@@ -66,6 +67,11 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     static void recover(Context context, boolean mayStartMonitoringService) {
+        recover(context, mayStartMonitoringService, "RECONCILIATION");
+    }
+
+    private static void recover(Context context, boolean mayStartMonitoringService,
+                                String monitoringStartSource) {
         TrialExpiryWarningReceiver.schedule(context);
         AlarmScheduleMigration.clearLegacyAlarmsOnce(context);
         new ReminderSettings(context).applyPowerSaveDefaultOnce();
@@ -83,7 +89,7 @@ public class BootReceiver extends BroadcastReceiver {
         CalendarReminderCatchUp.dispatchAfterRecovery(context);
         IntermittentFastingScheduler.schedule(context);
         WaterReminderScheduler.schedule(context);
-        SmartAlarmScheduler.recover(context);
+        SmartAlarmScheduler.recover(context, monitoringStartSource);
         ReminderScheduler.scheduleWatchdog(context);
         ComplicationRefresh.requestAll(context);
         ReminderReceiver.dispatchNextQueued(context);

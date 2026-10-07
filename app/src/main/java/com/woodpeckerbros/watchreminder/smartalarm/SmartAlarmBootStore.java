@@ -72,6 +72,11 @@ final class SmartAlarmBootStore {
         return targetAt > 0L && prefs(context).getLong(targetKey(alarmId), 0L) == targetAt;
     }
 
+    static synchronized long monitoringStartAt(Context context, int alarmId, long targetAt) {
+        return matches(context, alarmId, targetAt)
+                ? prefs(context).getLong(monitorAtKey(alarmId), 0L) : 0L;
+    }
+
     static synchronized boolean supportsSmartWake(Context context, int alarmId, long targetAt) {
         SharedPreferences prefs = prefs(context);
         return prefs.getLong(targetKey(alarmId), 0L) == targetAt

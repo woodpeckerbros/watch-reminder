@@ -10,8 +10,8 @@ android {
         applicationId = "com.woodpeckerbros.watchreminder"
         minSdk = 30
         targetSdk = 35
-        versionCode = 140
-        versionName = "1.40"
+        versionCode = 155
+        versionName = "1.55"
     }
 
     compileOptions {
@@ -23,13 +23,12 @@ android {
 dependencies {
     testImplementation("junit:junit:4.13.2")
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.3.0")
-    implementation("androidx.health:health-services-client:1.1.0-rc02")
+    implementation("androidx.health:health-services-client:1.1.0")
     implementation("com.google.guava:guava:33.7.1-android")
     implementation("com.kosherjava:zmanim:2.5.0")
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation("com.android.billingclient:billing:9.1.0")
     constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22")
         implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22")
     }
 }

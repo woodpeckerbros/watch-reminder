@@ -7,6 +7,61 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SmartWakeDetectorTest {
+    @Test public void correctlyEarlyMonitoringHasReadyBaselineBeforeAllowedWake() {
+        SmartWakeDetector detector = new SmartWakeDetector(0L);
+        for (int minute = 35; minute < 45; minute++) {
+            long at = minute * 60_000L;
+            detector.addHeartRate(60, at);
+            detector.addGyroscopeMotion(.10, at);
+        }
+        SmartWakeDetector.Decision decision = detector.evaluate(45 * 60_000L);
+        assertTrue(decision.baselineReady);
+        assertEquals("READY", decision.baselineStatus);
+    }
+
+    @Test public void lateMonitoringCannotCreateCandidateBeforeBaselineDuration() {
+        SmartWakeDetector detector = new SmartWakeDetector(0L);
+        for (int minute = 0; minute < 3; minute++) {
+            long at = minute * 60_000L;
+            detector.addHeartRate(60, at);
+            detector.addGyroscopeMotion(.10, at);
+        }
+        addStrongBaselineRelativeChange(detector, 180_000L);
+        SmartWakeDetector.Decision decision = detector.evaluate(245_000L);
+        assertFalse(decision.baselineReady);
+        assertEquals("COLLECTING_DURATION", decision.baselineStatus);
+        assertFalse(decision.candidateActive);
+    }
+
+    @Test public void baselineReadyStrongTwoGroupSignalCanCreateCandidateOnly() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        addStrongBaselineRelativeChange(detector, 610_000L);
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+        assertTrue(decision.baselineReady);
+        assertTrue("score=" + decision.score, decision.score >= 42);
+        assertEquals(2, decision.evidenceGroups);
+        assertTrue(decision.candidateActive);
+        assertFalse(decision.shouldWake);
+    }
+
+    @Test public void baselineReadyEighteenPointTwoGroupHintCanCreateCandidateOnly() {
+        SmartWakeDetector detector = preparedDetector();
+        detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);
+        detector.addHeartRate(64, 610_000L);
+        detector.addHeartRate(65, 630_000L);
+        detector.addHeartRate(66, 650_000L);
+        for (int i = 0; i < 60; i++) {
+            detector.addGyroscopeMotion(1.8, 615_000L + i * 500L);
+        }
+        SmartWakeDetector.Decision decision = detector.evaluate(675_000L);
+        assertTrue(decision.baselineReady);
+        assertTrue("score=" + decision.score, decision.score >= 18 && decision.score < 23);
+        assertEquals(2, decision.evidenceGroups);
+        assertTrue(decision.candidateActive);
+        assertFalse(decision.shouldWake);
+    }
+
     @Test public void repeatedFiveSecondEvaluationsOfIdenticalEvidenceNeverConfirm() {
         SmartWakeDetector detector = preparedDetector();
         detector.setUserActivity(SmartWakeDetector.UserActivity.ASLEEP, 600_000L);

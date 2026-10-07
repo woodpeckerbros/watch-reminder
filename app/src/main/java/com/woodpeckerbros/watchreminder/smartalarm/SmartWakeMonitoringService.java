@@ -14,8 +14,10 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.UserManager;
 
@@ -42,9 +44,11 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.lang.ref.WeakReference;
 
 public final class SmartWakeMonitoringService extends Service implements SensorEventListener {
     private static volatile boolean active;
+    private static volatile WeakReference<SmartWakeMonitoringService> runningService = new WeakReference<>(null);
     private static final String CHANNEL = "smart_wake_monitoring_v1";
     private static final int NOTIFICATION_ID = 0x534d5705;
     private static final String ACTION_STOP = "smartwake.STOP";
@@ -55,6 +59,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private static final String ACTION_WINDOW_START = "smartwake.WINDOW_START";
     private static final String ACTION_HARD_STOP = "smartwake.HARD_STOP";
     static final String EXTRA_DIRECT_BOOT_RECOVERY = "smartwake.direct_boot_recovery";
+    private static final String EXTRA_MONITORING_START_SOURCE = "smartwake.monitoring_start_source";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private SensorManager sensorManager;
     private Sensor accelerometer, gyroscope, stepDetector;
@@ -76,6 +81,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     private SmartWakeEvaluationCadence.Mode evaluationMode = SmartWakeEvaluationCadence.Mode.NORMAL;
     private long nextEvaluationDueAtElapsedMs = Long.MIN_VALUE;
     private long nextEvaluationDueAtUptimeMs = Long.MIN_VALUE;
+    private SmartWakeCandidateWakeLock candidateWakeLock;
+    private HandlerThread candidateLockTimeoutThread;
     private volatile long lastAccelEventAtElapsedMs = -1L, lastAccelCallbackAtElapsedMs = -1L;
     private volatile long lastGyroEventAtElapsedMs = -1L, lastGyroCallbackAtElapsedMs = -1L;
     private volatile long lastStepEventAtElapsedMs = -1L, lastStepCallbackAtElapsedMs = -1L;
@@ -126,15 +133,32 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     public static boolean isActive() {
         return active;
     }
+    /** A process-local check; onStartCommand also rejects duplicate occurrence starts. */
+    static boolean isMonitoringOccurrence(int alarmId, long targetAt) {
+        SmartWakeMonitoringService service = runningService.get();
+        MonitorSession session = service == null ? null : service.sessions.get(alarmId);
+        return session != null && SmartWakeRuntimePolicy.isSameSession(
+                session.alarmId, session.targetAt, alarmId, targetAt);
+    }
     public static void start(Context context, int alarmId, long targetAt, long wakeWindowStartAt) {
+        start(context, alarmId, targetAt, wakeWindowStartAt, "OTHER", 0L);
+    }
+    static void start(Context context, int alarmId, long targetAt, long wakeWindowStartAt,
+                      String source, long expectedMonitoringStartAt) {
         if (!EntitlementAccess.isFeatureAccessGranted(context)) return;
         Intent intent = new Intent(context, SmartWakeMonitoringService.class)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId).putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
-                .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt);
+                .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt)
+                .putExtra(SmartAlarmScheduler.EXTRA_EXPECTED_MONITORING_START_AT, expectedMonitoringStartAt)
+                .putExtra(EXTRA_MONITORING_START_SOURCE, source);
         ContextCompat.startForegroundService(context, intent);
     }
     /** Starts only an already-armed device-protected occurrence while credential storage is locked. */
     static void startDirectBoot(Context context, int alarmId, long targetAt, long wakeWindowStartAt) {
+        startDirectBoot(context, alarmId, targetAt, wakeWindowStartAt, "OTHER", 0L);
+    }
+    static void startDirectBoot(Context context, int alarmId, long targetAt, long wakeWindowStartAt,
+                                String source, long expectedMonitoringStartAt) {
         if (!SmartAlarmBootStore.supportsSmartWake(context, alarmId, targetAt)) {
             AppLog.w(context, "SmartWake direct-boot start rejected: shadow missing or stale id="
                     + alarmId + " target=" + targetAt);
@@ -144,6 +168,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
                 .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt)
+                .putExtra(SmartAlarmScheduler.EXTRA_EXPECTED_MONITORING_START_AT, expectedMonitoringStartAt)
+                .putExtra(EXTRA_MONITORING_START_SOURCE, source)
                 .putExtra(EXTRA_DIRECT_BOOT_RECOVERY, true);
         ContextCompat.startForegroundService(context, intent);
     }
@@ -152,6 +178,19 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         if (!active) return;
         context.startService(new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_STOP)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId));
+    }
+    static void releaseCandidateObservation(Context context, int alarmId, String reason) {
+        SmartWakeMonitoringService service = runningService.get();
+        if (service == null) return;
+        // Bind cancellation to this occurrence, without replacing the service's restart intent.
+        MonitorSession session = service.sessions.get(alarmId);
+        if (session == null) return;
+        try {
+            service.candidateWakeLock.stop(session.wakeLockStats, "ALARM_" + reason);
+        } catch (RuntimeException error) {
+            // Optional observation cleanup must never interrupt cancellation/alarm delivery.
+            AppLog.e(context, "Candidate wakelock cleanup failed; timeout retained", error);
+        }
     }
     static void hardStop(Context context, int alarmId, long targetAt) {
         if (!active) return;
@@ -165,7 +204,8 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         Intent intent = new Intent(context, SmartWakeMonitoringService.class).setAction(ACTION_WINDOW_START)
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
-                .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt);
+                .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt)
+                .putExtra(EXTRA_MONITORING_START_SOURCE, "SCHEDULED_ALARM");
         ContextCompat.startForegroundService(context, intent);
     }
     static void windowStartedDirectBoot(Context context, int alarmId, long targetAt,
@@ -179,6 +219,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
                 .putExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt)
+                .putExtra(EXTRA_MONITORING_START_SOURCE, "SCHEDULED_ALARM")
                 .putExtra(EXTRA_DIRECT_BOOT_RECOVERY, true);
         ContextCompat.startForegroundService(context, intent);
     }
@@ -200,6 +241,32 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 .setContentTitle("Smart Alarm").setContentText("מנטר חלון התעוררות").setOngoing(true).build());
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         serviceCreatedAt = System.currentTimeMillis();
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        PowerManager.WakeLock cpuLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK, "Zmanio:SmartWakeCandidate");
+        cpuLock.setReferenceCounted(false);
+        // A busy main looper must not delay the bounded lock's normal safety release.
+        candidateLockTimeoutThread = new HandlerThread("SmartWakeCandidateTimeout");
+        candidateLockTimeoutThread.start();
+        Handler lockTimeoutHandler = new Handler(candidateLockTimeoutThread.getLooper());
+        candidateWakeLock = new SmartWakeCandidateWakeLock(
+                new SmartWakeCandidateWakeLock.Backend() {
+                    @Override public void acquire(long timeoutMs) { cpuLock.acquire(timeoutMs); }
+                    @Override public boolean isHeld() { return cpuLock.isHeld(); }
+                    @Override public void release() {
+                        try { if (cpuLock.isHeld()) cpuLock.release(); }
+                        catch (RuntimeException error) {
+                            AppLog.e(SmartWakeMonitoringService.this, "Candidate wakelock release failed", error);
+                        }
+                    }
+                }, new SmartWakeCandidateWakeLock.Clock() {
+                    @Override public long elapsed() { return SystemClock.elapsedRealtime(); }
+                    @Override public long wall() { return System.currentTimeMillis(); }
+                }, new SmartWakeCandidateWakeLock.Timer() {
+                    @Override public void schedule(Runnable task, long delayMs) { lockTimeoutHandler.postDelayed(task, delayMs); }
+                    @Override public void cancel(Runnable task) { lockTimeoutHandler.removeCallbacks(task); }
+                }, message -> AppLog.d(SmartWakeMonitoringService.this, message));
+        runningService = new WeakReference<>(this);
         AppLog.d(this, "SERVICE_START service=SmartWakeMonitoringService");
     }
 
@@ -246,6 +313,16 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
         long wakeWindowStartAt = intent == null ? targetAt
                 : intent.getLongExtra(SmartAlarmScheduler.EXTRA_WAKE_WINDOW_START_AT, targetAt);
         int alarmId = intent == null ? 1 : intent.getIntExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, 1);
+        long expectedMonitoringStartAt = intent == null ? 0L : intent.getLongExtra(
+                SmartAlarmScheduler.EXTRA_EXPECTED_MONITORING_START_AT, 0L);
+        if (expectedMonitoringStartAt <= 0L) {
+            expectedMonitoringStartAt = SmartAlarmBootStore.monitoringStartAt(this, alarmId, targetAt);
+        }
+        String monitoringStartSource = intent == null ? "SERVICE_RECOVERY"
+                : intent.getStringExtra(EXTRA_MONITORING_START_SOURCE);
+        if (intent == null || (flags & (START_FLAG_REDELIVERY | START_FLAG_RETRY)) != 0) {
+            monitoringStartSource = "SERVICE_RECOVERY";
+        } else if (monitoringStartSource == null) monitoringStartSource = "OTHER";
         long currentTime = System.currentTimeMillis();
         boolean userUnlocked = isUserUnlocked();
         boolean directBootEligible = directBootRecovery && !userUnlocked
@@ -305,7 +382,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 firstSession = false;
             }
             sessions.put(alarmId, new MonitorSession(alarmId, targetAt, wakeWindowStartAt, now,
-                    directBootEligible, detector));
+                    expectedMonitoringStartAt, monitoringStartSource, directBootEligible, detector));
             if (firstSession) {
                 resourcesReleased = false;
                 registerMotion(now >= wakeWindowStartAt);
@@ -315,7 +392,12 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             AppLog.d(this, "SMART_WAKE_SESSION_START session_id=" + sessionId(alarmId, targetAt)
                     + " occurrence_id=" + sessionId(alarmId, targetAt)
                     + " monitoring_start=" + now + " earliest_wake=" + wakeWindowStartAt
-                    + " deadline=" + targetAt + " direct_boot=" + directBootEligible);
+                    + " deadline=" + targetAt + " direct_boot=" + directBootEligible
+                    + " EXPECTED_MONITORING_START_AT=" + expectedMonitoringStartAt
+                    + " ACTUAL_MONITORING_START_AT=" + now
+                    + " MONITORING_START_DELAY_MS=" + (expectedMonitoringStartAt > 0L
+                    ? now - expectedMonitoringStartAt : -1L)
+                    + " MONITORING_START_SOURCE=" + monitoringStartSource);
             AppLog.d(this, "SmartWake monitoring started id=" + alarmId + " wakeWindow=" + wakeWindowStartAt + " target=" + targetAt + " accel=" + (accelerometer != null)
                     + " gyro=" + (gyroscope != null) + " steps=" + (stepDetector != null)
                     + "; liveStageSource=UNAVAILABLE HealthServices1.1_has_no_live_sleep_stage_stream"
@@ -498,6 +580,10 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                     nextEvaluationDueAtElapsedMs, nextEvaluationDueAtUptimeMs,
                     startedAt, startedUptime);
             List<MonitorSession> evaluatedSessions = new ArrayList<>(sessions.values());
+            boolean candidateLockHeldAtStart = candidateWakeLock.isHeld();
+            for (MonitorSession session : evaluatedSessions) {
+                candidateWakeLock.recordEvaluation(session.wakeLockStats, startedAt, targetMode, timing);
+            }
             try {
                 evaluateSessions(System.currentTimeMillis(), false);
             } catch (RuntimeException error) {
@@ -516,6 +602,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                     + " EVALUATION_LATE_BY_MS=" + timing.lateByMs
                     + " EVALUATION_UPTIME_LATE_BY_MS=" + timing.uptimeLateByMs
                     + " SUSPEND_GAP_MS=" + timing.suspendGapMs
+                    + " CANDIDATE_WAKELOCK_HELD_AT_START=" + candidateLockHeldAtStart
                     + " EVALUATION_DURATION_MS=" + durationMs);
             for (MonitorSession session : evaluatedSessions) {
                 session.cadenceStats.record(startedAt, durationMs, targetMode, timing);
@@ -555,6 +642,20 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             session.evaluationCount++;
             session.detector.setSelfStimulus(SelfStimulusTracker.snapshot());
             SmartWakeDetector.Decision decision = session.detector.evaluate(now);
+            if (decision.baselineReady && session.baselineReadyAt == Long.MIN_VALUE) {
+                session.baselineReadyAt = now;
+                AppLog.d(this, "SMART_WAKE_BASELINE_READY occurrence_id="
+                        + sessionId(session.alarmId, session.targetAt)
+                        + " BASELINE_READY_AT=" + now
+                        + " TIME_FROM_MONITORING_START_TO_BASELINE_READY_MS="
+                        + (now - session.monitoringStartedAt));
+            }
+            candidateWakeLock.update(session.wakeLockStats, now, session.wakeWindowStartAt,
+                    session.targetAt, !destroyed, decision.candidateActive,
+                    decision.shouldWake && now >= session.wakeWindowStartAt,
+                    decision.candidateActive ? now - decision.candidateAgeMs : Long.MIN_VALUE,
+                    decision.candidateOriginScore, decision.candidateOriginGroups,
+                    decision.candidateConfirmationStatus);
             // Shadow telemetry is intentionally one-way. Its failure must not affect alarm logic.
             try {
                 session.shadow.record(now, decision, session.detector.shadowMovementBuckets(
@@ -698,12 +799,15 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     @Override public void onDestroy() {
         active = false;
+        if (runningService.get() == this) runningService = new WeakReference<>(null);
         destroyed = true;
         handler.removeCallbacksAndMessages(null);
         for (MonitorSession session : new ArrayList<>(sessions.values())) {
             removeSession(session.alarmId, "SERVICE_DESTROY", false, false);
         }
         releaseMonitoringResources("SERVICE_DESTROY");
+        if (candidateWakeLock != null) candidateWakeLock.stopAll("SERVICE_DESTROY");
+        if (candidateLockTimeoutThread != null) candidateLockTimeoutThread.quitSafely();
         AppLog.d(this, "SERVICE_DESTROY service=SmartWakeMonitoringService"
                 + " accel_registration_count=" + accelerometerRegistrationCount
                 + " accel_sample_count=" + accelerometerSampleCount
@@ -727,23 +831,30 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
 
     private static final class MonitorSession {
         final int alarmId;
-        final long targetAt, wakeWindowStartAt, monitoringStartedAt;
+        final long targetAt, wakeWindowStartAt, monitoringStartedAt, expectedMonitoringStartAt;
+        final String monitoringStartSource;
         final boolean directBootRecovery;
         final SmartWakeDetector detector;
         long evaluationCount;
+        long baselineReadyAt = Long.MIN_VALUE;
         long lastDetailedTelemetryAt = Long.MIN_VALUE;
         long normalEvaluations, watchingEvaluations, candidateEvaluations;
         final CadenceStats cadenceStats = new CadenceStats();
         final SmartWakeShadowTelemetry shadow = new SmartWakeShadowTelemetry();
+        final SmartWakeCandidateWakeLock.Session wakeLockStats;
         MonitorSession(int alarmId, long targetAt, long wakeWindowStartAt,
-                       long monitoringStartedAt, boolean directBootRecovery,
+                       long monitoringStartedAt, long expectedMonitoringStartAt,
+                       String monitoringStartSource, boolean directBootRecovery,
                        SmartWakeDetector detector) {
             this.alarmId = alarmId;
             this.targetAt = targetAt;
             this.wakeWindowStartAt = wakeWindowStartAt;
             this.monitoringStartedAt = monitoringStartedAt;
+            this.expectedMonitoringStartAt = expectedMonitoringStartAt;
+            this.monitoringStartSource = monitoringStartSource;
             this.directBootRecovery = directBootRecovery;
             this.detector = detector;
+            this.wakeLockStats = new SmartWakeCandidateWakeLock.Session(sessionId(alarmId, targetAt));
         }
     }
 
@@ -759,6 +870,10 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                                boolean releaseWhenEmpty) {
         MonitorSession removed = sessions.remove(alarmId);
         if (removed == null) return;
+        candidateWakeLock.stop(removed.wakeLockStats, reason);
+        AppLog.appendSmartWakeSummary(this, "CANDIDATE_WAKELOCK_SESSION_SUMMARY session_id="
+                + sessionId(removed.alarmId, removed.targetAt) + " "
+                + removed.wakeLockStats.summary() + " reason=" + reason);
         if (cancelHardStop) SmartAlarmScheduler.cancelHardStop(this, alarmId);
         String shadowSummary = "";
         try {
@@ -773,8 +888,18 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 + sessionId(removed.alarmId, removed.targetAt)
                 + " occurrence_id=" + sessionId(removed.alarmId, removed.targetAt)
                 + " monitoring_start=" + removed.monitoringStartedAt
+                + " EXPECTED_MONITORING_START_AT=" + removed.expectedMonitoringStartAt
+                + " ACTUAL_MONITORING_START_AT=" + removed.monitoringStartedAt
+                + " MONITORING_START_DELAY_MS=" + (removed.expectedMonitoringStartAt > 0L
+                ? removed.monitoringStartedAt - removed.expectedMonitoringStartAt : -1L)
+                + " MONITORING_START_SOURCE=" + removed.monitoringStartSource
                 + " earliest_wake=" + removed.wakeWindowStartAt
                 + " deadline=" + removed.targetAt
+                + " BASELINE_READY_AT=" + (removed.baselineReadyAt == Long.MIN_VALUE
+                ? "NO_DATA" : Long.toString(removed.baselineReadyAt))
+                + " TIME_FROM_MONITORING_START_TO_BASELINE_READY_MS="
+                + (removed.baselineReadyAt == Long.MIN_VALUE ? "NO_DATA"
+                : Long.toString(removed.baselineReadyAt - removed.monitoringStartedAt))
                 + " evaluation_count=" + removed.evaluationCount
                 + " normal_evaluations=" + removed.normalEvaluations
                 + " watching_evaluations=" + removed.watchingEvaluations
@@ -783,6 +908,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
                 + " WATCHING_EVALUATION_COUNT=" + removed.watchingEvaluations
                 + " CANDIDATE_EVALUATION_COUNT=" + removed.candidateEvaluations
                 + " " + removed.cadenceStats.summary()
+                + " " + removed.wakeLockStats.summary()
                 + (shadowSummary.isEmpty() ? "" : " " + shadowSummary)
                 + " reason=" + reason);
         if (releaseWhenEmpty && SmartWakeRuntimePolicy.shouldReleaseResources(sessions.size())) {
@@ -791,6 +917,7 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
     }
 
     private void releaseMonitoringResources(String reason) {
+        if (candidateWakeLock != null) candidateWakeLock.stopAll(reason);
         if (resourcesReleased) return;
         resourcesReleased = true;
         handler.removeCallbacks(evaluateRunnable);

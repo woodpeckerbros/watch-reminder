@@ -10,8 +10,8 @@ android {
         applicationId = "com.woodpeckerbros.watchreminder"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1019
-        versionName = "1.19"
+        versionCode = 1021
+        versionName = "1.21"
     }
 
     compileOptions {
@@ -25,7 +25,6 @@ dependencies {
     implementation("com.kosherjava:zmanim:2.5.0")
     implementation("com.android.billingclient:billing:9.1.0")
     constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22")
         implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22")
     }
 }

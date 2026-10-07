@@ -20,6 +20,7 @@ public final class SmartAlarmScheduler {
     public static final String EXTRA_TARGET_AT = "smart_alarm_target_at";
     public static final String EXTRA_ALARM_ID = "smart_alarm_id";
     public static final String EXTRA_WAKE_WINDOW_START_AT = "smart_alarm_wake_window_start_at";
+    static final String EXTRA_EXPECTED_MONITORING_START_AT = "smart_wake_expected_monitoring_start_at";
     private SmartAlarmScheduler() {}
 
     public static void reschedule(Context context) {
@@ -38,6 +39,10 @@ public final class SmartAlarmScheduler {
      * a snooze whose original alarm time has already passed.
      */
     public static void recover(Context context) {
+        recover(context, "RECONCILIATION");
+    }
+
+    public static void recover(Context context, String monitoringStartSource) {
         if (!EntitlementAccess.isFeatureAccessGranted(context)) {
             cancel(context, "ENTITLEMENT_REVOKED");
             return;
@@ -78,19 +83,30 @@ public final class SmartAlarmScheduler {
                         // along with AlarmManager entries so a restored purchase survives reboot.
                         SmartAlarmBootStore.arm(context, alarmId, targetAt, monitorAt,
                                 wakeWindowStartAt, store.windowMinutes() > 0);
-                        // Once the monitor alarm has fired, scheduling it again would immediately
-                        // redeliver the same intent and interrupt the active detector.
-                        if (now < monitorAt) {
+                        SmartWakeDirectBootPolicy.Action monitoringAction =
+                                SmartWakeDirectBootPolicy.decide(store.windowMinutes() > 0,
+                                        false, monitorAt, wakeWindowStartAt, targetAt, now);
+                        if (monitoringAction == SmartWakeDirectBootPolicy.Action.RESTORE_MONITORING_START) {
                             setWindowAlarm(context, manager, monitorAt,
-                                    windowIntent(context, alarmId, targetAt, wakeWindowStartAt));
-                        } else if (now < wakeWindowStartAt) {
-                            // Recovery after the monitor alarm must not leave the baseline absent.
-                            SmartWakeMonitoringService.start(context, alarmId, targetAt, wakeWindowStartAt);
+                                    windowIntent(context, alarmId, targetAt, wakeWindowStartAt, monitorAt));
+                        } else if (monitoringAction == SmartWakeDirectBootPolicy.Action.START_MONITORING_CATCH_UP
+                                && !SmartWakeMonitoringService.isMonitoringOccurrence(alarmId, targetAt)) {
+                            // A missed start is recovered even after earliestWake. The independent
+                            // deadline was restored above; the same occurrence is idempotent.
+                            SmartWakeMonitoringService.start(context, alarmId, targetAt,
+                                    wakeWindowStartAt, monitoringStartSource, monitorAt);
+                            AppLog.w(context, "SMART_WAKE_MONITOR_CATCH_UP id=" + alarmId
+                                    + " occurrence_id=" + alarmId + ":" + targetAt
+                                    + " EXPECTED_MONITORING_START_AT=" + monitorAt
+                                    + " catch_up_requested_at=" + now
+                                    + " phase=" + (now < wakeWindowStartAt ? "LEAD_IN" : "WAKE_WINDOW")
+                                    + " MONITORING_START_SOURCE=" + monitoringStartSource);
                         }
                         if (now < wakeWindowStartAt) setWindowAlarm(context, manager, wakeWindowStartAt,
                                 windowStartCheckIntent(context, alarmId, targetAt, wakeWindowStartAt));
                         AppLog.d(context, "SmartAlarm recovery preserved scheduled id=" + alarmId
-                                + " target=" + targetAt + " monitorActive=" + (now >= monitorAt));
+                                + " target=" + targetAt + " monitorDue=" + (now >= monitorAt)
+                                + " EXPECTED_MONITORING_START_AT=" + monitorAt);
                     }
                 }
                 continue;
@@ -143,7 +159,8 @@ public final class SmartAlarmScheduler {
                     entry.earliestWakeAt, entry.targetAt, now);
             if (monitoringAction == SmartWakeDirectBootPolicy.Action.RESTORE_MONITORING_START) {
                 setWindowAlarm(context, manager, entry.monitoringStartAt,
-                        windowIntent(context, entry.alarmId, entry.targetAt, entry.earliestWakeAt));
+                        windowIntent(context, entry.alarmId, entry.targetAt, entry.earliestWakeAt,
+                                entry.monitoringStartAt));
                 setWindowAlarm(context, manager, entry.earliestWakeAt,
                         windowStartCheckIntent(context, entry.alarmId, entry.targetAt,
                                 entry.earliestWakeAt));
@@ -159,7 +176,7 @@ public final class SmartAlarmScheduler {
                                     entry.earliestWakeAt));
                 }
                 SmartWakeMonitoringService.startDirectBoot(context, entry.alarmId, entry.targetAt,
-                        entry.earliestWakeAt);
+                        entry.earliestWakeAt, "DIRECT_BOOT_RECOVERY", entry.monitoringStartAt);
                 AppLog.w(context, "SMART_WAKE_MONITOR_CATCH_UP_LOCKED_BOOT id=" + entry.alarmId
                         + " occurrence_id=" + entry.alarmId + ":" + entry.targetAt
                         + " monitoring_start=" + entry.monitoringStartAt
@@ -199,13 +216,15 @@ public final class SmartAlarmScheduler {
         if (manager == null) return;
         SmartAlarmBootStore.arm(context, alarmId, targetAt, monitorAt, wakeWindowStartAt,
                 store.windowMinutes() > 0);
-        setWindowAlarm(context, manager, monitorAt, windowIntent(context, alarmId, targetAt, wakeWindowStartAt));
+        setWindowAlarm(context, manager, monitorAt,
+                windowIntent(context, alarmId, targetAt, wakeWindowStartAt, monitorAt));
         setWindowAlarm(context, manager, wakeWindowStartAt,
                 windowStartCheckIntent(context, alarmId, targetAt, wakeWindowStartAt));
         setDeadlineAlarm(context, manager, alarmId, targetAt, deadlineIntent(context, alarmId, targetAt));
         scheduleHardStop(context, manager, alarmId, targetAt);
         AppLog.d(context, "SmartAlarm scheduled id=" + alarmId + " monitor=" + monitorAt
                 + " wakeWindow=" + wakeWindowStartAt + " target=" + targetAt
+                + " EXPECTED_MONITORING_START_AT=" + monitorAt
                 + " baselineBufferMs=" + SmartWakeSamplingProfile.startBufferMs(
                 SmartWakeSamplingProfile.observedHrIntervalMs(context)));
     }
@@ -310,9 +329,10 @@ public final class SmartAlarmScheduler {
     }
 
     private static void cancel(Context context, int alarmId, String reason) {
+        SmartWakeMonitoringService.releaseCandidateObservation(context, alarmId, reason);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (manager != null) {
-            manager.cancel(windowIntent(context, alarmId, 0, 0));
+            manager.cancel(windowIntent(context, alarmId, 0, 0, 0));
             manager.cancel(windowStartCheckIntent(context, alarmId, 0, 0));
             manager.cancel(deadlineIntent(context, alarmId, 0));
             manager.cancel(detectedFireIntent(context, alarmId, 0, null));
@@ -478,9 +498,11 @@ public final class SmartAlarmScheduler {
         setWindowAlarm(context, manager, hardStopAt, hardStopIntent(context, alarmId, targetAt));
     }
 
-    private static PendingIntent windowIntent(Context context, int alarmId, long targetAt, long wakeWindowStartAt) {
+    private static PendingIntent windowIntent(Context context, int alarmId, long targetAt,
+                                              long wakeWindowStartAt, long monitoringStartAt) {
         Intent intent = alarmIntent(context, SmartWakeWindowReceiver.class, alarmId, targetAt)
-                .putExtra(EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt);
+                .putExtra(EXTRA_WAKE_WINDOW_START_AT, wakeWindowStartAt)
+                .putExtra(EXTRA_EXPECTED_MONITORING_START_AT, monitoringStartAt);
         return PendingIntent.getBroadcast(context, requestCode(alarmId, 1), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
