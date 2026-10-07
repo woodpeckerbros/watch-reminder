@@ -3896,6 +3896,7 @@ public class MainActivity extends Activity {
         dateHeaderParams.setMargins(dp(3), dp(5), dp(3), dp(8));
         View dateHeader = zmanimDateHeader(dayMillis);
         timesCard.addView(dateHeader, dateHeaderParams);
+        addTekufaRow(timesCard, dayMillis);
         addTachanunNotice(timesCard, dayMillis);
         addCurrentFastRows(timesCard, dayMillis);
         addCurrentJewishHolidayRows(timesCard, dayMillis);
@@ -8204,6 +8205,18 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    /** Shows only on the civil date of the tekufa; reminder settings do not affect this calendar fact. */
+    private void addTekufaRow(LinearLayout timesCard, long dayMillis) {
+        TimeZone timeZone = TimeZone.getTimeZone(new ZmanimSettings(this).timeZoneId());
+        TekufaHelper.Event tekufa = TekufaHelper.onCivilDay(dayMillis, timeZone);
+        if (tekufa == null) return;
+        String name = TekufaHelper.name(this, tekufa.seasonIndex());
+        String label = AppLanguage.isEnglish(this) ? "Tekufa · " + name : "זמן התקופה · " + name;
+        String value = NextReminderCalculator.formatTime(tekufa.localMeanAt())
+                + " / " + NextReminderCalculator.formatTime(tekufa.officialAt());
+        timesCard.addView(zmanimTimeRow(label, value));
     }
 
     private void addCurrentFastRows(LinearLayout timesCard, long dayMillis) {

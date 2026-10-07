@@ -46,6 +46,16 @@ public class TekufaHelper {
         return events;
     }
 
+    /** Returns the tekufa whose actual time falls on this civil day, if any. */
+    public static Event onCivilDay(long dayMillis, TimeZone timeZone) {
+        Calendar requestedDay = startOfDay(dayMillis, timeZone);
+        for (int offset = -24; offset <= 80; offset++) {
+            Event event = eventAtOffset(offset);
+            if (sameCivilDay(event.officialAt, requestedDay, timeZone)) return event;
+        }
+        return null;
+    }
+
     public static String summary(Context context, long now) {
         Event event = next(now);
         if (event == null) {
@@ -114,7 +124,24 @@ public class TekufaHelper {
         return calendar;
     }
 
-    static class Event {
+    private static Calendar startOfDay(long at, TimeZone timeZone) {
+        Calendar calendar = Calendar.getInstance(timeZone);
+        calendar.setTimeInMillis(at);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar;
+    }
+
+    private static boolean sameCivilDay(long at, Calendar requestedDay, TimeZone timeZone) {
+        Calendar eventDay = startOfDay(at, timeZone);
+        return eventDay.get(Calendar.ERA) == requestedDay.get(Calendar.ERA)
+                && eventDay.get(Calendar.YEAR) == requestedDay.get(Calendar.YEAR)
+                && eventDay.get(Calendar.DAY_OF_YEAR) == requestedDay.get(Calendar.DAY_OF_YEAR);
+    }
+
+    public static class Event {
         final int seasonIndex;
         final long localMeanAt;
         final long officialAt;
@@ -128,5 +155,11 @@ public class TekufaHelper {
             this.windowStartAt = windowStartAt;
             this.windowEndAt = windowEndAt;
         }
+
+        public int seasonIndex() { return seasonIndex; }
+        public long localMeanAt() { return localMeanAt; }
+        public long officialAt() { return officialAt; }
+        public long windowStartAt() { return windowStartAt; }
+        public long windowEndAt() { return windowEndAt; }
     }
 }
