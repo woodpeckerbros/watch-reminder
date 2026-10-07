@@ -1677,9 +1677,22 @@ public class MainActivity extends Activity {
                 showSmartAlarmActions(alarmId);
                 return true;
             });
-            TextView time = text(String.format(Locale.US, "%02d:%02d", alarm.hour(), alarm.minute()), 25, COLOR_CARD_TEXT);
+            String alarmTime = alarm.zmanimTimeEnabled()
+                    ? smartAlarmZmanimLabel(alarm)
+                    : String.format(Locale.US, "%02d:%02d", alarm.hour(), alarm.minute());
+            TextView time = text(alarmTime, alarm.zmanimTimeEnabled() ? 16 : 25, COLOR_CARD_TEXT);
             AppFont.bold(time);
             alarmCard.addView(time);
+            if (alarm.zmanimTimeEnabled() && alarm.enabled()) {
+                long next = SmartAlarmScheduler.nextTargetAt(this, alarmId, System.currentTimeMillis());
+                if (next != Long.MAX_VALUE) {
+                    java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("EEE HH:mm", Locale.getDefault());
+                    format.setTimeZone(TimeZone.getTimeZone(new ZmanimSettings(this).timeZoneId()));
+                    alarmCard.addView(text(getString(R.string.smart_alarm_next_occurrence,
+                                    format.format(new java.util.Date(next))),
+                            11, COLOR_CARD_MUTED));
+                }
+            }
             TextView days = text(smartAlarmDaysLabel(alarm.daysMask()), 11, COLOR_CARD_MUTED);
             alarmCard.addView(days);
             Switch enabled = new Switch(this);
@@ -1719,6 +1732,14 @@ public class MainActivity extends Activity {
         return android.text.TextUtils.join(" · ", selected);
     }
 
+    private String smartAlarmZmanimLabel(SmartAlarmStore alarm) {
+        int offset = alarm.zmanimOffsetMinutes();
+        String zman = UiText.t(this, ZmanimHelper.label(alarm.zmanimKey()));
+        if (offset == 0) return zman;
+        return getString(offset < 0 ? R.string.smart_alarm_zmanim_offset_before
+                : R.string.smart_alarm_zmanim_offset_after, Math.abs(offset), zman);
+    }
+
     private void showSmartAlarmEditor(int alarmId, boolean newAlarm) {
         stopSmartAlarmPreview();
         horizontalCarouselGestureAreas.clear();
@@ -1737,6 +1758,22 @@ public class MainActivity extends Activity {
         enabledCard.addView(enabledSwitch);
         content.addView(enabledCard, cardParams());
 
+        RadioGroup timeMode = new RadioGroup(this);
+        timeMode.setOrientation(LinearLayout.VERTICAL);
+        RadioButton fixedTimeOption = new RadioButton(this);
+        fixedTimeOption.setId(View.generateViewId());
+        fixedTimeOption.setText(R.string.smart_alarm_fixed_time);
+        RadioButton zmanimTimeOption = new RadioButton(this);
+        zmanimTimeOption.setId(View.generateViewId());
+        zmanimTimeOption.setText(R.string.smart_alarm_zmanim_time);
+        timeMode.addView(fixedTimeOption);
+        timeMode.addView(zmanimTimeOption);
+        timeMode.check(smart.zmanimTimeEnabled() ? zmanimTimeOption.getId() : fixedTimeOption.getId());
+        LinearLayout timeModeCard = card();
+        timeModeCard.addView(text(getString(R.string.smart_alarm_time_mode), 15, COLOR_CARD_TEXT));
+        timeModeCard.addView(timeMode);
+        content.addView(timeModeCard, cardParams());
+
         LinearLayout timeCard = card();
         TextView timeTitle = text("שעת השכמה", 15, COLOR_CARD_TEXT);
         AppFont.bold(timeTitle);
@@ -1745,6 +1782,34 @@ public class MainActivity extends Activity {
         NumberPicker minutePicker = numberPicker(0, 59, smart.minute());
         timeCard.addView(timePickerRow(hourPicker, minutePicker));
         content.addView(timeCard, cardParams());
+
+        LinearLayout zmanimTimeCard = card();
+        TextView zmanimTimeTitle = text(getString(R.string.smart_alarm_zmanim_title), 15, COLOR_CARD_TEXT);
+        AppFont.bold(zmanimTimeTitle);
+        zmanimTimeCard.addView(zmanimTimeTitle);
+        Spinner zmanimTimeSpinner = new Spinner(this);
+        zmanimTimeSpinner.setAdapter(spinnerAdapter(translated(ZmanimHelper.LABELS)));
+        zmanimTimeSpinner.setSelection(ZmanimHelper.indexOf(smart.zmanimKey()));
+        zmanimTimeCard.addView(zmanimTimeSpinner, matchParams());
+        String[] offsetDirections = {getString(R.string.smart_alarm_before),
+                getString(R.string.smart_alarm_at), getString(R.string.smart_alarm_after)};
+        Spinner offsetDirection = new Spinner(this);
+        offsetDirection.setAdapter(spinnerAdapter(offsetDirections));
+        offsetDirection.setSelection(smart.zmanimOffsetMinutes() < 0 ? 0
+                : smart.zmanimOffsetMinutes() == 0 ? 1 : 2);
+        NumberPicker offsetMinutes = numberPicker(0, 180, Math.abs(smart.zmanimOffsetMinutes()));
+        zmanimTimeCard.addView(pickerColumn(getString(R.string.smart_alarm_zmanim_offset), offsetMinutes));
+        zmanimTimeCard.addView(offsetDirection, matchParams());
+        zmanimTimeCard.addView(text(getString(R.string.smart_alarm_zmanim_location_hint),
+                11, COLOR_CARD_MUTED));
+        content.addView(zmanimTimeCard, cardParams());
+        Runnable updateTimeMode = () -> {
+            boolean zmanim = timeMode.getCheckedRadioButtonId() == zmanimTimeOption.getId();
+            timeCard.setVisibility(zmanim ? View.GONE : View.VISIBLE);
+            zmanimTimeCard.setVisibility(zmanim ? View.VISIBLE : View.GONE);
+        };
+        timeMode.setOnCheckedChangeListener((group, checkedId) -> updateTimeMode.run());
+        updateTimeMode.run();
 
         LinearLayout smartWindowCard = card();
         TextView smartWindowTitle = text("חלון השכמה חכם", 15, COLOR_CARD_TEXT);
@@ -2060,6 +2125,15 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, UiText.t(this, "יש לבחור לפחות שתי משימות"), Toast.LENGTH_SHORT).show();
                 return;
             }
+            int offset = offsetDirection.getSelectedItemPosition() == 0 ? -offsetMinutes.getValue()
+                    : offsetDirection.getSelectedItemPosition() == 2 ? offsetMinutes.getValue() : 0;
+            boolean zmanimTime = timeMode.getCheckedRadioButtonId() == zmanimTimeOption.getId();
+            String zmanimKey = ZmanimHelper.KEYS[zmanimTimeSpinner.getSelectedItemPosition()];
+            if (enabledSwitch.isChecked() && zmanimTime && SmartAlarmScheduler.nextZmanTargetAt(
+                    this, zmanimKey, offset, selectedDaysMask[0], System.currentTimeMillis()) == Long.MAX_VALUE) {
+                Toast.makeText(this, R.string.smart_alarm_zmanim_unavailable, Toast.LENGTH_LONG).show();
+                return;
+            }
             smart.save(enabledSwitch.isChecked(), hourPicker.getValue(), minutePicker.getValue(),
                     selectedDaysMask[0], windowPicker.getValue(), snoozeInterval.getValue(), snoozeCount.getValue(),
                     vibrationSwitch.isChecked(), vibrationValues[vibrationSpinner.getSelectedItemPosition()],
@@ -2067,6 +2141,7 @@ public class MainActivity extends Activity {
                     selectedSoundUri[0], durationPicker.getValue(),
                     backgroundValues[selectedBackgroundIndex[0]],
                     dismissValues[dismissMethodIndex[0]], holdSeconds.getValue());
+            smart.saveZmanimTime(zmanimTime, zmanimKey, offset);
             smart.saveWakeTasks(mathDifficulty.getValue(), memoryDifficulty.getValue(), shakeCount.getValue(),
                     stepCount.getValue(), alternatingTaps.getValue(), multipleTaskMask[0], wakeCheckSwitch.isChecked(),
                     wakeCheckDelay.getValue());
@@ -3216,9 +3291,14 @@ public class MainActivity extends Activity {
                     summary.setText(getString(R.string.water_fixed_window_too_short));
                     return;
                 }
-                int firstAmount = Math.max(glassSize,
-                        WaterReminderScheduler.amountForRemaining(target, slots));
-                int reminders = (int) Math.ceil(target / (double) firstAmount);
+                long startAt = start * 60_000L;
+                long endAt = end * 60_000L;
+                long firstAt = WaterReminderScheduler.fixedAmountNextAt(
+                        startAt, endAt, startAt, target, glassSize);
+                int firstAmount = WaterReminderScheduler.fixedAmountForReminder(
+                        target, glassSize, firstAt, endAt);
+                int reminders = WaterReminderScheduler.fixedAmountPlannedReminders(
+                        start, end, target, glassSize);
                 automaticInterval.setText(getString(R.string.water_auto_interval));
                 summary.setText(getString(R.string.water_plan_summary_glass, reminders, firstAmount));
             }

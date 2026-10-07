@@ -13,6 +13,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.woodpeckerbros.watchreminder.zmanim.ZmanimHelper;
+
 public final class SmartAlarmStore {
     private static final String PREFS = "smart_alarm";
     private static final String REGISTRY = "smart_alarm_registry";
@@ -89,6 +91,20 @@ public final class SmartAlarmStore {
     public int alternatingTapCount() { return clamp(prefs.getInt("alternating_tap_count", 10), 4, 30); }
     public int multipleTaskMask() { return prefs.getInt("multiple_task_mask", ALL_WAKE_TASKS) & ALL_WAKE_TASKS; }
     public boolean wakeCheckEnabled() { return prefs.getBoolean("wake_check_enabled", false); }
+    public boolean zmanimTimeEnabled() { return prefs.getBoolean("zmanim_time_enabled", false); }
+    public String zmanimKey() {
+        String key = prefs.getString("zmanim_key", ZmanimHelper.KEY_SUNRISE);
+        for (String allowed : ZmanimHelper.KEYS) if (allowed.equals(key)) return key;
+        return ZmanimHelper.KEY_SUNRISE;
+    }
+    public int zmanimOffsetMinutes() { return clamp(prefs.getInt("zmanim_offset_minutes", -45), -180, 180); }
+    public void saveZmanimTime(boolean enabled, String key, int offsetMinutes) {
+        boolean valid = false;
+        for (String allowed : ZmanimHelper.KEYS) if (allowed.equals(key)) valid = true;
+        prefs.edit().putBoolean("zmanim_time_enabled", enabled)
+                .putString("zmanim_key", valid ? key : ZmanimHelper.KEY_SUNRISE)
+                .putInt("zmanim_offset_minutes", clamp(offsetMinutes, -180, 180)).apply();
+    }
     public boolean systemTimerFallbackEnabled() { return prefs.getBoolean("system_timer_fallback_enabled", false); }
     public void setSystemTimerFallbackEnabled(boolean enabled) {
         prefs.edit().putBoolean("system_timer_fallback_enabled", enabled).apply();
@@ -198,6 +214,9 @@ public final class SmartAlarmStore {
                     .put("multipleTaskMask", alarm.multipleTaskMask())
                     .put("wakeCheckEnabled", alarm.wakeCheckEnabled())
                     .put("wakeCheckDelayMinutes", alarm.wakeCheckDelayMinutes())
+                    .put("zmanimTimeEnabled", alarm.zmanimTimeEnabled())
+                    .put("zmanimKey", alarm.zmanimKey())
+                    .put("zmanimOffsetMinutes", alarm.zmanimOffsetMinutes())
                     .put("systemTimerFallbackEnabled", alarm.systemTimerFallbackEnabled()));
         }
         return result;
@@ -227,6 +246,9 @@ public final class SmartAlarmStore {
                     value.optBoolean("wakeCheckEnabled", false),
                     value.optInt("wakeCheckDelayMinutes", 5));
             alarm.setSystemTimerFallbackEnabled(value.optBoolean("systemTimerFallbackEnabled", false));
+            alarm.saveZmanimTime(value.optBoolean("zmanimTimeEnabled", false),
+                    value.optString("zmanimKey", ZmanimHelper.KEY_SUNRISE),
+                    value.optInt("zmanimOffsetMinutes", -45));
         }
         context.getApplicationContext().getSharedPreferences(REGISTRY, Context.MODE_PRIVATE).edit()
                 .putInt("next_id", highest + 1).apply();

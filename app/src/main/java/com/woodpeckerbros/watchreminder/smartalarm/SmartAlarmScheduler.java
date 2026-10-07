@@ -10,8 +10,11 @@ import android.content.Intent;
 import com.woodpeckerbros.watchreminder.AppLog;
 import com.woodpeckerbros.watchreminder.entitlement.EntitlementAccess;
 import com.woodpeckerbros.watchreminder.reminder.ReminderScheduler;
+import com.woodpeckerbros.watchreminder.zmanim.ZmanimHelper;
+import com.woodpeckerbros.watchreminder.zmanim.ZmanimSettings;
 
 import java.util.Calendar;
+import java.util.TimeZone;
 
 public final class SmartAlarmScheduler {
     public static final String EXTRA_TARGET_AT = "smart_alarm_target_at";
@@ -184,7 +187,7 @@ public final class SmartAlarmScheduler {
     private static void schedule(Context context, int alarmId, long notBefore) {
         SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
         if (!store.enabled()) return;
-        long targetAt = nextTarget(store.hour(), store.minute(), store.daysMask(), notBefore);
+        long targetAt = nextTarget(context, store, notBefore);
         if (targetAt == Long.MAX_VALUE) return;
         long wakeWindowStartAt = targetAt - store.windowMinutes() * 60_000L;
         // Build a personal sleep baseline before the user-selected wake window, while keeping
@@ -336,7 +339,7 @@ public final class SmartAlarmScheduler {
             if (targetAt > now && !state.fired(targetAt) && !state.dismissed(targetAt)) {
                 result = Math.min(result, targetAt);
             } else {
-                long next = nextTarget(store.hour(), store.minute(), store.daysMask(), now);
+                long next = nextTarget(context, store, now);
                 result = Math.min(result, next);
             }
         }
@@ -382,6 +385,39 @@ public final class SmartAlarmScheduler {
             if (selected && calendar.getTimeInMillis() > now) return calendar.getTimeInMillis();
         }
         return Long.MAX_VALUE;
+    }
+
+    private static long nextTarget(Context context, SmartAlarmStore store, long now) {
+        if (!store.zmanimTimeEnabled()) {
+            return nextTarget(store.hour(), store.minute(), store.daysMask(), now);
+        }
+        return nextZmanTargetAt(context, store.zmanimKey(), store.zmanimOffsetMinutes(),
+                store.daysMask(), now);
+    }
+
+    public static long nextZmanTargetAt(Context context, String key, int offsetMinutes,
+                                         int daysMask, long now) {
+        TimeZone zone = TimeZone.getTimeZone(new ZmanimSettings(context).timeZoneId());
+        return SmartAlarmZmanimTarget.next(daysMask, offsetMinutes, now,
+                zone, day -> ZmanimHelper.timeForKey(context, key, day));
+    }
+
+    public static long nextTargetAt(Context context, int alarmId, long now) {
+        return nextTarget(context, new SmartAlarmStore(context, alarmId), now);
+    }
+
+    /** Called after a location or time-zone change, without touching fixed-time alarms. */
+    public static void rescheduleZmanimAlarms(Context context) {
+        if (!EntitlementAccess.isFeatureAccessGranted(context)) return;
+        for (int alarmId : SmartAlarmStore.ids(context)) {
+            SmartAlarmStore store = new SmartAlarmStore(context, alarmId);
+            if (!store.zmanimTimeEnabled()) continue;
+            SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+            long targetAt = state.targetAt();
+            if ((state.snoozeUsed() > 0 && targetAt > System.currentTimeMillis())
+                    || (state.fired(targetAt) && !state.dismissed(targetAt))) continue;
+            reschedule(context, alarmId);
+        }
     }
 
     private static void setWindowAlarm(Context context, AlarmManager manager, long at, PendingIntent intent) {
@@ -508,6 +544,9 @@ public final class SmartAlarmScheduler {
                     .append(" hour=").append(store.hour()).append(':').append(store.minute())
                     .append(" daysMask=").append(store.daysMask())
                     .append(" windowMinutes=").append(store.windowMinutes())
+                    .append(" zmanimTimeEnabled=").append(store.zmanimTimeEnabled())
+                    .append(" zmanimKey=").append(store.zmanimKey())
+                    .append(" zmanimOffsetMinutes=").append(store.zmanimOffsetMinutes())
                     .append(" target=").append(targetAt)
                     .append(" fired=").append(state.fired(targetAt))
                     .append(" dismissed=").append(state.dismissed(targetAt))

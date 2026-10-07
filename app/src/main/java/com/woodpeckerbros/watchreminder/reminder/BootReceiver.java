@@ -53,6 +53,10 @@ public class BootReceiver extends BroadcastReceiver {
             RECOVERY_RUNNING.set(true);
             try {
                 recover(appContext, true);
+                if (Intent.ACTION_TIME_CHANGED.equals(action)
+                        || Intent.ACTION_TIMEZONE_CHANGED.equals(action)) {
+                    SmartAlarmScheduler.rescheduleZmanimAlarms(appContext);
+                }
             } finally {
                 ReminderRecoveryJobService.schedule(appContext);
                 RECOVERY_RUNNING.set(false);

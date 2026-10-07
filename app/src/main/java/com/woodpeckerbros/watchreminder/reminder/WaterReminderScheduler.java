@@ -16,8 +16,8 @@ public final class WaterReminderScheduler {
     private static final int AUTO_SNOOZE_REQUEST_CODE = "water_auto_snooze".hashCode();
     static final String ACTION_AUTO_SNOOZE = "com.woodpeckerbros.watchreminder.WATER_AUTO_SNOOZE";
     static final int AUTO_RETRY_MINUTES = 5;
-    static final int FIXED_AMOUNT_INTERVAL_MINUTES = 30;
-    private static final long FIXED_AMOUNT_INTERVAL_MS = FIXED_AMOUNT_INTERVAL_MINUTES * 60_000L;
+    static final int MIN_GLASS_INTERVAL_MINUTES = 30;
+    private static final long MIN_GLASS_INTERVAL_MS = MIN_GLASS_INTERVAL_MINUTES * 60_000L;
     private static final long SNOOZE_RECOVERY_WINDOW_MS = 30 * 60_000L;
 
     private WaterReminderScheduler() {
@@ -189,36 +189,60 @@ public final class WaterReminderScheduler {
         return Math.min(remaining, dailyTargetPortionMl(targetMl, remindersPerDay));
     }
 
-    /** The glass-size plan uses one regular reminder every half hour. */
+    /** Evenly spaces the chosen glass over the drinking window, at least 30 minutes apart. */
     public static int automaticIntervalMinutes(int startMinute, int endMinute,
                                                int dailyTargetMl, int glassSizeMl) {
-        if (endMinute - startMinute < FIXED_AMOUNT_INTERVAL_MINUTES
+        if (endMinute - startMinute < MIN_GLASS_INTERVAL_MINUTES
                 || dailyTargetMl <= 0 || glassSizeMl <= 0) {
             return 0;
         }
-        return FIXED_AMOUNT_INTERVAL_MINUTES;
+        int windowMinutes = endMinute - startMinute;
+        return Math.max(MIN_GLASS_INTERVAL_MINUTES, Math.min(windowMinutes,
+                (int) Math.round(windowMinutes * (double) glassSizeMl / dailyTargetMl)));
     }
 
     public static int fixedAmountSlotsAvailable(int startMinute, int endMinute) {
-        return Math.max(0, (endMinute - startMinute) / FIXED_AMOUNT_INTERVAL_MINUTES);
+        return Math.max(0, (endMinute - startMinute) / MIN_GLASS_INTERVAL_MINUTES);
+    }
+
+    /** Preview using the same spacing and amount calculations as regular reminders. */
+    public static int fixedAmountPlannedReminders(int startMinute, int endMinute,
+                                                   int dailyTargetMl, int glassSizeMl) {
+        long startAt = startMinute * 60_000L;
+        long endAt = endMinute * 60_000L;
+        long previous = startAt;
+        int remaining = dailyTargetMl;
+        int count = 0;
+        while (remaining > 0 && count < 48) {
+            long next = fixedAmountNextAt(startAt, endAt, previous, remaining, glassSizeMl);
+            if (next <= 0L) break;
+            remaining -= fixedAmountForReminder(remaining, glassSizeMl, next, endAt);
+            previous = next;
+            count++;
+        }
+        return count;
     }
 
     /** Keep the chosen glass size unless the remaining half-hour slots need a larger amount. */
     public static int fixedAmountForReminder(int remainingMl, int glassSizeMl,
                                              long triggerAt, long endAt) {
         if (remainingMl <= 0 || glassSizeMl <= 0) return 0;
-        long slots = triggerAt > endAt ? 1L : (endAt - triggerAt) / FIXED_AMOUNT_INTERVAL_MS + 1L;
+        long slots = triggerAt > endAt ? 1L : (endAt - triggerAt) / MIN_GLASS_INTERVAL_MS + 1L;
         int neededMl = (int) ((remainingMl + slots - 1L) / slots);
         return Math.min(remainingMl, Math.max(glassSizeMl, neededMl));
     }
 
-    /** The first alert and each later regular alert are at least 30 minutes from the anchor. */
+    /** Rebalances the spacing after drinking or a missed alert, never below 30 minutes. */
     public static long fixedAmountNextAt(long startAt, long endAt, long now,
                                          int remainingMl, int glassSizeMl) {
-        if (endAt - startAt < FIXED_AMOUNT_INTERVAL_MS
+        if (endAt - startAt < MIN_GLASS_INTERVAL_MS
                 || remainingMl <= 0 || glassSizeMl <= 0) return 0L;
         long anchor = Math.max(startAt, now);
-        long nextAt = anchor + FIXED_AMOUNT_INTERVAL_MS;
+        long remainingTime = endAt - anchor;
+        if (remainingTime < MIN_GLASS_INTERVAL_MS) return 0L;
+        long interval = Math.max(MIN_GLASS_INTERVAL_MS, Math.min(remainingTime,
+                Math.round(remainingTime * (double) glassSizeMl / remainingMl)));
+        long nextAt = anchor + interval;
         return nextAt <= endAt ? nextAt : 0L;
     }
 
@@ -274,6 +298,8 @@ public final class WaterReminderScheduler {
         if (ReminderSettings.WATER_MODE_FIXED_AMOUNT.equals(settings.waterMode())) {
             long saved = store.nextFixedAt();
             if (!targetReached && shouldRecoverSnooze(saved, now)) return saved;
+            long next = nextFixedAmountTriggerAt(settings, now, targetReached, store.consumedTodayMl());
+            return next <= 0L ? 0L : QuietTimeHelper.adjust(context, next);
         }
         long triggerAt = nextTriggerAt(settings, now, targetReached);
         return triggerAt <= 0L ? 0L : QuietTimeHelper.adjust(context, triggerAt);

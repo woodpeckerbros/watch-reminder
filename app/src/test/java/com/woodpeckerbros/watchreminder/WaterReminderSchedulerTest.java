@@ -66,21 +66,25 @@ public class WaterReminderSchedulerTest {
     }
 
     @Test
-    public void glassSizePlanKeepsThirtyMinutesBetweenRegularReminders() {
-        assertEquals(30, WaterReminderScheduler.automaticIntervalMinutes(
+    public void glassSizePlanCalculatesIntervalFromGlassTargetAndWindow() {
+        assertEquals(84, WaterReminderScheduler.automaticIntervalMinutes(
                 8 * 60, 22 * 60, 2000, 200));
-        assertEquals(30, WaterReminderScheduler.automaticIntervalMinutes(
+        assertEquals(58, WaterReminderScheduler.automaticIntervalMinutes(
                 10 * 60, 22 * 60, 2500, 200));
+        assertEquals(30, WaterReminderScheduler.automaticIntervalMinutes(
+                10 * 60, 22 * 60, 5000, 50));
         assertEquals(0, WaterReminderScheduler.automaticIntervalMinutes(
                 10 * 60, 10 * 60 + 20, 2500, 200));
         assertEquals(24, WaterReminderScheduler.fixedAmountSlotsAvailable(10 * 60, 22 * 60));
+        assertEquals(12, WaterReminderScheduler.fixedAmountPlannedReminders(
+                10 * 60, 22 * 60, 2500, 200));
         long start = 10 * 60 * 60_000L;
         long end = 22 * 60 * 60_000L;
-        assertEquals(start + 30 * 60_000L,
+        assertEquals(start + 57 * 60_000L + 36_000L,
                 WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200));
         long first = WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200);
-        assertEquals(first + 30 * 60_000L,
-                WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2300, 200));
+        long second = WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2300, 200);
+        assertTrue(second - first >= 57 * 60_000L && second - first <= 58 * 60_000L);
         assertEquals(0L, WaterReminderScheduler.fixedAmountNextAt(
                 start, end, end - 20 * 60_000L, 2500, 200));
     }
@@ -99,19 +103,42 @@ public class WaterReminderSchedulerTest {
     }
 
     @Test
-    public void skipAndFifteenMinuteSnoozeKeepTheRegularThirtyMinuteCadence() {
+    public void skipRebalancesSpacingAndFifteenMinuteSnoozeStillOverridesIt() {
         long start = 10 * 60 * 60_000L;
         long end = 22 * 60 * 60_000L;
         long first = WaterReminderScheduler.fixedAmountNextAt(start, end, start, 2500, 200);
         long afterSkip = WaterReminderScheduler.fixedAmountNextAt(start, end, first, 2500, 200);
-        assertEquals(first + 30 * 60_000L, afterSkip);
+        assertTrue(afterSkip - first >= 52 * 60_000L && afterSkip - first <= 54 * 60_000L);
         long snoozed = WaterReminderScheduler.requestedSnoozeAt(first, 15);
         assertEquals(first + 15 * 60_000L, snoozed);
         long afterDrinkingAtSnooze = WaterReminderScheduler.fixedAmountNextAt(
                 start, end, snoozed, 2300, 200);
-        assertEquals(snoozed + 30 * 60_000L, afterDrinkingAtSnooze);
-        assertEquals(end - 10 * 60_000L, WaterReminderScheduler.fixedAmountNextAt(
+        assertTrue(afterDrinkingAtSnooze - snoozed >= 56 * 60_000L
+                && afterDrinkingAtSnooze - snoozed <= 57 * 60_000L);
+        assertEquals(end, WaterReminderScheduler.fixedAmountNextAt(
                 start, end, end - 40 * 60_000L, 100, 200));
+    }
+
+    @Test
+    public void dynamicGlassPlanCanFinishTheDailyGoalWithoutShortRegularGaps() {
+        long start = 10 * 60 * 60_000L;
+        long end = 22 * 60 * 60_000L;
+        long previous = start;
+        int remaining = 2500;
+        int reminders = 0;
+        boolean amountIncreased = false;
+        while (remaining > 0 && reminders < 30) {
+            long next = WaterReminderScheduler.fixedAmountNextAt(start, end, previous, remaining, 200);
+            assertTrue(next > previous && next <= end);
+            assertTrue(next - previous >= 30 * 60_000L);
+            int amount = WaterReminderScheduler.fixedAmountForReminder(remaining, 200, next, end);
+            amountIncreased |= amount > 200;
+            remaining -= amount;
+            previous = next;
+            reminders++;
+        }
+        assertEquals(0, remaining);
+        assertTrue(amountIncreased);
     }
 
     @Test

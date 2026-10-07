@@ -5,6 +5,7 @@ import com.woodpeckerbros.watchreminder.reminder.*;
 import com.woodpeckerbros.watchreminder.*;
 
 import com.woodpeckerbros.watchreminder.calendar.*;
+import com.woodpeckerbros.watchreminder.smartalarm.SmartAlarmScheduler;
 
 import android.content.Context;
 
@@ -27,6 +28,7 @@ public final class ZmanimRescheduler {
         AppLog.d(context, "zmanim reschedule begin");
         new ReminderStore(context).rescheduleAll();
         ReminderDueChecker.dispatchAfterZmanimChange(context);
+        SmartAlarmScheduler.rescheduleZmanimAlarms(context);
         JewishDayScheduler.schedule(context);
         TekufaScheduler.schedule(context);
         MoonBlessingScheduler.schedule(context);
