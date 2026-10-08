@@ -23,6 +23,7 @@ public class TekufaScheduler {
     static final String EXTRA_WINDOW_END_AT = "tekufa_window_end_at";
     static final String KIND_ADVANCE = "advance";
     static final String KIND_START = "start";
+    static final String KIND_END = "end";
     private static final String REQUEST_KEY = "tekufa";
     private static final String DELIVERY_PREFS = "tekufa_delivery";
     private static final String KEY_LAST_START = "last_start";
@@ -71,6 +72,10 @@ public class TekufaScheduler {
             ScheduledEvent start = new ScheduledEvent(KIND_START, tekufa.windowStartAt, tekufa);
             if (start.triggerAt > now && (best == null || start.triggerAt < best.triggerAt)) {
                 best = start;
+            }
+            ScheduledEvent end = new ScheduledEvent(KIND_END, tekufa.windowEndAt, tekufa);
+            if (end.triggerAt > now && (best == null || end.triggerAt < best.triggerAt)) {
+                best = end;
             }
         }
         return best;

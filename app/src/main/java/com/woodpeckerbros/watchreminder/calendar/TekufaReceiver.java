@@ -64,9 +64,12 @@ public class TekufaReceiver extends BroadcastReceiver {
     static void showNotification(Context context, TekufaScheduler.ScheduledEvent event) {
         String title = UiText.t(context, "תזכורת תקופה");
         TekufaHelper.Event tekufa = event.tekufa;
-        String prefix = TekufaScheduler.KIND_START.equals(event.kind)
-                ? UiText.t(context, "זמן התקופה מתחיל עכשיו")
-                : UiText.t(context, "תזכורת מקדימה לזמן התקופה");
+        boolean ended = TekufaScheduler.KIND_END.equals(event.kind);
+        String prefix = ended
+                ? UiText.t(context, "חלון ההימנעות מתקופה הסתיים")
+                : TekufaScheduler.KIND_START.equals(event.kind)
+                        ? UiText.t(context, "זמן התקופה מתחיל עכשיו")
+                        : UiText.t(context, "תזכורת מקדימה לזמן התקופה");
         String ironWaterGuidance = TekufaScheduler.KIND_ADVANCE.equals(event.kind)
                 ? " | " + context.getString(R.string.tekufa_iron_water_guidance)
                 : "";
@@ -86,12 +89,14 @@ public class TekufaReceiver extends BroadcastReceiver {
                 + " | "
                 + UiText.t(context, "חלון")
                 + ": "
-                + UiText.t(context, "יש להימנע משתיית מים גלויים מ־")
-                + NextReminderCalculator.formatTime(tekufa.windowStartAt)
-                + " "
-                + UiText.t(context, "עד")
-                + " "
-                + NextReminderCalculator.formatTime(tekufa.windowEndAt)
+                + (ended
+                        ? UiText.t(context, "הסתיים — ניתן לשתות מים")
+                        : UiText.t(context, "יש להימנע משתיית מים גלויים מ־")
+                                + NextReminderCalculator.formatTime(tekufa.windowStartAt)
+                                + " "
+                                + UiText.t(context, "עד")
+                                + " "
+                                + NextReminderCalculator.formatTime(tekufa.windowEndAt))
                 + ironWaterGuidance;
         InformationalAlertReceiver.show(context, "tekufa", title, text);
     }
