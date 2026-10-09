@@ -22,6 +22,7 @@ final class SmartAlarmBootStore {
     private static final String EARLIEST_WAKE_PREFIX = "earliest_wake_";
     private static final String SMART_WAKE_ENABLED_PREFIX = "smart_wake_enabled_";
     private static final String DELIVERED_PREFIX = "delivered_";
+    private static final String EARLY_ATTEMPT_PREFIX = "early_attempt_";
 
     static final class Entry {
         final int alarmId;
@@ -30,15 +31,17 @@ final class SmartAlarmBootStore {
         final long earliestWakeAt;
         final boolean smartWakeEnabled;
         final boolean delivered;
+        final boolean earlyAttemptDelivered;
 
         Entry(int alarmId, long targetAt, long monitoringStartAt, long earliestWakeAt,
-              boolean smartWakeEnabled, boolean delivered) {
+              boolean smartWakeEnabled, boolean delivered, boolean earlyAttemptDelivered) {
             this.alarmId = alarmId;
             this.targetAt = targetAt;
             this.monitoringStartAt = monitoringStartAt;
             this.earliestWakeAt = earliestWakeAt;
             this.smartWakeEnabled = smartWakeEnabled;
             this.delivered = delivered;
+            this.earlyAttemptDelivered = earlyAttemptDelivered;
         }
     }
 
@@ -55,7 +58,7 @@ final class SmartAlarmBootStore {
                 .putLong(earliestWakeKey(alarmId), earliestWakeAt)
                 .putBoolean(smartWakeEnabledKey(alarmId), smartWakeEnabled);
         if (previousTarget != targetAt) {
-            editor.putBoolean(deliveredKey(alarmId), false);
+            editor.putBoolean(deliveredKey(alarmId), false).putBoolean(earlyAttemptKey(alarmId), false);
         }
         editor.commit();
     }
@@ -65,7 +68,7 @@ final class SmartAlarmBootStore {
         if (targetAt != 0L && prefs.getLong(targetKey(alarmId), 0L) != targetAt) return;
         prefs.edit().remove(targetKey(alarmId)).remove(monitorAtKey(alarmId))
                 .remove(earliestWakeKey(alarmId)).remove(smartWakeEnabledKey(alarmId))
-                .remove(deliveredKey(alarmId)).commit();
+                .remove(deliveredKey(alarmId)).remove(earlyAttemptKey(alarmId)).commit();
     }
 
     static synchronized boolean matches(Context context, int alarmId, long targetAt) {
@@ -100,6 +103,13 @@ final class SmartAlarmBootStore {
         return prefs.edit().putBoolean(deliveredKey(alarmId), true).commit();
     }
 
+    /** Marks that this occurrence already made an early attempt, without disarming its final safety net. */
+    static synchronized boolean markEarlyAttemptDelivered(Context context, int alarmId, long targetAt) {
+        SharedPreferences prefs = prefs(context);
+        if (prefs.getLong(targetKey(alarmId), 0L) != targetAt) return false;
+        return prefs.edit().putBoolean(earlyAttemptKey(alarmId), true).commit();
+    }
+
     static synchronized List<Entry> entries(Context context) {
         SharedPreferences prefs = prefs(context);
         List<Entry> result = new ArrayList<>();
@@ -112,7 +122,8 @@ final class SmartAlarmBootStore {
                         prefs.getLong(monitorAtKey(alarmId), 0L),
                         prefs.getLong(earliestWakeKey(alarmId), 0L),
                         prefs.getBoolean(smartWakeEnabledKey(alarmId), false),
-                        prefs.getBoolean(deliveredKey(alarmId), false)));
+                        prefs.getBoolean(deliveredKey(alarmId), false),
+                        prefs.getBoolean(earlyAttemptKey(alarmId), false)));
             } catch (NumberFormatException ignored) {
             }
         }
@@ -128,7 +139,8 @@ final class SmartAlarmBootStore {
                     .append(" monitoringStart=").append(entry.monitoringStartAt)
                     .append(" earliestWake=").append(entry.earliestWakeAt)
                     .append(" smartWakeEnabled=").append(entry.smartWakeEnabled)
-                    .append(" directBootDelivered=").append(entry.delivered).append('\n');
+                    .append(" directBootDelivered=").append(entry.delivered)
+                    .append(" earlyAttemptDelivered=").append(entry.earlyAttemptDelivered).append('\n');
         }
         return result.length() == 0 ? "none\n" : result.toString();
     }
@@ -143,4 +155,5 @@ final class SmartAlarmBootStore {
     private static String earliestWakeKey(int alarmId) { return EARLIEST_WAKE_PREFIX + alarmId; }
     private static String smartWakeEnabledKey(int alarmId) { return SMART_WAKE_ENABLED_PREFIX + alarmId; }
     private static String deliveredKey(int alarmId) { return DELIVERED_PREFIX + alarmId; }
+    private static String earlyAttemptKey(int alarmId) { return EARLY_ATTEMPT_PREFIX + alarmId; }
 }

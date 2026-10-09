@@ -30,6 +30,8 @@ public final class SmartAlarmRingingService extends Service {
     private static final int NOTIFICATION_ID = 0x534d5706;
     private static final long FULL_SCREEN_REPOST_INTERVAL_MS = 8_000L;
     private static final String EXTRA_DIRECT_BOOT_FALLBACK = "direct_boot_fallback";
+    private static java.lang.ref.WeakReference<SmartAlarmRingingService> activeService;
+    private static final long UI_FEEDBACK_FALLBACK_DELAY_MS = 750L;
     private AlertFeedback feedback;
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -48,6 +50,7 @@ public final class SmartAlarmRingingService extends Service {
             ContextCompat.startForegroundService(context, new Intent(context, SmartAlarmRingingService.class)
                     .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                     .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt)
+                    .putExtra("feedback_end_at", new SmartAlarmStateStore(context, alarmId).feedbackEndAt(targetAt))
                     .putExtra("wake_check_escalation", wakeCheckEscalation));
             return true;
         } catch (RuntimeException error) {
@@ -71,11 +74,35 @@ public final class SmartAlarmRingingService extends Service {
     }
 
     public static void stop(Context context) {
+        SmartAlarmRingingService service = activeService == null ? null : activeService.get();
+        if (service != null) service.stopOwnedFeedback();
         context.stopService(new Intent(context, SmartAlarmRingingService.class));
+    }
+
+    /** Late Activity cleanup must never stop a newer snooze/final presentation. */
+    static void stop(Context context, int alarmId, long targetAt) {
+        SmartAlarmRingingService service = activeService == null ? null : activeService.get();
+        if (service != null && service.activeAlarmId == alarmId && service.activeTargetAt == targetAt) {
+            stop(context);
+        }
+    }
+
+    static void quiesce(int alarmId, long targetAt) {
+        SmartAlarmRingingService service = activeService == null ? null : activeService.get();
+        if (service != null && service.activeAlarmId == alarmId && service.activeTargetAt == targetAt) {
+            service.stopOwnedFeedback();
+        }
+    }
+
+    private void stopOwnedFeedback() {
+        handler.removeCallbacksAndMessages(null);
+        if (feedback != null) { feedback.stop(); feedback = null; }
+        releaseWakeLock();
     }
 
     @Override public void onCreate() {
         super.onCreate();
+        activeService = new java.lang.ref.WeakReference<>(this);
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Smart Alarm ringing", NotificationManager.IMPORTANCE_LOW));
         startForeground(NOTIFICATION_ID, notification(1, 0L, false));
@@ -88,6 +115,18 @@ public final class SmartAlarmRingingService extends Service {
                 && intent.getBooleanExtra("wake_check_escalation", false);
         boolean directBootFallback = intent != null
                 && intent.getBooleanExtra(EXTRA_DIRECT_BOOT_FALLBACK, false);
+        if (!directBootFallback) {
+            SmartAlarmStateStore state = new SmartAlarmStateStore(this, alarmId);
+            long requestedFeedbackEndAt = intent == null ? 0L : intent.getLongExtra("feedback_end_at", 0L);
+            if (!state.presentationMatches(targetAt, requestedFeedbackEndAt)
+                    || state.presentationTimeoutHandled()
+                    || (!wakeCheckEscalation && (!state.fired(targetAt) || state.dismissed(targetAt)))) {
+                AppLog.d(this, "SmartAlarm stale ringing service start ignored id=" + alarmId
+                        + " target=" + targetAt);
+                if (activeTargetAt == 0L) stopSelf(startId);
+                return START_NOT_STICKY;
+            }
+        }
         activeAlarmId = alarmId;
         activeTargetAt = targetAt;
         activeWakeCheckEscalation = wakeCheckEscalation;
@@ -109,14 +148,29 @@ public final class SmartAlarmRingingService extends Service {
             return START_NOT_STICKY;
         }
         SmartAlarmStore settings = new SmartAlarmStore(this, alarmId);
-        int alertDurationMs = settings.alertDurationSeconds() * 1000;
+        int alertDurationMs = SmartAlarmPresentationTiming.feedbackRemaining(System.currentTimeMillis(),
+                new SmartAlarmStateStore(this, alarmId).feedbackEndAt(targetAt),
+                settings.alertDurationSeconds() * 1000);
+        if (alertDurationMs <= 0) { stopSelf(); return START_NOT_STICKY; }
         holdCpuWhileRinging(alertDurationMs);
         // The full-screen notification can win the race and open the activity before this FGS
         // reaches onStartCommand.  Keep the service in that case as the screen guard, but leave
         // feedback to the already-visible activity so it is not started twice.
-        if (!SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
-            feedback = AlertFeedback.startSmartAlarm(this, settings);
+        if (!SmartAlarmAlertActivity.hasPresentation(alarmId, targetAt)) {
+            ensureAlertScreen(alarmId, targetAt, wakeCheckEscalation);
         }
+        // Give the controls their first frame before ringing. If the system suppresses the UI,
+        // still ring with a bounded fallback rather than dropping the alarm altogether.
+        handler.postDelayed(() -> {
+            if (!SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
+                int remaining = SmartAlarmPresentationTiming.feedbackRemaining(System.currentTimeMillis(),
+                        new SmartAlarmStateStore(this, alarmId).feedbackEndAt(targetAt),
+                        settings.alertDurationSeconds() * 1000);
+                feedback = AlertFeedback.startSmartAlarm(this, settings, remaining);
+                AppLog.w(this, "SmartAlarm feedback fallback; controls not visible id=" + alarmId
+                        + " target=" + targetAt + " remainingMs=" + remaining);
+            }
+        }, UI_FEEDBACK_FALLBACK_DELAY_MS);
         handler.postDelayed(() -> guardAlertScreen(
                 alarmId, targetAt, wakeCheckEscalation), 1_200L);
         handler.postDelayed(this::stopSelf, alertDurationMs + 1_000L);
@@ -144,9 +198,11 @@ public final class SmartAlarmRingingService extends Service {
                 builder.addAction(SmartAlarmActions.dismissAction(
                         this, alarmId, targetAt, true));
             } else {
-                builder.addAction(SmartAlarmActions.openAction(this, alarmId, targetAt))
-                        .addAction(SmartAlarmActions.snoozeAction(this, alarmId, targetAt))
-                        .addAction(SmartAlarmActions.dismissAction(this, alarmId, targetAt));
+                builder.addAction(SmartAlarmActions.openAction(this, alarmId, targetAt));
+                if (!new SmartAlarmStateStore(this, alarmId).finalDeadlineDelivered()) {
+                    builder.addAction(SmartAlarmActions.snoozeAction(this, alarmId, targetAt));
+                }
+                builder.addAction(SmartAlarmActions.dismissAction(this, alarmId, targetAt));
             }
         }
         return builder.build();
@@ -174,6 +230,13 @@ public final class SmartAlarmRingingService extends Service {
     }
 
     private void guardAlertScreen(int alarmId, long targetAt, boolean wakeCheckEscalation) {
+        SmartAlarmStateStore state = new SmartAlarmStateStore(this, alarmId);
+        if (state.presentationTimeoutHandled()
+                || System.currentTimeMillis() >= state.feedbackEndAt(targetAt)
+                || (!wakeCheckEscalation && (!state.fired(targetAt) || state.dismissed(targetAt)))) {
+            stopSelf();
+            return;
+        }
         if (SmartAlarmAlertActivity.isShowing(alarmId, targetAt)) {
             // The activity now owns user feedback; the service stays alive only to guard its
             // foreground state and to recover it if Wear OS sends it back to Home.
@@ -229,9 +292,8 @@ public final class SmartAlarmRingingService extends Service {
     }
 
     @Override public void onDestroy() {
-        handler.removeCallbacksAndMessages(null);
-        if (feedback != null) { feedback.stop(); feedback = null; }
-        releaseWakeLock();
+        stopOwnedFeedback();
+        if (activeService != null && activeService.get() == this) activeService = null;
         super.onDestroy();
     }
 

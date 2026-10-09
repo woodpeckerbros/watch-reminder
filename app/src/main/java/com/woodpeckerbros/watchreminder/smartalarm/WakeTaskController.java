@@ -34,6 +34,7 @@ final class WakeTaskController implements SensorEventListener {
     private final LinearLayout body;
     private final SmartAlarmStore settings;
     private final Runnable completed;
+    private final Runnable progressChanged;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Random random = new Random();
     private final ArrayDeque<String> queue = new ArrayDeque<>();
@@ -46,11 +47,13 @@ final class WakeTaskController implements SensorEventListener {
     private int lastRotationDirection;
     private long lastRotationAt;
 
-    WakeTaskController(Activity activity, LinearLayout body, SmartAlarmStore settings, Runnable completed) {
+    WakeTaskController(Activity activity, LinearLayout body, SmartAlarmStore settings,
+                       Runnable completed, Runnable progressChanged) {
         this.activity = activity;
         this.body = body;
         this.settings = settings;
         this.completed = completed;
+        this.progressChanged = progressChanged;
     }
 
     void start(String requested) {
@@ -76,6 +79,7 @@ final class WakeTaskController implements SensorEventListener {
         stop();
         if (queue.isEmpty()) { completed.run(); return; }
         String method = queue.removeFirst();
+        progressChanged.run();
         body.removeAllViews();
         body.setPadding(dp(18), dp(32), dp(18), dp(8));
         body.addView(title(isEnglish() ? "Wake-up task" : "משימת השכמה", 18));
@@ -187,6 +191,7 @@ final class WakeTaskController implements SensorEventListener {
             if (lastRotationDirection != 0 && direction != lastRotationDirection
                     && now - lastRotationAt >= 340L && now - lastRotationAt <= 2_000L) {
                 progress++;
+                progressChanged.run();
                 counter.setText(progress + " / " + target);
                 if (progress >= target) { next(); return; }
             }
@@ -214,6 +219,7 @@ final class WakeTaskController implements SensorEventListener {
         if (!hit) return;
         lastMotionAt = now;
         progress++;
+        progressChanged.run();
         counter.setText(progress + " / " + target);
         if (progress >= target) next();
     }
@@ -251,7 +257,7 @@ final class WakeTaskController implements SensorEventListener {
                 Button option = action(String.valueOf(value));
                 option.setMinWidth(0); option.setMinimumWidth(0); option.setPadding(dp(2), 0, dp(2), 0);
             option.setOnClickListener(v -> {
-                if (value == answer) { mathRemaining--; if (mathRemaining == 0) next(); else showMathQuestion(); }
+                if (value == answer) { progressChanged.run(); mathRemaining--; if (mathRemaining == 0) next(); else showMathQuestion(); }
                     else showMathQuestion();
             });
                 LinearLayout.LayoutParams optionParams = new LinearLayout.LayoutParams(0, dp(38), 1f);
@@ -324,7 +330,7 @@ final class WakeTaskController implements SensorEventListener {
         long interval = visibleMs + gapMs;
         for (int i = 0; i < length; i++) {
             int index = i;
-            handler.postDelayed(() -> { display.setText("●"); display.setTextSize(48); display.setTextColor(colors[sequence[index]]); }, initialDelay + i * interval);
+            handler.postDelayed(() -> { progressChanged.run(); display.setText("●"); display.setTextSize(48); display.setTextColor(colors[sequence[index]]); }, initialDelay + i * interval);
             handler.postDelayed(() -> { display.setText("·"); display.setTextColor(Color.WHITE); }, initialDelay + visibleMs + i * interval);
         }
         handler.postDelayed(() -> showMemoryChoices(sequence, colors), initialDelay + length * interval);
@@ -340,6 +346,7 @@ final class WakeTaskController implements SensorEventListener {
             choice.setOnClickListener(v -> {
                 if (sequence[entered[0]] == selected) {
                     entered[0]++; status.setText(entered[0] + " / " + sequence.length);
+                    progressChanged.run();
                     if (entered[0] == sequence.length) next();
                 } else startMemory();
             });
@@ -359,6 +366,7 @@ final class WakeTaskController implements SensorEventListener {
             int chosen = v == left ? 0 : 1;
             if (chosen != expected[0]) { startAlternating(); return; }
             expected[0] = 1 - expected[0]; progress++; counter.setText(progress + " / " + target);
+            progressChanged.run();
             left.setAlpha(expected[0] == 0 ? 1f : .45f); right.setAlpha(expected[0] == 1 ? 1f : .45f);
             if (progress >= target) next();
         };

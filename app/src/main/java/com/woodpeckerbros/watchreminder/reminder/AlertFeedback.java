@@ -56,9 +56,15 @@ public class AlertFeedback {
     }
 
     public static AlertFeedback startSmartAlarm(Context context, SmartAlarmStore settings) {
+        return startSmartAlarm(context, settings, settings.alertDurationSeconds() * 1000);
+    }
+
+    /** Transferring presentation ownership must not restart the configured ringing duration. */
+    public static AlertFeedback startSmartAlarm(Context context, SmartAlarmStore settings, int remainingMs) {
         AlertFeedback feedback = new AlertFeedback(context);
+        if (remainingMs <= 0) return feedback;
         feedback.startConfigured(
-                settings.alertDurationSeconds() * 1000,
+                remainingMs,
                 settings.vibrationEnabled(),
                 settings.vibrationStyle(),
                 settings.vibrationStrength(),

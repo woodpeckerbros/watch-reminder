@@ -388,6 +388,27 @@ Analyze the final 5 minutes before deadline.
 
 Identify the strongest missed candidate and explain exactly why it did not confirm.
 
+## 11A. PRACTICAL WAKE QUALITY
+
+For every production `WAKE` decision report:
+
+- production decision and decision reason
+- `SHADOW_PRACTICAL_WAKE_QUALITY`
+- `SHADOW_PRACTICAL_WAKE_REASONS`
+- `SHADOW_CARDIO_STRENGTH`
+- `SHADOW_MOVEMENT_QUALITY`
+- `SHADOW_CROSS_MODAL_QUALITY`
+- HR delta and slope at WAKE
+- HR trend consistency
+- movement age
+- cross-modal gap and convergence
+- movement episode count, movement renewal count, and cross-modal renewal count
+- recent group counts for 5s / 15s / 30s
+
+This is observation only. It must be reported separately from the production decision and must never be described as proof of a sleep stage or a successful behavioral wake.
+
+If user ground truth is supplied with the logs, compare the shadow quality with the reported state, wake difficulty, first-alarm memory, and whether the user returned to sleep. Do not tune or learn production behavior automatically.
+
 ## 12. EXTERNAL DISTURBANCES
 
 Search available logs for obvious external disturbances near important Smart Wake windows, including:
@@ -438,6 +459,20 @@ At the END of the report include:
 USER_REPORTED_WAKE_TIME = UNKNOWN
 
 USER_REPORTED_STATE_AT_WAKE = UNKNOWN
+
+Allowed values: `DEEP_ASLEEP`, `ASLEEP_BUT_WAKING`, `HALF_AWAKE`, `END_OF_DREAM`, `ALREADY_AWAKE`, `UNKNOWN`.
+
+USER_REPORTED_WAKE_DIFFICULTY = UNKNOWN
+
+Allowed values: `1` = extremely easy, `2` = easy, `3` = normal, `4` = difficult, `5` = extremely difficult, `UNKNOWN`.
+
+USER_REMEMBERS_FIRST_ALARM = UNKNOWN
+
+Allowed values: `YES`, `NO`, `UNSURE`.
+
+USER_RETURNED_TO_SLEEP = UNKNOWN
+
+Allowed values: `YES`, `NO`, `UNSURE`.
 
 USER_REPORTED_EXTERNAL_DISTURBANCE = UNKNOWN
 

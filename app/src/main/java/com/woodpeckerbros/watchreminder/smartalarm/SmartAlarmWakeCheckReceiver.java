@@ -55,6 +55,7 @@ public final class SmartAlarmWakeCheckReceiver extends BroadcastReceiver {
         if (notifications != null) notifications.cancel(NOTIFICATION_BASE + alarmId);
         SmartAlarmWakeCheckActivity.closeIfShowing(alarmId);
         state(context).edit().remove(PENDING_PREFIX + alarmId).apply();
+        SmartAlarmScheduler.confirmAwake(context, alarmId, "WAKE_CHECK_IM_AWAKE");
         SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId, "IM_AWAKE");
     }
 

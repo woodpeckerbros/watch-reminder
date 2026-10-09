@@ -25,6 +25,7 @@ final class HoldToDismissButton extends Button {
     private float progress;
     private boolean completed;
     private Runnable onComplete;
+    private Runnable onProgress;
 
     HoldToDismissButton(Context context) {
         super(context);
@@ -42,6 +43,8 @@ final class HoldToDismissButton extends Button {
         durationMs = Math.max(1, seconds) * 1_000L;
         onComplete = completion;
     }
+
+    void setOnProgress(Runnable callback) { onProgress = callback; }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
@@ -69,6 +72,7 @@ final class HoldToDismissButton extends Button {
         @Override public void run() {
             if (!isPressed() || completed) return;
             progress = Math.min(1f, (SystemClock.uptimeMillis() - pressedAt) / (float) durationMs);
+            if (onProgress != null) onProgress.run();
             invalidate();
             if (progress >= 1f) {
                 completed = true;

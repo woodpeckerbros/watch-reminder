@@ -663,6 +663,17 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             } catch (RuntimeException error) {
                 AppLog.e(this, "SmartWake shadow telemetry failed id=" + session.alarmId, error);
             }
+            SmartWakePracticalWakeQuality.Result practicalWakeQuality = null;
+            if (decision.shouldWake) {
+                // Strictly post-decision observation: this result is logged only and cannot
+                // reach the detector, cadence selector, wake lock, or alarm scheduling path.
+                try {
+                    practicalWakeQuality = SmartWakePracticalWakeQuality.evaluate(decision,
+                            session.shadow.window90());
+                } catch (RuntimeException error) {
+                    AppLog.e(this, "SmartWake practical quality shadow failed id=" + session.alarmId, error);
+                }
+            }
             SmartWakeEvaluationCadence.Mode mode = SmartWakeEvaluationCadence.forDecision(decision);
             if (mode.intervalMs < nextIntervalMs) {
                 nextIntervalMs = mode.intervalMs;
@@ -696,12 +707,15 @@ public final class SmartWakeMonitoringService extends Service implements SensorE
             } catch (RuntimeException error) {
                 AppLog.e(this, "SmartWake shadow compact telemetry failed id=" + session.alarmId, error);
             }
-            AppLog.appendSmartWakeSummary(this, compactSummary + shadowCompact);
+            AppLog.appendSmartWakeSummary(this, compactSummary + shadowCompact
+                    + (practicalWakeQuality == null ? "" : practicalWakeQuality.compact()));
             if (session.lastDetailedTelemetryAt == Long.MIN_VALUE
                     || now - session.lastDetailedTelemetryAt >= 30_000L || decision.shouldWake) {
                 session.lastDetailedTelemetryAt = now;
                 AppLog.d(this, "SmartWake score id=" + session.alarmId + cadenceTelemetry
-                        + "\n" + decision.telemetry());
+                        + "\n" + decision.telemetry()
+                        + (practicalWakeQuality == null ? "" : "\n"
+                        + practicalWakeQuality.telemetry(decision, session.shadow.window90())));
                 try {
                     if (session.shadow.window90() != null) AppLog.d(this, session.shadow.telemetry());
                 } catch (RuntimeException error) {

@@ -36,7 +36,7 @@ import java.util.Calendar;
 import java.lang.ref.WeakReference;
 
 public final class SmartAlarmAlertActivity extends Activity {
-    static final long INTERACTION_GRACE_MS = 5_000L;
+    static final long INTERACTION_GRACE_MS = SmartAlarmPresentationTiming.INTERACTION_GRACE_MS;
     private static WeakReference<SmartAlarmAlertActivity> activeActivity;
     private long targetAt;
     private int alarmId = 1;
@@ -57,6 +57,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     private long lastInitialInteractionAt;
     private boolean autoSnoozed;
     private Runnable interactionGraceClose;
+    private long feedbackEndAt;
 
     static boolean isShowing(int expectedAlarmId, long expectedTargetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
@@ -69,6 +70,63 @@ public final class SmartAlarmAlertActivity extends Activity {
                 && !activity.isFinishing() && !activity.isDestroyed()
                 && activity.alarmId == expectedAlarmId
                 && (expectedTargetAt == 0L || activity.targetAt == expectedTargetAt);
+    }
+
+    static boolean hasPresentation(int expectedAlarmId, long expectedTargetAt) {
+        SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
+        return activity != null && !activity.isFinishing() && !activity.isDestroyed()
+                && activity.alarmId == expectedAlarmId && activity.targetAt == expectedTargetAt;
+    }
+
+    static void finishForNotificationAction(int expectedAlarmId, long expectedTargetAt) {
+        SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
+        if (activity == null || activity.alarmId != expectedAlarmId
+                || activity.targetAt != expectedTargetAt || activity.isFinishing()) return;
+        activity.explicitlyHandled = true;
+        activity.handler.removeCallbacksAndMessages(null);
+        activity.stopOwnFeedback();
+        if (activity.wakeTaskController != null) activity.wakeTaskController.stop();
+        activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        activity.finishAndRemoveTask();
+    }
+
+    /**
+     * Replaces an already visible early-snooze surface before the hard deadline is posted.
+     * This deliberately does not cancel the shared notification: the final receiver replaces it
+     * immediately with the final-deadline notification using the same notification id.
+     */
+    static boolean supersedeForFinalDeadline(int expectedAlarmId, long finalTargetAt) {
+        SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
+        if (activity == null || !shouldSupersedeForFinalDeadline(activity.alarmId, activity.targetAt,
+                expectedAlarmId, finalTargetAt, true) || activity.isFinishing()
+                || activity.isDestroyed()) {
+            return false;
+        }
+        activity.explicitlyHandled = true;
+        SmartAlarmRingingService.quiesce(expectedAlarmId, activity.targetAt);
+        activity.stopOwnFeedback();
+        activity.handler.removeCallbacksAndMessages(null);
+        if (activity.wakeTaskController != null) activity.wakeTaskController.stop();
+        activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        activity.finishAndRemoveTask();
+        AppLog.w(activity, "SmartAlarm early alert surface superseded by final deadline id="
+                + expectedAlarmId + " early_target=" + activity.targetAt
+                + " final_target=" + finalTargetAt);
+        return true;
+    }
+
+    static boolean shouldSupersedeForFinalDeadline(int activeAlarmId, long activeTargetAt,
+                                                     int incomingAlarmId, long incomingTargetAt,
+                                                     boolean incomingIsFinalDeadline) {
+        return incomingIsFinalDeadline && activeAlarmId == incomingAlarmId
+                && activeTargetAt > 0L;
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // Full-screen notification and immediate service launch can both target the same task.
+        // Reusing it must preserve an in-progress dismiss task and the fixed feedback expiry.
+        setIntent(intent);
     }
 
     @Override protected void onCreate(Bundle state) {
@@ -84,11 +142,39 @@ public final class SmartAlarmAlertActivity extends Activity {
         AppLog.d(this, "SmartAlarm alert activity onCreate id=" + alarmId
                 + " target=" + targetAt + " reason=" + getIntent().getStringExtra("reason"));
         settings = new SmartAlarmStore(this, alarmId);
+        SmartAlarmStateStore alarmState = new SmartAlarmStateStore(this, alarmId);
+        feedbackEndAt = alarmState.feedbackEndAt(targetAt);
+        if (!previewMode && (alarmState.presentationTimeoutHandled()
+                || (!wakeCheckEscalation && (!alarmState.fired(targetAt) || alarmState.dismissed(targetAt))))) {
+            explicitlyHandled = true;
+            finishAndRemoveTask();
+            return;
+        }
         setContentView(content());
         // Keep the ringing service alive as a foreground screen guard.  Wear OS can send an
         // alarm activity back to Home after it was shown; the guard brings it forward again
         // while this occurrence remains unanswered.
-        alertFeedback = AlertFeedback.startSmartAlarm(this, settings);
+        // Start feedback only after the controls have completed their first layout/draw pass.
+        getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(
+                new android.view.ViewTreeObserver.OnPreDrawListener() {
+                    @Override public boolean onPreDraw() {
+                        getWindow().getDecorView().getViewTreeObserver().removeOnPreDrawListener(this);
+                        handler.post(() -> {
+                            if (explicitlyHandled || isFinishing()) return;
+                            int remaining = previewMode ? settings.alertDurationSeconds() * 1000
+                                    : SmartAlarmPresentationTiming.feedbackRemaining(System.currentTimeMillis(),
+                                    feedbackEndAt, settings.alertDurationSeconds() * 1000);
+                            alertFeedback = AlertFeedback.startSmartAlarm(SmartAlarmAlertActivity.this,
+                                    settings, remaining);
+                            AppLog.d(SmartAlarmAlertActivity.this, "SmartAlarm controls ready id=" + alarmId
+                                    + " target=" + targetAt + " feedbackRemainingMs=" + remaining);
+                        });
+                        return true;
+                    }
+                });
+        if (!previewMode) handler.postDelayed(() -> SmartAlarmAutoSnoozeReceiver.handleTimeout(
+                this, alarmId, targetAt, wakeCheckEscalation, feedbackEndAt),
+                Math.max(0L, feedbackEndAt - System.currentTimeMillis()));
     }
 
     @Override protected void onResume() {
@@ -137,8 +223,10 @@ public final class SmartAlarmAlertActivity extends Activity {
         alarmClockParams.setMargins(0, dp(2), 0, dp(1));
         body.addView(alarmClock, alarmClockParams);
 
-        int used = new SmartAlarmStateStore(this, alarmId).snoozeUsed();
-        int remaining = wakeCheckEscalation ? 0 : Math.max(0, settings.snoozeCount() - used);
+        SmartAlarmStateStore state = new SmartAlarmStateStore(this, alarmId);
+        int used = state.snoozeUsed();
+        int remaining = wakeCheckEscalation || state.finalDeadlineDelivered() ? 0
+                : Math.max(0, settings.snoozeCount() - used);
         if (!wakeCheckEscalation && settings.snoozeCount() > 0) {
             body.addView(label(english ? remaining + " snoozes remaining" : "נותרו " + remaining + " נודניקים", 13, 0xFFE8E8E8));
         }
@@ -152,6 +240,7 @@ public final class SmartAlarmAlertActivity extends Activity {
             HoldToDismissButton hold = new HoldToDismissButton(this);
             styleButton(hold, english ? "Hold to dismiss" : "לחצו לכיבוי", 0xFF7E2A35);
             hold.configure(holdDurationSeconds, this::dismissAlarm);
+            hold.setOnProgress(this::recordUserActivity);
             dismiss = hold;
             body.addView(label(english ? "Hold for " + holdDurationSeconds + " seconds"
                     : "יש ללחוץ במשך " + holdDurationSeconds + " שניות", 11, 0xFFE8E8E8));
@@ -207,6 +296,9 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     private void dismissAlarm() {
         if (previewMode) { closePreview(); return; }
+        if (explicitlyHandled || isFinishing()) return;
+        SmartAlarmStateStore state = new SmartAlarmStateStore(this, alarmId);
+        if (!wakeCheckEscalation && (!state.fired(targetAt) || state.dismissed(targetAt))) return;
         explicitlyHandled = true;
         if (wakeCheckEscalation) {
             // The original occurrence was already dismissed and the next calendar alarm was
@@ -221,27 +313,11 @@ public final class SmartAlarmAlertActivity extends Activity {
                     "WAKE_CHECK_ESCALATION_DISMISS");
             return;
         }
-        // Cancel all receivers for this occurrence before changing its state.  In particular,
-        // this prevents a pending SmartWakeWindowReceiver from restarting sensor sampling after
-        // the user has pressed "Dismiss".
-        SmartAlarmScheduler.cancel(this, alarmId);
-        SmartWakeMonitoringService.stop(this, alarmId);
-        SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
-        new SmartAlarmStateStore(this, alarmId).dismiss(targetAt);
         stopFeedback();
-        if (settings.wakeCheckEnabled()) {
-            SmartAlarmWakeCheckReceiver.schedule(this, alarmId, targetAt, settings.wakeCheckDelayMinutes());
-            SmartAlarmAttentionStore.retainForWakeCheck(this, alarmId, targetAt);
-            AppLog.d(this, "SmartAlarm dismissed; wake check retained id=" + alarmId);
-        } else {
-            SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
-            AppLog.d(this, "SmartAlarm dismissed finally id=" + alarmId);
-        }
-        SmartAlarmScheduler.scheduleNextAfterHandled(this, alarmId, targetAt);
+        SmartAlarmWakeCheckReceiver.cancel(this, alarmId);
+        SmartAlarmScheduler.confirmAwake(this, alarmId, "ACTIVITY_DISMISS_COMPLETED");
         close();
-        if (!settings.wakeCheckEnabled()) {
-            SmartAlarmAttentionStore.releaseAfterTerminalAction(this, alarmId, "DISMISS");
-        }
+        SmartAlarmAttentionStore.releaseAfterTerminalAction(this, alarmId, "DISMISS_COMPLETED");
     }
 
     private boolean requiresWakeTask(String method) {
@@ -256,16 +332,17 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     private void startWakeTask(String method) {
         if (wakeTaskController != null) wakeTaskController.stop();
-        wakeTaskController = new WakeTaskController(this, alertBody, settings, this::dismissAlarm);
+        recordUserActivity();
+        wakeTaskController = new WakeTaskController(this, alertBody, settings,
+                this::dismissAlarm, this::recordUserActivity);
         wakeTaskController.start(method);
     }
 
     private void snooze() {
         if (previewMode) { closePreview(); return; }
-        if (autoSnoozed) {
-            AppLog.d(this, "SmartAlarm snooze ignored after automatic snooze id=" + alarmId);
-            return;
-        }
+        if (explicitlyHandled || isFinishing()) return;
+        SmartAlarmStateStore state = new SmartAlarmStateStore(this, alarmId);
+        if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
         explicitlyHandled = true;
         SmartAlarmScheduler.cancelAutoSnooze(this, alarmId);
         stopFeedback();
@@ -334,7 +411,11 @@ public final class SmartAlarmAlertActivity extends Activity {
 
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private void stopFeedback() {
-        SmartAlarmRingingService.stop(this);
+        SmartAlarmRingingService.stop(this, alarmId, targetAt);
+        stopOwnFeedback();
+    }
+
+    private void stopOwnFeedback() {
         if (alertFeedback != null) {
             alertFeedback.stop();
             alertFeedback = null;
@@ -343,9 +424,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     @Override public void onBackPressed() { }
 
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
-        if (!previewMode && !autoSnoozed && event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            lastInitialInteractionAt = SystemClock.uptimeMillis();
-        }
+        if (!previewMode) recordUserActivity();
         if (previewMode) {
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 previewDownX = event.getX(); previewDownY = event.getY();
@@ -359,9 +438,7 @@ public final class SmartAlarmAlertActivity extends Activity {
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
-        if (!previewMode && !autoSnoozed && event.getAction() == KeyEvent.ACTION_DOWN) {
-            lastInitialInteractionAt = SystemClock.uptimeMillis();
-        }
+        if (!previewMode && event.getAction() == KeyEvent.ACTION_DOWN) recordUserActivity();
         return super.dispatchKeyEvent(event);
     }
 
@@ -378,14 +455,27 @@ public final class SmartAlarmAlertActivity extends Activity {
      */
     static boolean closeAutoSnoozed(int alarmId, long targetAt) {
         SmartAlarmAlertActivity activity = activeActivity == null ? null : activeActivity.get();
-        if (activity == null || activity.explicitlyHandled || activity.alarmId != alarmId || activity.targetAt != targetAt)
+        if (activity == null || activity.explicitlyHandled || activity.isFinishing()
+                || activity.alarmId != alarmId || activity.targetAt != targetAt)
             return false;
         return activity.stopForAutoSnooze();
     }
 
     static long interactionGraceDelayMs(long now, long lastInteractionAt) {
-        if (lastInteractionAt <= 0L) return 0L;
-        return Math.max(0L, lastInteractionAt + INTERACTION_GRACE_MS - now);
+        return SmartAlarmPresentationTiming.graceRemaining(now, lastInteractionAt);
+    }
+
+    private void recordUserActivity() {
+        if (explicitlyHandled || isFinishing()) return;
+        lastInitialInteractionAt = SystemClock.uptimeMillis();
+        if (autoSnoozed) scheduleInteractionGraceClose();
+    }
+
+    private void scheduleInteractionGraceClose() {
+        if (interactionGraceClose == null) interactionGraceClose = this::finishAfterInteractionGrace;
+        handler.removeCallbacks(interactionGraceClose);
+        handler.postDelayed(interactionGraceClose,
+                interactionGraceDelayMs(SystemClock.uptimeMillis(), lastInitialInteractionAt));
     }
 
     private boolean stopForAutoSnooze() {
@@ -395,18 +485,24 @@ public final class SmartAlarmAlertActivity extends Activity {
         long delayMs = interactionGraceDelayMs(SystemClock.uptimeMillis(), lastInitialInteractionAt);
         if (delayMs <= 0L) {
             AppLog.d(this, "SmartAlarm auto-snooze closed task immediately id=" + alarmId);
-            finishAfterInteractionGrace();
+            finishSilentScreen();
             return false;
         }
         AppLog.d(this, "SmartAlarm auto-snooze kept task visible id=" + alarmId
                 + " graceMs=" + delayMs);
-        interactionGraceClose = this::finishAfterInteractionGrace;
-        handler.postDelayed(interactionGraceClose, delayMs);
+        scheduleInteractionGraceClose();
         return true;
     }
 
     private void finishAfterInteractionGrace() {
         if (explicitlyHandled) return;
+        finishSilentScreen();
+        SmartAlarmAutoSnoozeReceiver.handleTimeout(this, alarmId, targetAt,
+                wakeCheckEscalation, feedbackEndAt);
+    }
+
+    private void finishSilentScreen() {
+        if (wakeTaskController != null) wakeTaskController.stop();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         finishAndRemoveTask();
     }
@@ -415,9 +511,9 @@ public final class SmartAlarmAlertActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         if (wakeTaskController != null) wakeTaskController.stop();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        // Activity destruction (for example when the user opens the app) is not an alarm action.
-        // Feedback stops itself at the configured timeout unless an explicit action handles it.
-        if (explicitlyHandled) stopFeedback();
+        // The next final/snooze presentation may already own the shared service. A destroyed
+        // Activity must only stop its own feedback, never that newer service.
+        stopOwnFeedback();
         SmartAlarmAlertActivity active = activeActivity == null ? null : activeActivity.get();
         if (active == this) activeActivity = null;
         super.onDestroy();

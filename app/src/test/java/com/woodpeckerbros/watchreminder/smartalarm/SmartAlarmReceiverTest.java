@@ -21,8 +21,8 @@ public class SmartAlarmReceiverTest {
                 "WAKE_LIGHT_SLEEP_OPPORTUNITY", false));
     }
 
-    @Test public void durableEarlyAlertMayCancelFinalDeadline() {
-        assertTrue(SmartAlarmReceiver.shouldCancelFinalDeadline(
+    @Test public void durableEarlyAlertStillMayNotCancelFinalDeadline() {
+        assertFalse(SmartAlarmReceiver.shouldCancelFinalDeadline(
                 "WAKE_LIGHT_SLEEP_OPPORTUNITY", true));
     }
 

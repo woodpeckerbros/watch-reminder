@@ -55,10 +55,21 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
         }
         synchronized (DELIVERY_LOCK) {
             SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
-            if (!state.canFire(targetAt)) {
+            boolean finalDeadline = SmartAlarmScheduler.isFinalDeadlineReason(reason);
+            if (!state.canFire(targetAt, finalDeadline)) {
                 AppLog.w(context, "SmartAlarm duplicate/stale fire target=" + targetAt
                         + " reason=" + reason);
                 return;
+            }
+            if (finalDeadline) {
+                // A final delivery supersedes any still-pending early snooze, but is never
+                // suppressed just because an early attempt rang before it.
+                SmartAlarmScheduler.endEarlyAlert(context, alarmId, targetAt,
+                        "FINAL_DEADLINE_SUPERSEDES_EARLY_CHAIN");
+                SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
+                SmartAlarmRingingService.quiesce(alarmId, state.targetAt());
+                SmartAlarmAlertActivity.supersedeForFinalDeadline(alarmId, targetAt);
+                SmartAlarmActions.cancelNotification(context, alarmId);
             }
             try {
                 if (!deliver(context, alarmId, targetAt, reason)) {
@@ -109,7 +120,8 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
                 .putExtra(SmartAlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(SmartAlarmScheduler.EXTRA_TARGET_AT, targetAt).putExtra("reason", reason)
                 .putExtra("wake_check_escalation", wakeCheckEscalation)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         Bundle creatorOptions = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             ActivityOptions options = ActivityOptions.makeBasic();
@@ -132,25 +144,34 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
             builder.addAction(SmartAlarmActions.dismissAction(
                     context, alarmId, targetAt, true));
         } else {
-            builder.addAction(SmartAlarmActions.openAction(context, alarmId, targetAt))
-                    .addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt))
-                    .addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
+            builder.addAction(SmartAlarmActions.openAction(context, alarmId, targetAt));
+            if (!SmartAlarmScheduler.isFinalDeadlineReason(reason)) {
+                builder.addAction(SmartAlarmActions.snoozeAction(context, alarmId, targetAt));
+            }
+            builder.addAction(SmartAlarmActions.dismissAction(context, alarmId, targetAt));
         }
         Notification notification = builder.build();
         manager.notify(NOTIFICATION_BASE + alarmId, notification);
         // manager.notify() is the first durable alert-delivery point.  An internal Smart Wake
         // decision must never terminalize state or remove the independent final deadline first.
+        boolean finalDeadline = SmartAlarmScheduler.isFinalDeadlineReason(reason);
         boolean occurrenceStateDurable = wakeCheckEscalation
-                || new SmartAlarmStateStore(context, alarmId).markFireDelivered(targetAt);
+                || new SmartAlarmStateStore(context, alarmId).markFireDelivered(targetAt, finalDeadline);
+        new SmartAlarmStateStore(context, alarmId).beginPresentation(targetAt,
+                System.currentTimeMillis() + settings.alertDurationSeconds() * 1000L);
         if (!occurrenceStateDurable) {
             AppLog.e(context, "SmartAlarm notification posted but fired state was not durable; "
                     + "retaining final deadline", new IllegalStateException("state commit failed"));
         }
-        if (shouldCancelFinalDeadline(reason, occurrenceStateDurable)) {
-            SmartAlarmScheduler.cancelDeadline(context, alarmId, targetAt,
-                    "EARLY_ALERT_NOTIFICATION_POSTED");
-        } else if ("deadline".equals(reason) && occurrenceStateDurable) {
+        if (finalDeadline && occurrenceStateDurable) {
             SmartAlarmBootStore.disarm(context, alarmId, targetAt);
+        } else if (!wakeCheckEscalation) {
+            SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
+            SmartAlarmBootStore.markEarlyAttemptDelivered(context, alarmId, state.occurrenceTargetAt());
+            AppLog.w(context, "EARLY_WAKE_ATTEMPT_STARTED id=" + alarmId + " occurrence_id="
+                    + alarmId + ":" + state.occurrenceTargetAt()
+                    + " FINAL_DEADLINE_STILL_ARMED=" + state.finalDeadlineStillRequired()
+                    + " AWAKE_CONFIRMED=" + state.awakeConfirmed());
         }
         AppLog.d(context, "SmartAlarm notified id=" + alarmId
                 + " fullScreen=" + AppLog.fullScreenIntentAllowed(context)
@@ -189,8 +210,9 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
     }
 
     static boolean shouldCancelFinalDeadline(String deliveryReason, boolean deliveryDurable) {
-        return deliveryDurable && !"deadline".equals(deliveryReason)
-                && !"wake_check_escalation".equals(deliveryReason);
+        // Delivery of an early opportunity is never consent to remove the user's hard safety
+        // deadline. Only an explicit awake confirmation can cancel it.
+        return false;
     }
 
     private static void fireDirectBoot(Context context, int alarmId, long targetAt) {
@@ -239,7 +261,7 @@ public final class SmartAlarmReceiver extends BroadcastReceiver {
     }
 
     static String diagnosticWakeReason(String deliveryReason) {
-        return "deadline".equals(deliveryReason) ? "WAKE_FINAL_DEADLINE"
+        return SmartAlarmFinalDeadlinePolicy.isFinalDeadlineDelivery(deliveryReason) ? "WAKE_FINAL_DEADLINE"
                 : deliveryReason == null ? "WAKE_TEMPORAL_MULTI_SENSOR_CONFIRMATION" : deliveryReason;
     }
 

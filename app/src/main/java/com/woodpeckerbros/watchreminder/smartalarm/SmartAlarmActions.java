@@ -86,6 +86,7 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         boolean wakeCheckEscalation = intent.getBooleanExtra("wake_check_escalation", false);
         if (wakeCheckEscalation && ACTION_DISMISS.equals(intent.getAction())) {
             SmartAlarmRingingService.stop(context);
+            SmartAlarmAlertActivity.finishForNotificationAction(alarmId, targetAt);
             SmartAlarmScheduler.cancelAutoSnooze(context, alarmId);
             SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
             cancelNotification(context, alarmId);
@@ -96,33 +97,27 @@ public final class SmartAlarmActions extends BroadcastReceiver {
         }
         SmartAlarmStateStore state = new SmartAlarmStateStore(context, alarmId);
         if (!state.fired(targetAt) || state.dismissed(targetAt)) return;
+        if (!ACTION_DISMISS.equals(intent.getAction()) && !ACTION_SNOOZE.equals(intent.getAction())) return;
+        // A stale snooze action is never evidence of successful dismissal, particularly if
+        // the original deadline has meanwhile promoted this occurrence to its final alert.
+        if (ACTION_SNOOZE.equals(intent.getAction()) && (state.finalDeadlineDelivered()
+                || state.snoozeUsed() >= new SmartAlarmStore(context, alarmId).snoozeCount())) return;
 
         SmartAlarmRingingService.stop(context);
-        SmartWakeMonitoringService.stop(context, alarmId);
-        SmartAlarmScheduler.cancel(context, alarmId);
+        SmartAlarmAlertActivity.finishForNotificationAction(alarmId, targetAt);
         SmartAlarmScheduler.cancelAutoSnooze(context, alarmId);
         cancelNotification(context, alarmId);
         if (ACTION_SNOOZE.equals(intent.getAction())) {
             SmartAlarmStore settings = new SmartAlarmStore(context, alarmId);
-            if (state.snoozeUsed() < settings.snoozeCount()) {
+            if (!state.finalDeadlineDelivered() && state.snoozeUsed() < settings.snoozeCount()) {
                 SmartAlarmScheduler.scheduleSnooze(context, alarmId, targetAt, settings.snoozeMinutes());
                 AppLog.d(context, "SmartAlarm notification snooze id=" + alarmId);
                 return;
             }
         }
-        state.dismiss(targetAt);
-        if (new SmartAlarmStore(context, alarmId).wakeCheckEnabled()) {
-            SmartAlarmWakeCheckReceiver.schedule(context, alarmId, targetAt,
-                    new SmartAlarmStore(context, alarmId).wakeCheckDelayMinutes());
-            SmartAlarmAttentionStore.retainForWakeCheck(context, alarmId, targetAt);
-        } else {
-            SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
-        }
-        SmartAlarmScheduler.scheduleNextAfterHandled(context, alarmId, targetAt);
-        if (!new SmartAlarmStore(context, alarmId).wakeCheckEnabled()) {
-            SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId,
-                    "NOTIFICATION_DISMISS");
-        }
+        SmartAlarmWakeCheckReceiver.cancel(context, alarmId);
+        SmartAlarmScheduler.confirmAwake(context, alarmId, "NOTIFICATION_DISMISS");
+        SmartAlarmAttentionStore.releaseAfterTerminalAction(context, alarmId, "NOTIFICATION_DISMISS");
         AppLog.d(context, "SmartAlarm notification dismiss id=" + alarmId);
     }
 
